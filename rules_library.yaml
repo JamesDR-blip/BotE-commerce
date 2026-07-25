@@ -1,0 +1,18 @@
+Cosmetics:
+  description: Ngành hàng Mỹ phẩm
+  rules:
+  - Cột Volume (Dung tích) phải chứa đơn vị ml hoặc g.
+  - Cột Ingredients không được để trống.
+  - Giá sản phẩm (Price) phải là số dương.
+Fashion:
+  description: Ngành hàng Thời trang
+  rules:
+  - Chuẩn hóa cột Size về chữ in hoa (S, M, L, XL, XXL).
+  - Loại bỏ khoảng trắng thừa ở cột Color.
+  - Giá sản phẩm (Price) phải là số dương lớn hơn 0.
+HomeAppliances:
+  description: Ngành hàng Gia dụng
+  rules:
+  - Cột Power (Công suất) phải chứa đơn vị W hoặc kW.
+  - Cột Dimensions phải đúng định dạng DxRxC (cm).
+  - Giá sản phẩm (Price) phải là số dương.

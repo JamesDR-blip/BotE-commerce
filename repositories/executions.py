@@ -1,0 +1,20 @@
+"""Repository for execution audit records."""
+from __future__ import annotations
+from typing import Callable
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+from models.database import ExecutionRecord, ReportRecord, ValidationLogRecord
+from models.domain import ValidationIssue
+
+
+class ExecutionRepository:
+    def __init__(self, sessions: Callable[[], Session]) -> None: self._sessions = sessions
+    def save(self, record: ExecutionRecord, issues: list[ValidationIssue], reports: dict[str, str]) -> None:
+        with self._sessions() as session:
+            session.add(record)
+            session.add_all(ValidationLogRecord(execution_id=record.id, row_number=x.row, field=x.field, code=x.code, message=x.message, severity=x.severity) for x in issues)
+            session.add_all(ReportRecord(execution_id=record.id, format=fmt, path=path) for fmt, path in reports.items())
+            session.commit()
+    def history(self, limit: int = 50) -> list[ExecutionRecord]:
+        with self._sessions() as session:
+            return list(session.scalars(select(ExecutionRecord).order_by(ExecutionRecord.created_at.desc()).limit(limit)))

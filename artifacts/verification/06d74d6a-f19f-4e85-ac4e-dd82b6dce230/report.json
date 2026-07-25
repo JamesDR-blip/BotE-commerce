@@ -1,0 +1,37 @@
+{
+  "execution_id": "06d74d6a-f19f-4e85-ac4e-dd82b6dce230",
+  "category": "Fashion",
+  "health_score": 40.0,
+  "rule_version": "9a7c2e0ca101",
+  "issues": [
+    {
+      "row": 6,
+      "field": "Size",
+      "code": "invalid_size",
+      "message": "Size must be S, M, L, XL or XXL",
+      "severity": "error"
+    },
+    {
+      "row": 6,
+      "field": "Color",
+      "code": "empty_color",
+      "message": "Color cannot be empty",
+      "severity": "error"
+    },
+    {
+      "row": 4,
+      "field": "Price",
+      "code": "invalid_price",
+      "message": "Price must be a positive number",
+      "severity": "error"
+    },
+    {
+      "row": 5,
+      "field": "Price",
+      "code": "invalid_price",
+      "message": "Price must be a positive number",
+      "severity": "error"
+    }
+  ],
+  "anomaly_count": 0
+}

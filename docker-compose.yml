@@ -1,0 +1,24 @@
+services:
+  api:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://dq:change-me@db:5432/dataquality
+    volumes: ["./artifacts:/app/artifacts"]
+    depends_on: [db]
+  dashboard:
+    build: .
+    command: streamlit run dashboard.py --server.address 0.0.0.0
+    ports: ["8501:8501"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://dq:change-me@db:5432/dataquality
+    depends_on: [db]
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: dataquality
+      POSTGRES_USER: dq
+      POSTGRES_PASSWORD: change-me
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+volumes:
+  postgres_data:

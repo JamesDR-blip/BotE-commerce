@@ -1,0 +1,6 @@
+Product_ID,Size,Color,Price
+P101,s, Red ,150000
+P102, M ,Blue,200000
+P103,L,Black ,-5000
+P104,xl,White,FREE
+P105,UNKNOWN_SIZE,,350000
