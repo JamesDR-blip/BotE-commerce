@@ -17,3 +17,6 @@ def test_validation_upload_generates_all_reports(tmp_path) -> None:
     body = response.json()
     assert body["category"] == "Fashion"
     assert set(body["reports"]) == {"excel", "html", "json", "pdf"}
+    download = TestClient(app).get(body["reports"]["json"])
+    assert download.status_code == 200
+    assert "health_score" in download.text
