@@ -1,0 +1,21 @@
+# Python environment and local settings
+venv/
+.venv/
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Runtime data and generated reports
+artifacts/
+output/
+*.db
+generated_cleaner_code.py
+Data_Quality_Report.html
+clean_data.xlsx
+quarantine_records.csv
+
+# Editor and OS files
+.vscode/
+.DS_Store
+Thumbs.db
