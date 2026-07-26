@@ -1,4 +1,0 @@
-﻿_source_row,Product_ID,Size,Color,Price,_quarantine_reason
-4,P103,L,Black,-5000.0,Price phải là số dương
-5,P104,XL,White,,Price phải là số dương
-6,P105,UNKNOWN_SIZE,,350000.0,Size không hợp lệ; Color không được để trống
