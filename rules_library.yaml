@@ -13,6 +13,7 @@ Fashion:
 HomeAppliances:
   description: Ngành hàng Gia dụng
   rules:
-  - Cột Power (Công suất) phải chứa đơn vị W hoặc kW.
-  - Cột Dimensions phải đúng định dạng DxRxC (cm).
-  - Giá sản phẩm (Price) phải là số dương.
+  - Chuẩn hóa khoảng trắng và lọc các product_title trùng nhau.
+  - Trích xuất Brands, Model_Series, Products, Material, Spec và Attribute_Special từ product_title.
+  - Tạo standard_title theo Brands + Model/Series + Products + Attribute_Special + Material + (Spec).
+  - Nếu có cột Power hoặc Dimensions thì kiểm tra định dạng kỹ thuật tương ứng.
