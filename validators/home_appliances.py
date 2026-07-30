@@ -1,7 +1,7 @@
 """Home appliances category validator plugin."""
 from __future__ import annotations
 import pandas as pd
-from models.domain import ValidationIssue
+from domain.models import ValidationIssue
 from services.title_extraction import extract_product_attributes
 from validators.base import CategoryValidator
 

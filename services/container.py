@@ -1,10 +1,11 @@
 """Composition root: dependency injection without mutable module globals."""
 from __future__ import annotations
 from configs.settings import Settings
-from models.database import make_session_factory
+from database.models import make_session_factory
 from repositories.executions import ExecutionRepository
 from repositories.rules import RuleRepository
 from services.cache import TTLCache
+from services.upload_reader import TabularUploadReader
 from services.plugins import ValidatorRegistry
 from agents.workflow import Agents, AutoFixAgent, ClassifierAgent, QAAgent, RuleRetrieverAgent, ValidatorAgent
 from agents.llm import LLMAssistantAgent
@@ -22,3 +23,4 @@ class Container:
         self.reports = ReportAgent(settings.reports_path)
         self.executions = ExecutionRepository(sessions)
         self.cache = TTLCache(settings.cache_ttl_seconds)
+        self.uploads = TabularUploadReader(settings.max_upload_bytes)

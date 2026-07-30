@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Callable
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from models.database import ExecutionRecord, ReportRecord, ValidationLogRecord
-from models.domain import ValidationIssue
+from database.models import ExecutionRecord, ReportRecord, ValidationLogRecord
+from domain.models import ValidationIssue
 
 
 class ExecutionRepository:

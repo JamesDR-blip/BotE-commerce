@@ -1,12 +1,16 @@
-"""Local entry point for the Data Quality Platform API."""
-from __future__ import annotations
+"""Backward-compatible API entry point.
 
-import uvicorn
+The executable application entry point lives in :mod:`app.main`.
+"""
+from app.main import create_app
 
-from api.main import create_app
-from configs.settings import Settings
+__all__ = ["create_app"]
 
 
 if __name__ == "__main__":
+    import uvicorn
+
+    from configs.settings import Settings
+
     settings = Settings()
     uvicorn.run(create_app(), host=settings.host, port=settings.port)

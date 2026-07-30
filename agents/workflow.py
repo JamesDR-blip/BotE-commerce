@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from repositories.rules import RuleRepository
 from services.plugins import ValidatorRegistry
 from services.anomalies import detect_anomalies
-from models.domain import ValidationIssue, ValidationResult
+from domain.models import ValidationIssue, ValidationResult
 
 
 class ClassifierAgent:

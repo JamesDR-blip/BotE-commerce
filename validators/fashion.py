@@ -1,7 +1,7 @@
 """Fashion category validator plugin."""
 from __future__ import annotations
 import pandas as pd
-from models.domain import ValidationIssue
+from domain.models import ValidationIssue
 from validators.base import CategoryValidator
 
 

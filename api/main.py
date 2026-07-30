@@ -1,11 +1,9 @@
 """FastAPI application factory."""
 from __future__ import annotations
-from io import BytesIO
 from pathlib import Path
-import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from api.schemas import ValidationResponse
+from schemas.responses import ValidationResponse
 from configs.settings import Settings
 from services.container import Container
 from services.logging import configure_logging, instrument_fastapi
@@ -21,7 +19,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/categories")
     def categories() -> dict[str, list[str]]: return {"categories": container.registry.categories()}
     @app.get("/executions")
-    def history(limit: int = 50) -> list[dict]:
+    def history(limit: int = 50) -> list[dict[str, str | float]]:
         return [{"id": x.id, "category": x.category, "health_score": x.health_score, "created_at": x.created_at.isoformat()} for x in container.executions.history(min(max(limit, 1), 100))]
     @app.get("/executions/{execution_id}/reports/{report_format}")
     def download_report(execution_id: str, report_format: str) -> FileResponse:
@@ -35,8 +33,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def validate(file: UploadFile = File(...), category: str | None = Form(None)) -> ValidationResponse:
         content = await file.read()
         try:
-            frame = pd.read_csv(BytesIO(content)) if (file.filename or "").lower().endswith(".csv") else pd.read_excel(BytesIO(content))
-            if frame.empty: raise ValueError("Input has no records")
+            frame = container.uploads.read(file.filename, content)
             result = service.validate(frame, content, category)
             urls = {name: f"/executions/{result.execution_id}/reports/{name}" for name in result.report_paths}
             return ValidationResponse(execution_id=result.execution_id, category=result.category, health_score=result.health_score, reports=urls, cached=result.cached)

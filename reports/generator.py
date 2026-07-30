@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen.canvas import Canvas
-from models.domain import ValidationResult
+from domain.models import ValidationResult
 
 
 class ReportAgent:

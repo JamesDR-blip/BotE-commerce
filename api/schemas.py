@@ -1,9 +1,7 @@
-"""API contracts."""
-from pydantic import BaseModel
+"""Backward-compatible imports for HTTP response contracts.
 
-class ValidationResponse(BaseModel):
-    execution_id: str
-    category: str
-    health_score: float
-    reports: dict[str, str]
-    cached: bool
+HTTP schemas now live in :mod:`schemas.responses`.
+"""
+from schemas.responses import ValidationResponse
+
+__all__ = ["ValidationResponse"]

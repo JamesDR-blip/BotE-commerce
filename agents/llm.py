@@ -1,6 +1,6 @@
 """Optional, text-only LLM assistant. It never returns executable instructions."""
 from __future__ import annotations
-from models.domain import ValidationIssue
+from domain.models import ValidationIssue
 
 
 class LLMAssistantAgent:

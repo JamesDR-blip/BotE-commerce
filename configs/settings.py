@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     validators_path: Path = Path("validators")
     reports_path: Path = Path("artifacts/reports")
     cache_ttl_seconds: int = 3600
+    max_upload_bytes: int = 25 * 1024 * 1024
     enable_llm: bool = False
     google_api_key: str | None = None
     llm_model: str = "gemini-2.5-flash"
