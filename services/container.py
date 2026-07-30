@@ -6,7 +6,7 @@ from repositories.executions import ExecutionRepository
 from repositories.rules import RuleRepository
 from services.cache import TTLCache
 from services.upload_reader import TabularUploadReader
-from services.plugins import ValidatorRegistry
+from plugins.registry import ValidatorRegistry
 from agents.workflow import Agents, AutoFixAgent, ClassifierAgent, QAAgent, RuleRetrieverAgent, ValidatorAgent
 from agents.llm import LLMAssistantAgent
 from reports.generator import ReportAgent

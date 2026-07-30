@@ -14,3 +14,6 @@ class CategoryValidator(ABC):
 
     def autofix(self, frame: pd.DataFrame) -> pd.DataFrame:
         return frame.copy()
+
+
+__all__ = ["CategoryValidator"]

@@ -25,6 +25,12 @@ validators/     Dynamically discovered category validators
 plugins/        Reserved package for future plugin implementations
 ```
 
+## Validator plugins
+
+`plugins.registry.ValidatorRegistry` dynamically discovers validator classes from `plugins/` first and then from the legacy `validators/` package. The first validator registered for a category is used, so a plugin can be migrated without changing the validation workflow. `plugins/fashion/validator.py` is the reference migration; `validators.fashion` remains a compatibility import.
+
+New validator plugins should subclass `plugins.base.ValidatorPlugin`, declare a unique `category`, and implement the same `validate`/optional `autofix` contract as `validators.base.CategoryValidator`. Plugin discovery imports installed project modules, so only trusted, reviewed plugin code should be deployed.
+
 `TabularUploadReader` is the single boundary for tabular user uploads. It accepts CSV, XLS, and XLSX files, limits payload size through `MAX_UPLOAD_BYTES`, rejects path-like filenames, and escapes spreadsheet-formula cells before downstream export.
 
 ## Run

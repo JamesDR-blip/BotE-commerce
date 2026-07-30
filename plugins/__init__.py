@@ -1,4 +1,6 @@
-"""Reserved package for future plugin implementations.
+"""Extensible plugin package for validators and future capabilities."""
 
-Validator discovery remains in :mod:`services.plugins` during Sprint 1.
-"""
+from plugins.base import ValidatorPlugin
+from plugins.registry import ValidatorRegistry
+
+__all__ = ["ValidatorPlugin", "ValidatorRegistry"]
