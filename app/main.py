@@ -5,8 +5,10 @@ import uvicorn
 
 from api.main import create_app
 from configs.settings import Settings
+from services.logging import configure_logging
 
 
 if __name__ == "__main__":
     settings = Settings()
-    uvicorn.run(create_app(), host=settings.host, port=settings.port)
+    configure_logging(settings.log_level)
+    uvicorn.run(create_app(settings), host=settings.host, port=settings.port)
