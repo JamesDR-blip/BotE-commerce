@@ -13,7 +13,7 @@ class RuleParser:
     """Convert a category's YAML mapping into a typed rule set."""
 
     def parse(self, category: str, payload: Mapping[str, Any]) -> RuleSet:
-        raw_rules = payload.get("validation_rules", ())
+        raw_rules = payload.get("validation_rules", [])
         if raw_rules is None:
             raw_rules = ()
         if not isinstance(raw_rules, list):
@@ -32,7 +32,7 @@ class RuleParser:
             raise ValueError(f"Unsupported rule type for '{category}': {rule_type!r}")
         if not all(isinstance(value, str) and value for value in (field, code, message)):
             raise ValueError(f"Rule for '{category}' requires non-empty type, field, code, and message")
-        values = payload.get("values", ())
+        values = payload.get("values", [])
         if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
             raise ValueError(f"Rule values for '{category}.{field}' must be a list of strings")
         pattern = payload.get("pattern")
