@@ -7,6 +7,7 @@ from repositories.rules import RuleRepository
 from services.plugins import ValidatorRegistry
 from services.anomalies import detect_anomalies
 from domain.models import ValidationIssue, ValidationResult
+from rule_engine.models import RuleSet
 
 
 class ClassifierAgent:
@@ -26,7 +27,7 @@ class ClassifierAgent:
 
 class RuleRetrieverAgent:
     def __init__(self, repository: RuleRepository) -> None: self._repository = repository
-    def retrieve(self, category: str): return self._repository.get(category)
+    def retrieve(self, category: str) -> tuple[RuleSet, str]: return self._repository.get(category)
 
 
 class AutoFixAgent:
@@ -34,7 +35,7 @@ class AutoFixAgent:
 
 
 class ValidatorAgent:
-    def validate(self, frame: pd.DataFrame, validator, rules: dict) -> list[ValidationIssue]:
+    def validate(self, frame: pd.DataFrame, validator, rules: RuleSet) -> list[ValidationIssue]:
         """Validate independent dataframe partitions concurrently."""
         chunks = [chunk for chunk in (frame.iloc[i::4] for i in range(4)) if not chunk.empty]
         with ThreadPoolExecutor(max_workers=len(chunks)) as executor:

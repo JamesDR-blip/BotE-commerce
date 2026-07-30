@@ -10,6 +10,36 @@ Fashion:
   - Chuẩn hóa cột Size về chữ in hoa (S, M, L, XL, XXL).
   - Loại bỏ khoảng trắng thừa ở cột Color.
   - Giá sản phẩm (Price) phải là số dương lớn hơn 0.
+  validation_rules:
+  - type: required_column
+    field: price
+    code: missing_column
+    message: "Missing required column: price"
+  - type: required_column
+    field: size
+    code: missing_column
+    message: "Missing required column: size"
+  - type: required_column
+    field: color
+    code: missing_column
+    message: "Missing required column: color"
+  - type: positive_number
+    field: price
+    issue_field: Price
+    code: invalid_price
+    message: "Price must be a positive number"
+    normalization_pattern: "[,\\.\\s]"
+  - type: enum
+    field: size
+    issue_field: Size
+    values: [S, M, L, XL, XXL]
+    code: invalid_size
+    message: "Size must be S, M, L, XL or XXL"
+  - type: non_empty
+    field: color
+    issue_field: Color
+    code: empty_color
+    message: "Color cannot be empty"
 HomeAppliances:
   description: Ngành hàng Gia dụng
   rules:

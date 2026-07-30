@@ -23,6 +23,7 @@ schemas/        HTTP request/response contracts
 services/       Application services and dependency container
 validators/     Dynamically discovered category validators
 plugins/        Reserved package for future plugin implementations
+rule_engine/    Typed YAML rule parsing, loading, and validation
 ```
 
 ## Validator plugins
@@ -30,6 +31,10 @@ plugins/        Reserved package for future plugin implementations
 `plugins.registry.ValidatorRegistry` dynamically discovers validator classes from `plugins/` first and then from the legacy `validators/` package. The first validator registered for a category is used, so a plugin can be migrated without changing the validation workflow. `plugins/fashion/validator.py` is the reference migration; `validators.fashion` remains a compatibility import.
 
 New validator plugins should subclass `plugins.base.ValidatorPlugin`, declare a unique `category`, and implement the same `validate`/optional `autofix` contract as `validators.base.CategoryValidator`. Plugin discovery imports installed project modules, so only trusted, reviewed plugin code should be deployed.
+
+## YAML rule engine
+
+`rule_engine` safely loads YAML through `yaml.safe_load`, parses supported declarative definitions, and evaluates them without generated Python code. `Fashion` is the reference migration. Its `validation_rules` support `required_column`, `positive_number`, `enum`, `non_empty`, and `regex` definitions. Existing descriptive `rules` lists and legacy validators remain supported during migration.
 
 `TabularUploadReader` is the single boundary for tabular user uploads. It accepts CSV, XLS, and XLSX files, limits payload size through `MAX_UPLOAD_BYTES`, rejects path-like filenames, and escapes spreadsheet-formula cells before downstream export.
 
