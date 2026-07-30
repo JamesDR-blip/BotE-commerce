@@ -36,6 +36,10 @@ New validator plugins should subclass `plugins.base.ValidatorPlugin`, declare a 
 
 `rule_engine` safely loads YAML through `yaml.safe_load`, parses supported declarative definitions, and evaluates them without generated Python code. `Fashion` is the reference migration. Its `validation_rules` support `required_column`, `positive_number`, `enum`, `non_empty`, and `regex` definitions. Existing descriptive `rules` lists and legacy validators remain supported during migration.
 
+## Validation services
+
+Reusable validation mechanics live in `services/`: `ValidationService` preserves the existing partitioned validator execution; `HealthScoreService` preserves the clean-row score formula; `MissingValueValidation`, `FormatValidation`, and `DuplicateDetection` provide deterministic primitives; and `BusinessRuleValidation` dispatches typed YAML rules. Existing agents, validators, Rule Engine API, reports, and HTTP responses delegate to these services without changing their output contracts.
+
 `TabularUploadReader` is the single boundary for tabular user uploads. It accepts CSV, XLS, and XLSX files, limits payload size through `MAX_UPLOAD_BYTES`, rejects path-like filenames, and escapes spreadsheet-formula cells before downstream export.
 
 ## Run

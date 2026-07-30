@@ -2,10 +2,11 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import pandas as pd
-from concurrent.futures import ThreadPoolExecutor
 from repositories.rules import RuleRepository
 from services.plugins import ValidatorRegistry
 from services.anomalies import detect_anomalies
+from services.health_score_service import HealthScoreService
+from services.validation_service import ValidationService
 from domain.models import ValidationIssue, ValidationResult
 from rule_engine.models import RuleSet
 
@@ -35,14 +36,13 @@ class AutoFixAgent:
 
 
 class ValidatorAgent:
+    def __init__(self, service: ValidationService | None = None) -> None: self._service = service or ValidationService()
     def validate(self, frame: pd.DataFrame, validator, rules: RuleSet) -> list[ValidationIssue]:
-        """Validate independent dataframe partitions concurrently."""
-        chunks = [chunk for chunk in (frame.iloc[i::4] for i in range(4)) if not chunk.empty]
-        with ThreadPoolExecutor(max_workers=len(chunks)) as executor:
-            return [issue for batch in executor.map(lambda chunk: validator.validate(chunk, rules), chunks) for issue in batch]
+        return self._service.validate(frame, validator, rules)
 
 
 class QAAgent:
+    def __init__(self, health_scores: HealthScoreService | None = None) -> None: self._health_scores = health_scores or HealthScoreService()
     def result(self, frame: pd.DataFrame, issues: list[ValidationIssue], category: str, version: str) -> ValidationResult:
         rejected_rows = {issue.row - 2 for issue in issues if issue.severity == "error"}
         rejected_rows |= detect_anomalies(frame)
@@ -52,7 +52,7 @@ class QAAgent:
         if not quarantine.empty:
             quarantine.insert(0, "_source_row", quarantine.index + 2)
             quarantine["_quarantine_reason"] = ["; ".join(reason_map.get(i, ["Statistical anomaly"])) for i in quarantine.index]
-        score = round(100 * len(clean) / len(frame), 2) if len(frame) else 0.0
+        score = self._health_scores.calculate(len(clean), len(frame))
         return ValidationResult(category, clean, quarantine, issues, score, version, len(rejected_rows - set(reason_map)))
 
 

@@ -6,6 +6,8 @@ from repositories.executions import ExecutionRepository
 from repositories.rules import RuleRepository
 from services.cache import TTLCache
 from services.upload_reader import TabularUploadReader
+from services.health_score_service import HealthScoreService
+from services.validation_service import ValidationService
 from plugins.registry import ValidatorRegistry
 from agents.workflow import Agents, AutoFixAgent, ClassifierAgent, QAAgent, RuleRetrieverAgent, ValidatorAgent
 from agents.llm import LLMAssistantAgent
@@ -18,7 +20,9 @@ class Container:
         sessions = make_session_factory(settings.database_url)
         self.registry = ValidatorRegistry()
         self.rules = RuleRepository(settings.rules_path)
-        self.agents = Agents(ClassifierAgent(), RuleRetrieverAgent(self.rules), AutoFixAgent(), ValidatorAgent(), QAAgent())
+        self.validation = ValidationService()
+        self.health_scores = HealthScoreService()
+        self.agents = Agents(ClassifierAgent(), RuleRetrieverAgent(self.rules), AutoFixAgent(), ValidatorAgent(self.validation), QAAgent(self.health_scores))
         self.llm = LLMAssistantAgent(settings.enable_llm, settings.google_api_key, settings.llm_model)
         self.reports = ReportAgent(settings.reports_path)
         self.executions = ExecutionRepository(sessions)

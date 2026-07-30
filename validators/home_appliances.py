@@ -2,6 +2,9 @@
 from __future__ import annotations
 import pandas as pd
 from domain.models import ValidationIssue
+from services.duplicate_detection import DuplicateDetection
+from services.format_validation import FormatValidation
+from services.missing_value_validation import MissingValueValidation
 from services.title_extraction import extract_product_attributes
 from validators.base import CategoryValidator
 
@@ -28,22 +31,19 @@ class HomeAppliancesValidator(CategoryValidator):
     def validate(self, frame: pd.DataFrame, rules: dict) -> list[ValidationIssue]:
         issues: list[ValidationIssue] = []
         names = {str(c).casefold(): c for c in frame.columns}
+        duplicates = DuplicateDetection(); formats = FormatValidation(); missing_values = MissingValueValidation()
         # Product feeds can be title-only. Enrichment is still useful without
         # technical Power/Dimensions columns, so those fields are optional.
         if "power" in names:
-            vals = frame[names["power"]].fillna("").astype(str)
-            issues.extend(ValidationIssue(i + 2, "Power", "invalid_power", "Power needs W or kW") for i in vals.index[~vals.str.contains(r"\b\d+(?:[.,]\d+)?\s*k?W\b", case=False, regex=True)])
+            issues.extend(formats.contains_regex(frame[names["power"]], r"\b\d+(?:[.,]\d+)?\s*k?W\b", "Power", "invalid_power", "Power needs W or kW"))
         if "dimensions" in names:
-            vals = frame[names["dimensions"]].fillna("").astype(str)
             pattern = r"^\s*\d+(?:[.,]\d+)?\s*[x×]\s*\d+(?:[.,]\d+)?\s*[x×]\s*\d+(?:[.,]\d+)?\s*(?:cm)?\s*$"
-            issues.extend(ValidationIssue(i + 2, "Dimensions", "invalid_dimensions", "Dimensions need D x R x C (cm)") for i in vals.index[~vals.str.match(pattern, case=False)])
+            issues.extend(formats.matches_regex(frame[names["dimensions"]], pattern, "Dimensions", "invalid_dimensions", "Dimensions need D x R x C (cm)"))
         if "product_title" not in names:
-            issues.extend(ValidationIssue(i + 2, "product_title", "missing_title", "product_title is required for enrichment") for i in frame.index)
+            issues.extend(missing_values.missing_column(frame, "product_title", "missing_title", "product_title is required for enrichment", use_frame_index=True))
         else:
             # A canonical title intentionally omits unrecognised marketing
             # details; using it as a dedupe key can therefore merge distinct
             # SKUs. Deduplicate only equivalent source titles.
-            normalized_titles = frame[names["product_title"]].fillna("").astype(str).str.replace(r"\s+", " ", regex=True).str.strip().str.casefold()
-            duplicates = normalized_titles.duplicated(keep="first")
-            issues.extend(ValidationIssue(i + 2, "product_title", "duplicate_product", "Duplicate normalized product title") for i in frame.index[duplicates])
+            issues.extend(duplicates.normalized_text_duplicates(frame[names["product_title"]], "product_title", "duplicate_product", "Duplicate normalized product title"))
         return issues
