@@ -4,7 +4,7 @@ An incremental foundation for an AI Data Studio that cleans, validates, enriches
 
 ## Current architecture
 
-`FastAPI route -> Container -> TabularUploadReader -> QualityService -> workflow agents -> validators/rules -> reports/repository`
+`FastAPI route -> Container -> TabularUploadReader -> QualityService -> LangGraph workflow -> validators/rules -> reports/repository`
 
 ## Project structure
 
@@ -41,6 +41,10 @@ New validator plugins should subclass `plugins.base.ValidatorPlugin`, declare a 
 Reusable validation mechanics live in `services/`: `ValidationService` preserves the existing partitioned validator execution; `HealthScoreService` preserves the clean-row score formula; `MissingValueValidation`, `FormatValidation`, and `DuplicateDetection` provide deterministic primitives; and `BusinessRuleValidation` dispatches typed YAML rules. Existing agents, validators, Rule Engine API, reports, and HTTP responses delegate to these services without changing their output contracts.
 
 `TabularUploadReader` is the single boundary for tabular user uploads. It accepts CSV, XLS, and XLSX files, limits payload size through `MAX_UPLOAD_BYTES`, rejects path-like filenames, and escapes spreadsheet-formula cells before downstream export.
+
+## LangGraph orchestration
+
+`WorkflowBuilder` composes the existing deterministic agents into a LangGraph state machine. `PlannerAgent` declares the validation sequence, and `WorkflowState` is the typed hand-off contract between nodes. The graph only orchestrates classification, rule retrieval, autofix, validation, and QA; validators, rule evaluation, reports, and API contracts are unchanged.
 
 ## Run
 

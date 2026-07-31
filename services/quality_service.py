@@ -11,16 +11,11 @@ from services.container import Container
 class QualityService:
     def __init__(self, container: Container) -> None: self._container = container
     def validate(self, frame: pd.DataFrame, source_bytes: bytes, requested_category: str | None = None) -> ExecutionSummary:
-        agents, registry = self._container.agents, self._container.registry
-        category = agents.classifier.classify(frame, registry.categories(), requested_category)
-        rules, version = agents.rules.retrieve(category)
-        cache_key = sha256(source_bytes + category.encode() + version.encode()).hexdigest()
+        result = self._container.workflow.run(frame, requested_category)
+        cache_key = sha256(source_bytes + result.category.encode() + result.rule_version.encode()).hexdigest()
         cached = self._container.cache.get(cache_key)
         if cached is not None: return ExecutionSummary(cached.execution_id, cached.category, cached.health_score, cached.report_paths, True)
-        validator = registry.get(category)
-        fixed = agents.fixer.fix(frame, validator)
-        issues = agents.validator.validate(fixed, validator, rules)
-        result = agents.qa.result(fixed, issues, category, version)
+        category, version, issues = result.category, result.rule_version, result.issues
         if self._container.settings.enable_llm:
             result.metadata["llm"] = {
                 "error_explanation": self._container.llm.explain_errors(issues),

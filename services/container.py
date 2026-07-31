@@ -10,6 +10,7 @@ from services.health_score_service import HealthScoreService
 from services.validation_service import ValidationService
 from plugins.registry import ValidatorRegistry
 from agents.workflow import Agents, AutoFixAgent, ClassifierAgent, QAAgent, RuleRetrieverAgent, ValidatorAgent
+from agents.graph import WorkflowBuilder
 from agents.llm import LLMAssistantAgent
 from reports.generator import ReportAgent
 
@@ -23,6 +24,7 @@ class Container:
         self.validation = ValidationService()
         self.health_scores = HealthScoreService()
         self.agents = Agents(ClassifierAgent(), RuleRetrieverAgent(self.rules), AutoFixAgent(), ValidatorAgent(self.validation), QAAgent(self.health_scores))
+        self.workflow = WorkflowBuilder(self.agents, self.registry)
         self.llm = LLMAssistantAgent(settings.enable_llm, settings.google_api_key, settings.llm_model)
         self.reports = ReportAgent(settings.reports_path)
         self.executions = ExecutionRepository(sessions)
