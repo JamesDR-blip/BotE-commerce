@@ -54,6 +54,10 @@ The workflow has dedicated Requirement, Category, Rule Retriever, QA, and Report
 
 `ExtractionAgent` uses the `ProductExtractor` interface and the built-in deterministic implementation to extract Brand, Model, Color, Size, Weight, Material, Voltage, Capacity, SKU, UPC, and GTIN from `product_title`, `title`, or `name`. Extraction results are read-only LangGraph state for now; they do not alter validation inputs or report/API contracts.
 
+## FastAPI backend
+
+The backend is dependency-injected through the application composition root. `POST /upload`, `/validate`, `/clean`, `/extract`, and `/mapping` accept safe CSV/XLS/XLSX uploads. `GET /history` and `GET /report/{execution_id}/{format}` expose execution records and generated reports. `/validations`, `/executions`, and `/executions/{id}/reports/{format}` remain compatible routes. Mapping returns non-mutating column suggestions; there is no frontend in this sprint.
+
 ## Run
 
 ```bash
