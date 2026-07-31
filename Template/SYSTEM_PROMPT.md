@@ -1102,17 +1102,8 @@ Completed:
 
 \- Sprint 0
 
-\- Sprint 1
-
-\- Sprint 2
-
-\- Sprint 3
-
-\- Sprint 4
-
-\- Sprint 5
-
-
+\- ...
+- Sprint 11
 
 Current architecture:
 
@@ -1122,15 +1113,17 @@ Current architecture:
 
 \- Logging and Config completed
 
-\- Validation implemented 
-
-
+\- Validation implemented
+- LangGraph implemented
+- Agent AI completed
+- Extraction implemented
+- FastAPI implemented
+- Database implemented
+- Streamlit Dashboard implemented
 
 Next sprint:
 
-Sprint 6 – LangGraph Foundation
-
-
+Sprint 12 – RAG 
 
 Follow the same project rules.
 
