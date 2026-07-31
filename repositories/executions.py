@@ -18,6 +18,9 @@ class ExecutionRepository:
     def history(self, limit: int = 50) -> list[ExecutionRecord]:
         with self._sessions() as session:
             return list(session.scalars(select(ExecutionRecord).order_by(ExecutionRecord.created_at.desc()).limit(limit)))
+    def get(self, execution_id: str) -> ExecutionRecord | None:
+        with self._sessions() as session:
+            return session.get(ExecutionRecord, execution_id)
     def report_path(self, execution_id: str, report_format: str) -> str | None:
         with self._sessions() as session:
             return session.scalar(select(ReportRecord.path).where(ReportRecord.execution_id == execution_id, ReportRecord.format == report_format))

@@ -3,6 +3,7 @@ from __future__ import annotations
 from configs.settings import Settings
 from database.models import make_session_factory
 from repositories.executions import ExecutionRepository
+from repositories.users import UserRepository
 from repositories.rules import RuleRepository
 from services.cache import TTLCache
 from services.upload_reader import TabularUploadReader
@@ -35,6 +36,7 @@ class Container:
         self.reports = ReportAgent(settings.reports_path)
         self.reporter = ReporterAgent(self.reports)
         self.executions = ExecutionRepository(sessions)
+        self.users = UserRepository(sessions)
         self.cache = TTLCache(settings.cache_ttl_seconds)
         self.uploads = TabularUploadReader(settings.max_upload_bytes)
         self.data_operations = DataOperationsService(self.agents, self.registry)

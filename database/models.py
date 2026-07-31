@@ -9,15 +9,26 @@ class Base(DeclarativeBase):
     pass
 
 
+class UserRecord(Base):
+    __tablename__ = "users"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    executions: Mapped[list["ExecutionRecord"]] = relationship(back_populates="user")
+
+
 class ExecutionRecord(Base):
     __tablename__ = "executions"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
     category: Mapped[str] = mapped_column(String(100), index=True)
     source_hash: Mapped[str] = mapped_column(String(64), index=True)
     rule_version: Mapped[str] = mapped_column(String(64))
     health_score: Mapped[float] = mapped_column(Float)
     status: Mapped[str] = mapped_column(String(20), default="completed")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    user: Mapped[UserRecord | None] = relationship(back_populates="executions")
     reports: Mapped[list["ReportRecord"]] = relationship(back_populates="execution", cascade="all, delete-orphan")
     logs: Mapped[list["ValidationLogRecord"]] = relationship(back_populates="execution", cascade="all, delete-orphan")
 
