@@ -25,6 +25,7 @@ class WorkflowBuilder:
         graph.add_node("requirements", self._requirements)
         graph.add_node("classify", self._classify)
         graph.add_node("retrieve_rules", self._retrieve_rules)
+        graph.add_node("extract", self._extract)
         graph.add_node("autofix", self._autofix)
         graph.add_node("validate", self._validate)
         graph.add_node("qa", self._qa)
@@ -32,7 +33,8 @@ class WorkflowBuilder:
         graph.add_edge("plan", "requirements")
         graph.add_edge("requirements", "classify")
         graph.add_edge("classify", "retrieve_rules")
-        graph.add_edge("retrieve_rules", "autofix")
+        graph.add_edge("retrieve_rules", "extract")
+        graph.add_edge("extract", "autofix")
         graph.add_edge("autofix", "validate")
         graph.add_edge("validate", "qa")
         graph.add_edge("qa", END)
@@ -57,6 +59,9 @@ class WorkflowBuilder:
     def _autofix(self, state: WorkflowState) -> dict[str, object]:
         validator = self._registry.get(state["category"])
         return {"fixed_frame": self._agents.fixer.fix(state["frame"], validator)}
+
+    def _extract(self, state: WorkflowState) -> dict[str, object]:
+        return {"extractions": self._agents.extraction.extract(state["frame"])}
 
     def _validate(self, state: WorkflowState) -> dict[str, object]:
         validator = self._registry.get(state["category"])

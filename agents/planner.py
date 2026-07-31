@@ -7,7 +7,7 @@ from .state import WorkflowState
 class PlannerAgent:
     """Select the standard validation steps without performing their work."""
 
-    _VALIDATION_PLAN = ("requirements", "classify", "retrieve_rules", "autofix", "validate", "qa")
+    _VALIDATION_PLAN = ("requirements", "classify", "retrieve_rules", "extract", "autofix", "validate", "qa")
 
     def plan(self, state: WorkflowState) -> dict[str, tuple[str, ...]]:
         if not state["categories"]:

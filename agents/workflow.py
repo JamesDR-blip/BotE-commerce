@@ -6,6 +6,7 @@ from services.validation_service import ValidationService
 from domain.models import ValidationIssue
 from rule_engine.models import RuleSet
 from .category import CategoryAgent
+from .extraction import ExtractionAgent
 from .qa import QAAgent
 from .requirement import RequirementAgent
 from .rule_retriever import RuleRetrieverAgent
@@ -32,4 +33,4 @@ class LLMExplanationAgent:
 
 @dataclass
 class Agents:
-    requirements: RequirementAgent; classifier: CategoryAgent; rules: RuleRetrieverAgent; fixer: AutoFixAgent; validator: ValidatorAgent; qa: QAAgent
+    requirements: RequirementAgent; classifier: CategoryAgent; rules: RuleRetrieverAgent; extraction: ExtractionAgent; fixer: AutoFixAgent; validator: ValidatorAgent; qa: QAAgent

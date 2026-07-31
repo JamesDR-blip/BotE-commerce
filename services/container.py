@@ -12,6 +12,8 @@ from plugins.registry import ValidatorRegistry
 from agents.workflow import Agents, AutoFixAgent, ClassifierAgent, QAAgent, RuleRetrieverAgent, ValidatorAgent
 from agents.requirement import RequirementAgent
 from agents.reporter import ReporterAgent
+from agents.extraction import ExtractionAgent
+from extractors.deterministic import DeterministicProductExtractor
 from agents.graph import WorkflowBuilder
 from agents.llm import LLMAssistantAgent
 from reports.generator import ReportAgent
@@ -25,7 +27,7 @@ class Container:
         self.rules = RuleRepository(settings.rules_path)
         self.validation = ValidationService()
         self.health_scores = HealthScoreService()
-        self.agents = Agents(RequirementAgent(), ClassifierAgent(), RuleRetrieverAgent(self.rules), AutoFixAgent(), ValidatorAgent(self.validation), QAAgent(self.health_scores))
+        self.agents = Agents(RequirementAgent(), ClassifierAgent(), RuleRetrieverAgent(self.rules), ExtractionAgent(DeterministicProductExtractor()), AutoFixAgent(), ValidatorAgent(self.validation), QAAgent(self.health_scores))
         self.workflow = WorkflowBuilder(self.agents, self.registry)
         self.llm = LLMAssistantAgent(settings.enable_llm, settings.google_api_key, settings.llm_model)
         self.reports = ReportAgent(settings.reports_path)

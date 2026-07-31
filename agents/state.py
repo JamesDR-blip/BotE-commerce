@@ -8,6 +8,7 @@ import pandas as pd
 from domain.models import ValidationIssue, ValidationResult
 from rule_engine.models import RuleSet
 from .requirement import ValidationRequirement
+from extractors.base import ExtractedAttributes
 
 
 class WorkflowState(TypedDict, total=False):
@@ -21,6 +22,7 @@ class WorkflowState(TypedDict, total=False):
     category: str
     rules: RuleSet
     rule_version: str
+    extractions: list[ExtractedAttributes]
     fixed_frame: pd.DataFrame
     issues: list[ValidationIssue]
     result: ValidationResult

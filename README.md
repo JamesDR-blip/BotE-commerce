@@ -50,6 +50,10 @@ Reusable validation mechanics live in `services/`: `ValidationService` preserves
 
 The workflow has dedicated Requirement, Category, Rule Retriever, QA, and Reporter agents. They are deterministic collaborators around the existing application services. `LLMAssistantAgent` is optional and is restricted to plain-text inference for explanations, suggested manual fixes, and report summaries. It has no tools, no code-execution path, and no generated content is evaluated by the application.
 
+## Product extraction
+
+`ExtractionAgent` uses the `ProductExtractor` interface and the built-in deterministic implementation to extract Brand, Model, Color, Size, Weight, Material, Voltage, Capacity, SKU, UPC, and GTIN from `product_title`, `title`, or `name`. Extraction results are read-only LangGraph state for now; they do not alter validation inputs or report/API contracts.
+
 ## Run
 
 ```bash
