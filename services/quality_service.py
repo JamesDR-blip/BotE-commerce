@@ -22,7 +22,7 @@ class QualityService:
                 "suggested_fixes": self._container.llm.suggest_fixes(issues),
                 "summary": self._container.llm.summarize_report(issues),
             }
-        execution_id = str(uuid4()); paths = self._container.reports.generate(execution_id, result)
+        execution_id = str(uuid4()); paths = self._container.reporter.generate(execution_id, result)
         self._container.executions.save(ExecutionRecord(id=execution_id, category=category, source_hash=sha256(source_bytes).hexdigest(), rule_version=version, health_score=result.health_score), issues, paths)
         summary = ExecutionSummary(execution_id, category, result.health_score, paths)
         self._container.cache.set(cache_key, summary)

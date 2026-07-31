@@ -22,13 +22,15 @@ class WorkflowBuilder:
     def build(self):
         graph = StateGraph(WorkflowState)
         graph.add_node("plan", self._planner.plan)
+        graph.add_node("requirements", self._requirements)
         graph.add_node("classify", self._classify)
         graph.add_node("retrieve_rules", self._retrieve_rules)
         graph.add_node("autofix", self._autofix)
         graph.add_node("validate", self._validate)
         graph.add_node("qa", self._qa)
         graph.add_edge(START, "plan")
-        graph.add_edge("plan", "classify")
+        graph.add_edge("plan", "requirements")
+        graph.add_edge("requirements", "classify")
         graph.add_edge("classify", "retrieve_rules")
         graph.add_edge("retrieve_rules", "autofix")
         graph.add_edge("autofix", "validate")
@@ -43,7 +45,10 @@ class WorkflowBuilder:
         return state["result"]
 
     def _classify(self, state: WorkflowState) -> dict[str, str]:
-        return {"category": self._agents.classifier.classify(state["frame"], state["categories"], state.get("requested_category"))}
+        return {"category": self._agents.classifier.classify(state["frame"], state["categories"], state["requirement"].requested_category)}
+
+    def _requirements(self, state: WorkflowState) -> dict[str, object]:
+        return {"requirement": self._agents.requirements.interpret(state.get("requested_category"))}
 
     def _retrieve_rules(self, state: WorkflowState) -> dict[str, object]:
         rules, version = self._agents.rules.retrieve(state["category"])

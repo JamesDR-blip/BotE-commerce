@@ -7,6 +7,7 @@ import pandas as pd
 
 from domain.models import ValidationIssue, ValidationResult
 from rule_engine.models import RuleSet
+from .requirement import ValidationRequirement
 
 
 class WorkflowState(TypedDict, total=False):
@@ -14,6 +15,7 @@ class WorkflowState(TypedDict, total=False):
 
     frame: pd.DataFrame
     requested_category: str | None
+    requirement: ValidationRequirement
     categories: list[str]
     plan: tuple[str, ...]
     category: str

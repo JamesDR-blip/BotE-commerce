@@ -46,6 +46,10 @@ Reusable validation mechanics live in `services/`: `ValidationService` preserves
 
 `WorkflowBuilder` composes the existing deterministic agents into a LangGraph state machine. `PlannerAgent` declares the validation sequence, and `WorkflowState` is the typed hand-off contract between nodes. The graph only orchestrates classification, rule retrieval, autofix, validation, and QA; validators, rule evaluation, reports, and API contracts are unchanged.
 
+## AI agents and inference safety
+
+The workflow has dedicated Requirement, Category, Rule Retriever, QA, and Reporter agents. They are deterministic collaborators around the existing application services. `LLMAssistantAgent` is optional and is restricted to plain-text inference for explanations, suggested manual fixes, and report summaries. It has no tools, no code-execution path, and no generated content is evaluated by the application.
+
 ## Run
 
 ```bash
