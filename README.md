@@ -58,6 +58,10 @@ The workflow has dedicated Requirement, Category, Rule Retriever, QA, and Report
 
 The backend is dependency-injected through the application composition root. `POST /upload`, `/validate`, `/clean`, `/extract`, and `/mapping` accept safe CSV/XLS/XLSX uploads. `GET /history` and `GET /report/{execution_id}/{format}` expose execution records and generated reports. `/validations`, `/executions`, and `/executions/{id}/reports/{format}` remain compatible routes. Mapping returns non-mutating column suggestions; there is no frontend in this sprint.
 
+## Streamlit dashboard
+
+Run FastAPI first, then run `streamlit run dashboard.py`. The dashboard uses `API_BASE_URL` (default `http://127.0.0.1:8000`) and communicates only through HTTP. It supports uploads and validation, health-score display, report downloads, execution history, and a health-score trend chart.
+
 ## Persistence and migrations
 
 SQLAlchemy persists users, executions (including health scores), report paths, and validation logs. Executions may have a nullable user owner so existing integrations remain compatible. Repositories provide the application boundary for each persisted aggregate. For deployment, install dependencies and run `alembic upgrade head`; the legacy schema auto-create path remains for local/test compatibility.

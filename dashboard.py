@@ -1,5 +1,5 @@
-"""Backward-compatible Streamlit entry point.
+"""Backward-compatible Streamlit entry point."""
+from app.dashboard import main
 
-The dashboard implementation lives in :mod:`app.dashboard`.
-"""
-from app.dashboard import *  # noqa: F403
+
+main()
