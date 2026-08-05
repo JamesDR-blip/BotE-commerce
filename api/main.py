@@ -81,14 +81,14 @@ async def _read_frame(file: UploadFile, container: Container):
 async def _validate_upload(file: UploadFile, category: str | None, container: Container, service: QualityService) -> ValidationResponse:
     content = await file.read()
     try:
-        logger.info("validation_requested", extra={"event": "validation_requested", "filename": file.filename, "requested_category": category})
+        logger.info("validation_requested", extra={"event": "validation_requested", "upload_filename": file.filename, "requested_category": category})
         frame = container.uploads.read(file.filename, content)
         result = service.validate(frame, content, category)
         urls = {name: f"/executions/{result.execution_id}/reports/{name}" for name in result.report_paths}
         logger.info("validation_completed", extra={"event": "validation_completed", "execution_id": result.execution_id, "category": result.category, "cached": result.cached})
         return ValidationResponse(execution_id=result.execution_id, category=result.category, health_score=result.health_score, reports=urls, cached=result.cached)
     except (ValueError, KeyError) as exc:
-        logger.warning("validation_rejected", extra={"event": "validation_rejected", "filename": file.filename, "reason": str(exc)})
+        logger.warning("validation_rejected", extra={"event": "validation_rejected", "upload_filename": file.filename, "reason": str(exc)})
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
