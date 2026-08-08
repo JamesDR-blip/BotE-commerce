@@ -12,7 +12,8 @@ from .requirement import RequirementAgent
 from .rule_retriever import RuleRetrieverAgent
 
 
-ClassifierAgent = CategoryAgent
+class ClassifierAgent(CategoryAgent):
+    pass
 
 
 class AutoFixAgent:
@@ -20,7 +21,7 @@ class AutoFixAgent:
 
 
 class ValidatorAgent:
-    def __init__(self, service: ValidationService | None = None) -> None: self._service = service or ValidationService()
+    def __init__(self, service: ValidationService | None = None) -> None: self._service = service
     def validate(self, frame: pd.DataFrame, validator, rules: RuleSet) -> list[ValidationIssue]:
         return self._service.validate(frame, validator, rules)
 

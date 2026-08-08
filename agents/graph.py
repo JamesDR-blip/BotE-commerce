@@ -10,6 +10,13 @@ from .planner import PlannerAgent
 from .state import WorkflowState
 from .workflow import Agents
 
+from .nodes.requirement import RequirementNode
+from .nodes.classifier import ClassifierNode
+from .nodes.rule_retrieval import RuleRetrievalNode
+from .nodes.extraction import ExtractionNode
+from .nodes.autofix import AutoFixNode
+from .nodes.validation import ValidationNode
+from .nodes.qa import QANode
 
 class WorkflowBuilder:
     """Build the validation graph while leaving domain work in existing agents."""
@@ -18,17 +25,24 @@ class WorkflowBuilder:
         self._agents = agents
         self._registry = registry
         self._planner = planner or PlannerAgent()
+        self._requirement_node = RequirementNode(self._agents.requirements)
+        self._classifier_node = ClassifierNode(self._agents.classifier)
+        self._rule_retrieval_node = RuleRetrievalNode(self._agents.rules)
+        self._extraction_node = ExtractionNode(self._agents.extraction)
+        self._autofix_node = AutoFixNode(self._agents.fixer, self._registry)
+        self._validation_node = ValidationNode(self._agents.validator, self._registry)
+        self._qa_node = QANode(self._agents.qa)
 
     def build(self):
         graph = StateGraph(WorkflowState)
         graph.add_node("plan", self._planner.plan)
-        graph.add_node("requirements", self._requirements)
-        graph.add_node("classify", self._classify)
-        graph.add_node("retrieve_rules", self._retrieve_rules)
-        graph.add_node("extract", self._extract)
-        graph.add_node("autofix", self._autofix)
-        graph.add_node("validate", self._validate)
-        graph.add_node("qa", self._qa)
+        graph.add_node("requirements", self._requirement_node)
+        graph.add_node("classify", self._classifier_node)
+        graph.add_node("retrieve_rules", self._rule_retrieval_node)
+        graph.add_node("extract", self._extraction_node)
+        graph.add_node("autofix", self._autofix_node)
+        graph.add_node("validate", self._validation_node)
+        graph.add_node("qa", self._qa_node)
         graph.add_edge(START, "plan")
         graph.add_edge("plan", "requirements")
         graph.add_edge("requirements", "classify")
@@ -45,27 +59,3 @@ class WorkflowBuilder:
             {"frame": frame, "requested_category": requested_category, "categories": self._registry.categories()}
         )
         return state["result"]
-
-    def _classify(self, state: WorkflowState) -> dict[str, str]:
-        return {"category": self._agents.classifier.classify(state["frame"], state["categories"], state["requirement"].requested_category)}
-
-    def _requirements(self, state: WorkflowState) -> dict[str, object]:
-        return {"requirement": self._agents.requirements.interpret(state.get("requested_category"))}
-
-    def _retrieve_rules(self, state: WorkflowState) -> dict[str, object]:
-        rules, version = self._agents.rules.retrieve(state["category"])
-        return {"rules": rules, "rule_version": version}
-
-    def _autofix(self, state: WorkflowState) -> dict[str, object]:
-        validator = self._registry.get(state["category"])
-        return {"fixed_frame": self._agents.fixer.fix(state["frame"], validator)}
-
-    def _extract(self, state: WorkflowState) -> dict[str, object]:
-        return {"extractions": self._agents.extraction.extract(state["frame"])}
-
-    def _validate(self, state: WorkflowState) -> dict[str, object]:
-        validator = self._registry.get(state["category"])
-        return {"issues": self._agents.validator.validate(state["fixed_frame"], validator, state["rules"])}
-
-    def _qa(self, state: WorkflowState) -> dict[str, ValidationResult]:
-        return {"result": self._agents.qa.result(state["fixed_frame"], state["issues"], state["category"], state["rule_version"])}
