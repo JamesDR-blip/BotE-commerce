@@ -1,11 +1,15 @@
 from fastapi.testclient import TestClient
 
 from api.main import create_app
+from unittest.mock import patch
 from configs.settings import Settings
 
 
 def _client() -> TestClient:
-    return TestClient(create_app(Settings(database_url="sqlite://")))
+    return TestClient(
+        create_app(Settings(database_url="sqlite://")), 
+        raise_server_exceptions=False,
+    )
 
 
 def test_upload_clean_extract_and_mapping_endpoints() -> None:
@@ -32,3 +36,73 @@ def test_history_and_report_aliases_are_available() -> None:
     client.app.state.container.executions = EmptyExecutions()
     assert client.get("/history").status_code == 200
     assert client.get("/report/missing/json").status_code == 404
+
+
+def test_validate_rejects_unsupported_category() -> None:
+    client = _client()
+
+    file = {
+        "file": (
+            "products.csv",
+            b"product_title,Price\nPhilips HX-200 Blue 220V,100\n",
+            "text/csv",
+        )
+    }
+
+    response = client.post(
+        "/validate",
+        files=file,
+        data={"category": "UnsupportedCategory"},
+    )
+
+    assert response.status_code == 422
+    assert "Unsupported category" in response.json()["detail"]
+
+
+def test_validate_does_not_convert_unexpected_error_to_422() -> None:
+    client = _client()
+
+    file = {
+        "file": (
+            "products.csv",
+            b"product_title,Price\nPhilips HX-200 Blue 220V,100\n",
+            "text/csv",
+        )
+    }
+
+    with patch.object(
+        client.app.state.quality_service,
+        "validate",
+        side_effect=RuntimeError("unexpected failure"),
+    ):
+        response = client.post(
+            "/validate",
+            files=file,
+        )
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Internal server error"}
+
+
+def test_unexpected_error_is_logged_without_exposing_details(caplog) -> None:
+    client = _client()
+
+    file = {
+        "file": (
+            "products.csv",
+            b"product_title,Price\nPhilips HX-200 Blue 220V,100\n",
+            "text/csv",
+        )
+    }
+
+    with caplog.at_level("ERROR"), patch.object(
+        client.app.state.quality_service,
+        "validate",
+        side_effect=RuntimeError("secret internal failure"),
+    ):
+        response = client.post("/validate", files=file)
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Internal server error"}
+    assert "secret internal failure" not in response.text
+    assert "unexpected_application_error" in caplog.text

@@ -2,8 +2,9 @@
 from __future__ import annotations
 import logging
 from pathlib import Path
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse
+from domain.exceptions import ValidationRequestError
 from api.dependencies import get_container, get_data_operations, get_mapping_service, get_quality_service
 from schemas.responses import ExtractionResponse, HistoryResponse, MappingResponse, TabularPreviewResponse, UploadResponse, ValidationResponse
 from configs.settings import Settings
@@ -16,12 +17,26 @@ from services.mapping_service import MappingService
 logger = logging.getLogger(__name__)
 
 
+def _internal_server_error(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception(
+        "unexpected_application_error",
+        extra={
+            "event": "unexpected_application_error",
+        },
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     configure_logging(settings.log_level)
     logger.info("application_configured", extra={"event": "application_configured", "environment": settings.environment})
     container = Container(settings); service = QualityService(container)
     app = FastAPI(title="AI Data Quality Platform", version="1.0.0")
+    app.add_exception_handler(Exception, _internal_server_error)
     app.state.container = container
     app.state.quality_service = service
     app.state.data_operations = container.data_operations
@@ -87,7 +102,7 @@ async def _validate_upload(file: UploadFile, category: str | None, container: Co
         urls = {name: f"/executions/{result.execution_id}/reports/{name}" for name in result.report_paths}
         logger.info("validation_completed", extra={"event": "validation_completed", "execution_id": result.execution_id, "category": result.category, "cached": result.cached})
         return ValidationResponse(execution_id=result.execution_id, category=result.category, health_score=result.health_score, reports=urls, cached=result.cached)
-    except (ValueError, KeyError) as exc:
+    except ValidationRequestError as exc:
         logger.warning("validation_rejected", extra={"event": "validation_rejected", "upload_filename": file.filename, "reason": str(exc)})
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

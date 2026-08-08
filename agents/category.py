@@ -1,5 +1,6 @@
 """Deterministic category inference agent."""
 from __future__ import annotations
+from domain.exceptions import ValidationRequestError
 
 import pandas as pd
 
@@ -10,7 +11,7 @@ class CategoryAgent:
     def classify(self, frame: pd.DataFrame, choices: list[str], requested: str | None = None) -> str:
         if requested:
             if requested not in choices:
-                raise ValueError(f"Unsupported category: {requested}")
+                raise ValidationRequestError(f"Unsupported category: {requested}")
             return requested
         columns = {str(column).casefold() for column in frame.columns}
         signals = {
