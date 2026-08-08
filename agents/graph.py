@@ -1,6 +1,9 @@
 """LangGraph builder that coordinates existing validation agents."""
 from __future__ import annotations
 
+import logging
+from uuid import uuid4
+
 from langgraph.graph import END, START, StateGraph
 
 from domain.models import ValidationResult
@@ -18,6 +21,10 @@ from .nodes.extraction import ExtractionNode
 from .nodes.autofix import AutoFixNode
 from .nodes.validation import ValidationNode
 from .nodes.qa import QANode
+
+
+logger = logging.getLogger(__name__)
+
 
 class WorkflowBuilder:
     """Build the validation graph while leaving domain work in existing agents."""
@@ -68,12 +75,54 @@ class WorkflowBuilder:
         
         return graph.compile()
 
-    def run(self, frame, requested_category: str | None = None) -> ValidationResult:
-        state = self._graph.invoke(
-            {
-                "frame": frame,
-                "requested_category": requested_category,
-                "categories": self._registry.categories(),
-            }
+    def run(
+        self,
+        frame,
+        requested_category: str | None = None,
+        execution_id: str | None = None,
+    ) -> ValidationResult:
+        execution_id = execution_id or str(uuid4())
+
+        logger.info(
+            "workflow_started",
+            extra={
+                "event": "workflow_started",
+                "execution_id": execution_id,
+                "workflow": "validation",
+            },
         )
-        return state["result"]
+
+        try:
+            state = self._graph.invoke(
+                {
+                    "frame": frame,
+                    "execution_id": execution_id,
+                    "requested_category": requested_category,
+                    "categories": self._registry.categories(),
+                }
+            )
+
+            result = state["result"]
+
+            logger.info(
+                "workflow_completed",
+                extra={
+                    "event": "workflow_completed",
+                    "execution_id": execution_id,
+                    "workflow": "validation",
+                    "category": result.category,
+                },
+            )
+
+            return result
+
+        except Exception:
+            logger.exception(
+                "workflow_failed",
+                extra={
+                    "event": "workflow_failed",
+                    "execution_id": execution_id,
+                    "workflow": "validation",
+                },
+            )
+            raise

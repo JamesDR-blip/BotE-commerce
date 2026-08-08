@@ -1,4 +1,6 @@
 import pandas as pd
+import pytest
+import logging
 from pathlib import Path
 
 from agents.graph import WorkflowBuilder
@@ -72,3 +74,111 @@ def test_workflow_builder_compiles_graph_once() -> None:
         builder.run(frame)
 
         assert build_mock.call_count == 1
+
+
+def test_workflow_logs_started_and_completed(caplog) -> None:
+    agents = Agents(
+        RequirementAgent(),
+        ClassifierAgent(),
+        RuleRetrieverAgent(
+            RuleRepository(Path("rules_library.yaml"))
+        ),
+        ExtractionAgent(
+            DeterministicProductExtractor()
+        ),
+        AutoFixAgent(),
+        ValidatorAgent(ValidationService()),
+        QAAgent(HealthScoreService()),
+    )
+
+    builder = WorkflowBuilder(
+        agents,
+        ValidatorRegistry(),
+    )
+
+    execution_id = "test-execution-123"
+
+    with caplog.at_level(logging.INFO, logger="agents.graph"):
+        result = builder.run(
+            pd.DataFrame(
+                {
+                    "Size": ["s"],
+                    "Color": [" Red "],
+                    "Price": ["100"],
+                }
+            ),
+            execution_id=execution_id,
+        )
+
+    events = [
+        record.__dict__.get("event")
+        for record in caplog.records
+    ]
+
+    assert "workflow_started" in events
+    assert "workflow_completed" in events
+
+    started = next(
+        record for record in caplog.records
+        if record.__dict__.get("event") == "workflow_started"
+    )
+
+    completed = next(
+        record for record in caplog.records
+        if record.__dict__.get("event") == "workflow_completed"
+    )
+
+    assert started.__dict__["execution_id"] == execution_id
+    assert completed.__dict__["execution_id"] == execution_id
+    assert completed.__dict__["category"] == "Fashion"
+    assert result.category == "Fashion"
+
+
+def test_workflow_logs_failed_execution(caplog, monkeypatch) -> None:
+    agents = Agents(
+        RequirementAgent(),
+        ClassifierAgent(),
+        RuleRetrieverAgent(
+            RuleRepository(Path("rules_library.yaml"))
+        ),
+        ExtractionAgent(
+            DeterministicProductExtractor()
+        ),
+        AutoFixAgent(),
+        ValidatorAgent(ValidationService()),
+        QAAgent(HealthScoreService()),
+    )
+
+    builder = WorkflowBuilder(
+        agents,
+        ValidatorRegistry(),
+    )
+
+    execution_id = "test-failed-execution"
+
+    def fail(*args, **kwargs):
+        raise RuntimeError("forced workflow failure")
+
+    monkeypatch.setattr(builder._graph, "invoke", fail)
+
+    with caplog.at_level(logging.INFO, logger="agents.graph"):
+        with pytest.raises(RuntimeError, match="forced workflow failure"):
+            builder.run(
+                pd.DataFrame(
+                    {
+                        "Size": ["s"],
+                        "Color": [" Red "],
+                        "Price": ["100"],
+                    }
+                ),
+                execution_id=execution_id,
+            )
+
+    failed = next(
+        record
+        for record in caplog.records
+        if record.__dict__.get("event") == "workflow_failed"
+    )
+
+    assert failed.__dict__["execution_id"] == execution_id
+    assert failed.__dict__["workflow"] == "validation"
