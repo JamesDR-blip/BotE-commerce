@@ -8,6 +8,7 @@ from plugins.registry import ValidatorRegistry
 
 from .planner import PlannerAgent
 from .state import WorkflowState
+from .router import WorkflowRouter
 from .workflow import Agents
 
 from .nodes.requirement import RequirementNode
@@ -32,6 +33,9 @@ class WorkflowBuilder:
         self._autofix_node = AutoFixNode(self._agents.fixer, self._registry)
         self._validation_node = ValidationNode(self._agents.validator, self._registry)
         self._qa_node = QANode(self._agents.qa)
+        self._router = WorkflowRouter()
+        self._graph = self.build()
+        
 
     def build(self):
         graph = StateGraph(WorkflowState)
@@ -43,8 +47,17 @@ class WorkflowBuilder:
         graph.add_node("autofix", self._autofix_node)
         graph.add_node("validate", self._validation_node)
         graph.add_node("qa", self._qa_node)
+
         graph.add_edge(START, "plan")
-        graph.add_edge("plan", "requirements")
+
+        graph.add_conditional_edges(
+            "plan",
+            self._router.route,
+            {
+                "validation": "requirements",
+            },
+        )
+
         graph.add_edge("requirements", "classify")
         graph.add_edge("classify", "retrieve_rules")
         graph.add_edge("retrieve_rules", "extract")
@@ -52,10 +65,15 @@ class WorkflowBuilder:
         graph.add_edge("autofix", "validate")
         graph.add_edge("validate", "qa")
         graph.add_edge("qa", END)
+        
         return graph.compile()
 
     def run(self, frame, requested_category: str | None = None) -> ValidationResult:
-        state = self.build().invoke(
-            {"frame": frame, "requested_category": requested_category, "categories": self._registry.categories()}
+        state = self._graph.invoke(
+            {
+                "frame": frame,
+                "requested_category": requested_category,
+                "categories": self._registry.categories(),
+            }
         )
         return state["result"]
