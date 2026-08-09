@@ -15,8 +15,14 @@ class WorkflowState(TypedDict, total=False):
     """Data passed between orchestration nodes, not a business-domain model."""
 
     frame: pd.DataFrame
+
+    # Execution context
     execution_id: str
+    workflow: str
+    execution_status: str
+
     requested_category: str | None
+
     requirement: ValidationRequirement
     categories: list[str]
     plan: tuple[str, ...]

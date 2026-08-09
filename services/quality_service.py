@@ -13,11 +13,39 @@ class QualityService:
     def validate(self, frame: pd.DataFrame, source_bytes: bytes, requested_category: str | None = None) -> ExecutionSummary:
         execution_id = str(uuid4())
 
-        result = self._container.workflow.run(
-            frame,
-            requested_category,
-            execution_id,
+        self._container.executions.create(
+            ExecutionRecord(
+                id=execution_id,
+                category=requested_category or "unknown",
+                source_hash=sha256(source_bytes).hexdigest(),
+                rule_version="unknown",
+                health_score=0.0,
+                status="RUNNING",
+            )
         )
+
+        try:
+            result = self._container.workflow.run(
+                frame,
+                requested_category,
+                execution_id,
+            )
+
+            self._container.executions.update_status(
+                execution_id,
+                "COMPLETED",
+            )
+
+        except Exception as exc:
+            print(
+                f"[QUALITY SERVICE ERROR] "
+                f"{type(exc).__name__}: {exc}"
+            )
+            self._container.executions.update_status(
+                execution_id,
+                "FAILED",
+            )
+            raise
         cache_key = sha256(source_bytes + result.category.encode() + result.rule_version.encode()).hexdigest()
         cached = self._container.cache.get(cache_key)
         if cached is not None: return ExecutionSummary(cached.execution_id, cached.category, cached.health_score, cached.report_paths, True)
@@ -29,7 +57,15 @@ class QualityService:
                 "summary": self._container.llm.summarize_report(issues),
             }
         paths = self._container.reporter.generate(execution_id, result)
-        self._container.executions.save(ExecutionRecord(id=execution_id, category=category, source_hash=sha256(source_bytes).hexdigest(), rule_version=version, health_score=result.health_score), issues, paths)
+        self._container.executions.save_result(
+            execution_id=execution_id,
+            category=category,
+            source_hash=sha256(source_bytes).hexdigest(),
+            rule_version=version,
+            health_score=result.health_score,
+            issues=issues,
+            reports=paths,
+        )
         summary = ExecutionSummary(execution_id, category, result.health_score, paths)
         self._container.cache.set(cache_key, summary)
         return summary

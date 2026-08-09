@@ -105,6 +105,17 @@ async def _validate_upload(file: UploadFile, category: str | None, container: Co
     except ValidationRequestError as exc:
         logger.warning("validation_rejected", extra={"event": "validation_rejected", "upload_filename": file.filename, "reason": str(exc)})
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception(
+            "validation_unexpected_error",
+            extra={
+                "event": "validation_unexpected_error",
+                "upload_filename": file.filename,
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            },
+        )
+        raise
 
 
 def _preview(category: str, frame) -> TabularPreviewResponse:

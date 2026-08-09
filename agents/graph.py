@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 from uuid import uuid4
 
+from langgraph import graph
 from langgraph.graph import END, START, StateGraph
 
 from domain.models import ValidationResult
@@ -22,6 +23,10 @@ from .nodes.extraction import ExtractionNode
 from .nodes.autofix import AutoFixNode
 from .nodes.validation import ValidationNode
 from .nodes.qa import QANode
+from .nodes.execution import (
+    ExecutionStartNode,
+    ExecutionCompleteNode,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -42,7 +47,10 @@ class WorkflowBuilder:
         self._validation_node = ValidationNode(self._agents.validator, self._registry)
         self._qa_node = QANode(self._agents.qa)
         self._router = WorkflowRouter()
+        self._execution_start_node = ExecutionStartNode()
+        self._execution_complete_node = ExecutionCompleteNode()
         self._graph = self.build()
+        
         
 
     def build(self):
@@ -87,8 +95,11 @@ class WorkflowBuilder:
             "qa",
             observe_node("qa", self._qa_node),
         )
+        graph.add_node("execution_start", self._execution_start_node)
+        graph.add_node("execution_complete", self._execution_complete_node)
 
-        graph.add_edge(START, "plan")
+        graph.add_edge(START, "execution_start")
+        graph.add_edge("execution_start", "plan")
 
         graph.add_conditional_edges(
             "plan",
@@ -104,8 +115,9 @@ class WorkflowBuilder:
         graph.add_edge("extract", "autofix")
         graph.add_edge("autofix", "validate")
         graph.add_edge("validate", "qa")
-        graph.add_edge("qa", END)
-        
+        graph.add_edge("qa", "execution_complete")
+        graph.add_edge("execution_complete", END)
+
         return graph.compile()
 
     def run(
@@ -130,6 +142,8 @@ class WorkflowBuilder:
                 {
                     "frame": frame,
                     "execution_id": execution_id,
+                    "workflow": "validation",
+                    "execution_status": "RUNNING",
                     "requested_category": requested_category,
                     "categories": self._registry.categories(),
                 }
@@ -144,6 +158,7 @@ class WorkflowBuilder:
                     "execution_id": execution_id,
                     "workflow": "validation",
                     "category": result.category,
+                    "status": "COMPLETED",
                 },
             )
 
@@ -156,6 +171,7 @@ class WorkflowBuilder:
                     "event": "workflow_failed",
                     "execution_id": execution_id,
                     "workflow": "validation",
+                    "status": "FAILED",
                 },
             )
             raise

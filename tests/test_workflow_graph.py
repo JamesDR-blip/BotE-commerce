@@ -182,3 +182,118 @@ def test_workflow_logs_failed_execution(caplog, monkeypatch) -> None:
 
     assert failed.__dict__["execution_id"] == execution_id
     assert failed.__dict__["workflow"] == "validation"
+
+
+def test_workflow_propagates_execution_context() -> None:
+    agents = Agents(
+        RequirementAgent(),
+        ClassifierAgent(),
+        RuleRetrieverAgent(
+            RuleRepository(Path("rules_library.yaml"))
+        ),
+        ExtractionAgent(
+            DeterministicProductExtractor()
+        ),
+        AutoFixAgent(),
+        ValidatorAgent(ValidationService()),
+        QAAgent(HealthScoreService()),
+    )
+
+    builder = WorkflowBuilder(
+        agents,
+        ValidatorRegistry(),
+    )
+
+    execution_id = "test-execution-001"
+
+    state = builder._graph.invoke(
+        {
+            "frame": pd.DataFrame(
+                {
+                    "Size": ["s"],
+                    "Color": [" Red "],
+                    "Price": ["100"],
+                }
+            ),
+            "execution_id": execution_id,
+            "workflow": "validation",
+            "requested_category": None,
+            "categories": builder._registry.categories(),
+        }
+    )
+
+    assert state["execution_id"] == execution_id
+    assert state["workflow"] == "validation"
+    assert state["execution_status"] == "COMPLETED"
+
+
+def test_workflow_marks_execution_completed() -> None:
+    agents = Agents(
+        RequirementAgent(),
+        ClassifierAgent(),
+        RuleRetrieverAgent(
+            RuleRepository(Path("rules_library.yaml"))
+        ),
+        ExtractionAgent(
+            DeterministicProductExtractor()
+        ),
+        AutoFixAgent(),
+        ValidatorAgent(ValidationService()),
+        QAAgent(HealthScoreService()),
+    )
+
+    builder = WorkflowBuilder(
+        agents,
+        ValidatorRegistry(),
+    )
+
+    execution_id = "test-execution-completed"
+
+    state = builder._graph.invoke(
+        {
+            "frame": pd.DataFrame(
+                {
+                    "Size": ["s"],
+                    "Color": [" Red "],
+                    "Price": ["100"],
+                }
+            ),
+            "execution_id": execution_id,
+            "workflow": "validation",
+            "requested_category": None,
+            "categories": builder._registry.categories(),
+        }
+    )
+
+    assert state["execution_id"] == execution_id
+    assert state["workflow"] == "validation"
+    assert state["execution_status"] == "COMPLETED"
+
+def test_execution_lifecycle_nodes() -> None:
+    from agents.nodes.execution import (
+        ExecutionStartNode,
+        ExecutionCompleteNode,
+        ExecutionFailedNode,
+    )
+
+    state = {
+        "execution_id": "test-execution-001",
+        "workflow": "validation",
+    }
+
+    started = ExecutionStartNode()(state)
+
+    assert started["execution_status"] == "RUNNING"
+    assert started["workflow"] == "validation"
+
+    completed = ExecutionCompleteNode()(
+        {**state, **started}
+    )
+
+    assert completed["execution_status"] == "COMPLETED"
+
+    failed = ExecutionFailedNode()(
+        {**state, **started}
+    )
+
+    assert failed["execution_status"] == "FAILED"
