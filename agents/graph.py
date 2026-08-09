@@ -13,6 +13,7 @@ from .planner import PlannerAgent
 from .state import WorkflowState
 from .router import WorkflowRouter
 from .workflow import Agents
+from .observability import observe_node
 
 from .nodes.requirement import RequirementNode
 from .nodes.classifier import ClassifierNode
@@ -46,14 +47,46 @@ class WorkflowBuilder:
 
     def build(self):
         graph = StateGraph(WorkflowState)
-        graph.add_node("plan", self._planner.plan)
-        graph.add_node("requirements", self._requirement_node)
-        graph.add_node("classify", self._classifier_node)
-        graph.add_node("retrieve_rules", self._rule_retrieval_node)
-        graph.add_node("extract", self._extraction_node)
-        graph.add_node("autofix", self._autofix_node)
-        graph.add_node("validate", self._validation_node)
-        graph.add_node("qa", self._qa_node)
+
+        graph.add_node(
+            "plan",
+            observe_node("plan", self._planner.plan),
+        )
+
+        graph.add_node(
+            "requirements",
+            observe_node("requirements", self._requirement_node),
+        )
+
+        graph.add_node(
+            "classify",
+            observe_node("classify", self._classifier_node),
+        )
+
+        graph.add_node(
+            "retrieve_rules",
+            observe_node("retrieve_rules", self._rule_retrieval_node),
+        )
+
+        graph.add_node(
+            "extract",
+            observe_node("extract", self._extraction_node),
+        )
+
+        graph.add_node(
+            "autofix",
+            observe_node("autofix", self._autofix_node),
+        )
+
+        graph.add_node(
+            "validate",
+            observe_node("validate", self._validation_node),
+        )
+
+        graph.add_node(
+            "qa",
+            observe_node("qa", self._qa_node),
+        )
 
         graph.add_edge(START, "plan")
 
