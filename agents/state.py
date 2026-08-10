@@ -6,6 +6,7 @@ from typing import TypedDict
 import pandas as pd
 
 from domain.models import ValidationIssue, ValidationResult
+from domain.plans import ExecutionPlan
 from rule_engine.models import RuleSet
 from .requirement import ValidationRequirement
 from extractors.base import ExtractedAttributes
@@ -25,7 +26,13 @@ class WorkflowState(TypedDict, total=False):
 
     requirement: ValidationRequirement
     categories: list[str]
+
+    # Legacy LangGraph routing plan.
     plan: tuple[str, ...]
+
+    # Capability-driven execution plan.
+    execution_plan: ExecutionPlan
+    
     category: str
     rules: RuleSet
     rule_version: str
