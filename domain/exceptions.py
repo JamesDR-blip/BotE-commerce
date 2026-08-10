@@ -8,3 +8,15 @@ class ApplicationError(Exception):
 
 class ValidationRequestError(ApplicationError):
     """Raised when a validation request cannot be processed."""
+
+
+class CapabilityError(Exception):
+    """Base exception for capability-related errors."""
+
+
+class CapabilityAlreadyRegisteredError(CapabilityError):
+    """Raised when a capability ID is already registered."""
+
+
+class CapabilityNotFoundError(CapabilityError):
+    """Raised when a requested capability does not exist."""

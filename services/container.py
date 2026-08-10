@@ -20,6 +20,8 @@ from extractors.deterministic import DeterministicProductExtractor
 from agents.graph import WorkflowBuilder
 from agents.llm import LLMAssistantAgent
 from reports.generator import ReportAgent
+from domain.capability_registry import CapabilityRegistry
+from capabilities.validation import ValidationCapability
 
 
 class Container:
@@ -32,7 +34,17 @@ class Container:
         self.health_scores = HealthScoreService()
         self.agents = Agents(RequirementAgent(), ClassifierAgent(), RuleRetrieverAgent(self.rules), ExtractionAgent(DeterministicProductExtractor()), AutoFixAgent(), ValidatorAgent(self.validation), QAAgent(self.health_scores))
         self.workflow = WorkflowBuilder(self.agents, self.registry)
-        self.llm = LLMAssistantAgent(settings.enable_llm, settings.google_api_key, settings.llm_model)
+
+        self.capabilities = CapabilityRegistry()
+        self.capabilities.register(
+            ValidationCapability(self.workflow)
+        )
+
+        self.llm = LLMAssistantAgent(
+            settings.enable_llm,
+            settings.google_api_key,
+            settings.llm_model,
+        )
         self.reports = ReportAgent(settings.reports_path)
         self.reporter = ReporterAgent(self.reports)
         self.executions = ExecutionRepository(sessions)
