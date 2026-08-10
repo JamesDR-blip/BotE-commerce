@@ -5,7 +5,6 @@ from __future__ import annotations
 import pandas as pd
 
 from domain.capabilities import (
-    Capability,
     CapabilityContext,
     CapabilityResult,
     CapabilitySpec,
@@ -13,28 +12,29 @@ from domain.capabilities import (
 from domain.validation_workflow import ValidationWorkflow
 
 
+VALIDATION_CAPABILITY_SPEC = CapabilitySpec(
+    id="data.validate",
+    version="1.0",
+    description="Validate ecommerce tabular data.",
+    input_keys=(
+        "frame",
+        "requested_category",
+    ),
+    output_keys=(
+        "validation_result",
+    ),
+)
+
+
 class ValidationCapability:
     """Expose the existing validation workflow as a platform capability."""
-
-    _SPEC = CapabilitySpec(
-        id="data.validate",
-        version="1.0",
-        description="Validate ecommerce tabular data.",
-        input_keys=(
-            "frame",
-            "requested_category",
-        ),
-        output_keys=(
-            "validation_result",
-        ),
-    )
 
     def __init__(self, workflow: ValidationWorkflow) -> None:
         self._workflow = workflow
 
     @property
     def spec(self) -> CapabilitySpec:
-        return self._SPEC
+        return VALIDATION_CAPABILITY_SPEC
 
     def execute(self, context: CapabilityContext) -> CapabilityResult:
         frame = context.inputs["frame"]
@@ -56,4 +56,7 @@ class ValidationCapability:
         )
 
 
-__all__ = ["ValidationCapability"]
+__all__ = [
+    "ValidationCapability",
+    "VALIDATION_CAPABILITY_SPEC",
+]

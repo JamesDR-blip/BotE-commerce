@@ -9,10 +9,17 @@ class ValidationRequirement:
     """The validated user intent available to the orchestration graph."""
 
     requested_category: str | None = None
-
+    requested_capabilities: tuple[str, ...] = ()
 
 class RequirementAgent:
     """Convert the current transport input into a typed workflow requirement."""
 
-    def interpret(self, requested_category: str | None = None) -> ValidationRequirement:
-        return ValidationRequirement(requested_category=requested_category)
+    def interpret(
+        self, 
+        requested_category: str | None = None, 
+        requested_capabilities: tuple[str, ...] = ()
+    ) -> ValidationRequirement:
+        return ValidationRequirement(
+            requested_category=requested_category,
+            requested_capabilities=requested_capabilities,
+        )

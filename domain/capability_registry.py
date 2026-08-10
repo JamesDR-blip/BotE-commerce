@@ -44,3 +44,10 @@ class CapabilityRegistry:
             capability.spec
             for capability in self._capabilities.values()
         )
+
+
+def catalog(self) -> dict[str, CapabilitySpec]:
+    return {
+        capability.spec.id: capability.spec
+        for capability in self._capabilities.values()
+    }

@@ -16,12 +16,14 @@ from agents.workflow import Agents, AutoFixAgent, ClassifierAgent, QAAgent, Rule
 from agents.requirement import RequirementAgent
 from agents.reporter import ReporterAgent
 from agents.extraction import ExtractionAgent
+from agents.planner import PlannerAgent
 from extractors.deterministic import DeterministicProductExtractor
 from agents.graph import WorkflowBuilder
 from agents.llm import LLMAssistantAgent
 from reports.generator import ReportAgent
 from domain.capability_registry import CapabilityRegistry
-from capabilities.validation import ValidationCapability
+from domain.dependency_resolver import DependencyResolver
+from capabilities.validation import ValidationCapability, VALIDATION_CAPABILITY_SPEC
 
 
 class Container:
@@ -33,18 +35,27 @@ class Container:
         self.validation = ValidationService()
         self.health_scores = HealthScoreService()
         self.agents = Agents(RequirementAgent(), ClassifierAgent(), RuleRetrieverAgent(self.rules), ExtractionAgent(DeterministicProductExtractor()), AutoFixAgent(), ValidatorAgent(self.validation), QAAgent(self.health_scores))
-        self.workflow = WorkflowBuilder(self.agents, self.registry)
 
         self.capabilities = CapabilityRegistry()
-        self.capabilities.register(
-            ValidationCapability(self.workflow)
+
+        capability_catalog = {
+            VALIDATION_CAPABILITY_SPEC.id: VALIDATION_CAPABILITY_SPEC,
+        }
+
+        planner = PlannerAgent(
+            catalog=capability_catalog,
+            resolver=DependencyResolver(),
         )
 
-        self.llm = LLMAssistantAgent(
-            settings.enable_llm,
-            settings.google_api_key,
-            settings.llm_model,
+        self.workflow = WorkflowBuilder(
+            self.agents,
+            self.registry,
+            planner=planner,
         )
+
+        validation_capability = ValidationCapability(self.workflow)
+        self.capabilities.register(validation_capability)
+        
         self.reports = ReportAgent(settings.reports_path)
         self.reporter = ReporterAgent(self.reports)
         self.executions = ExecutionRepository(sessions)

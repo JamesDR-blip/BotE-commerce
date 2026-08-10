@@ -35,7 +35,12 @@ logger = logging.getLogger(__name__)
 class WorkflowBuilder:
     """Build the validation graph while leaving domain work in existing agents."""
 
-    def __init__(self, agents: Agents, registry: ValidatorRegistry, planner: PlannerAgent | None = None) -> None:
+    def __init__(
+        self, 
+        agents: Agents, 
+        registry: ValidatorRegistry, 
+        planner: PlannerAgent | None = None,
+    ) -> None:
         self._agents = agents
         self._registry = registry
         self._planner = planner or PlannerAgent()
