@@ -1,3 +1,5 @@
+from domain.execution_plan import ExecutionPlan as CompatibilityExecutionPlan
+from domain.execution_plan import PlanStep as CompatibilityPlanStep
 from domain.plans import ExecutionPlan, PlanStep
 
 
@@ -75,3 +77,8 @@ def test_plan_is_immutable():
         pass
     else:
         raise AssertionError("ExecutionPlan should be immutable")
+
+
+def test_execution_plan_compatibility_module_uses_canonical_models():
+    assert CompatibilityPlanStep is PlanStep
+    assert CompatibilityExecutionPlan is ExecutionPlan
