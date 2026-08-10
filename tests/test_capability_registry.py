@@ -12,6 +12,18 @@ from domain.exceptions import (
 )
 
 
+class FakeCapability:
+    def __init__(self, spec: CapabilitySpec) -> None:
+        self._spec = spec
+
+    @property
+    def spec(self) -> CapabilitySpec:
+        return self._spec
+
+    def execute(self, context):
+        raise NotImplementedError
+
+
 class EchoCapability:
     def __init__(self, capability_id: str) -> None:
         self._spec = CapabilitySpec(
@@ -73,3 +85,45 @@ def test_list_returns_registered_capabilities():
     capabilities = registry.list()
 
     assert capabilities == (first, second)
+
+
+def test_registry_returns_capability_specs():
+    registry = CapabilityRegistry()
+
+    capability = FakeCapability(
+        CapabilitySpec(
+            id="data.validate",
+            version="1.0",
+            description="Validate data",
+            input_keys=("frame",),
+            output_keys=("result",),
+        )
+    )
+
+    registry.register(capability)
+
+    specs = registry.specs()
+
+    assert len(specs) == 1
+    assert specs[0].id == "data.validate"
+    assert specs[0].version == "1.0"
+
+
+def test_registry_specs_returns_tuple():
+    registry = CapabilityRegistry()
+
+    registry.register(
+        FakeCapability(
+            CapabilitySpec(
+                id="data.validate",
+                version="1.0",
+                description="Validate data",
+                input_keys=("frame",),
+                output_keys=("result",),
+            )
+        )
+    )
+
+    specs = registry.specs()
+
+    assert isinstance(specs, tuple)

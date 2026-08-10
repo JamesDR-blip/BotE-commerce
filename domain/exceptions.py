@@ -20,3 +20,15 @@ class CapabilityAlreadyRegisteredError(CapabilityError):
 
 class CapabilityNotFoundError(CapabilityError):
     """Raised when a requested capability does not exist."""
+
+
+class CapabilityDependencyError(Exception):
+    """Base exception for capability dependency resolution errors."""
+
+
+class CapabilityDependencyMissingError(CapabilityDependencyError):
+    """Raised when a required capability is not registered."""
+
+
+class CapabilityDependencyCycleError(CapabilityDependencyError):
+    """Raised when capability dependencies contain a cycle."""

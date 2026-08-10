@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from domain.capabilities import Capability
+from domain.capabilities import Capability, CapabilitySpec
 from domain.exceptions import (
     CapabilityAlreadyRegisteredError,
     CapabilityNotFoundError,
 )
+
 
 
 class CapabilityRegistry:
@@ -36,3 +37,10 @@ class CapabilityRegistry:
 
     def list(self) -> tuple[Capability, ...]:
         return tuple(self._capabilities.values())
+
+    def specs(self) -> tuple[CapabilitySpec, ...]:
+        """Return the static specifications of all registered capabilities."""
+        return tuple(
+            capability.spec
+            for capability in self._capabilities.values()
+        )
