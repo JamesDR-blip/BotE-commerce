@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass
 
 
-KNOWN_BRANDS = {"Teckwe", "Kemei", "Wit", "Ninja", "Philips", "Xiaomi", "Dyson", "Keurig", "Cosori", "Instant"}
+KNOWN_BRANDS = {"Teckwe", "Kemei", "Wit", "Ninja", "Philips", "Xiaomi", "Dyson", "Keurig", "Cosori", "Instant", "Nike"}
 MATERIALS = ("Silicone", "Stainless Steel", "Plastic", "Glass", "Ceramic", "Aluminum", "Metal", "Bamboo", "Rubber")
 COLORS = ("Black", "White", "Pink", "Red", "Blue", "Green", "Purple", "Silver", "Gold", "Grey", "Gray", "Colored")
 FEATURES = ("Rechargeable", "Portable", "Cordless", "Waterproof", "Wireless", "Bluetooth", "Mini", "Compact", "Handheld", "Smart", "Multi-Functional", "Ultra-Silent", "Electric", "Battery Operated")

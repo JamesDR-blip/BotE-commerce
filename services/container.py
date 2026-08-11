@@ -32,10 +32,17 @@ from reports.generator import ReportAgent
 from domain.capability_registry import CapabilityRegistry
 from domain.dependency_resolver import DependencyResolver
 
-from capabilities.validation import ValidationCapability, VALIDATION_CAPABILITY_SPEC
+from capabilities.validation import (
+    ValidationCapability,
+    VALIDATION_CAPABILITY_SPEC,
+)
 from capabilities.cleaning import (
     CleaningCapability,
     CLEANING_CAPABILITY_SPEC,
+)
+from capabilities.extraction import (
+    ExtractionCapability,
+    EXTRACTION_CAPABILITY_SPEC,
 )
 
 class Container:
@@ -58,6 +65,7 @@ class Container:
         capability_catalog = {
             VALIDATION_CAPABILITY_SPEC.id: VALIDATION_CAPABILITY_SPEC,
             CLEANING_CAPABILITY_SPEC.id: CLEANING_CAPABILITY_SPEC,
+            EXTRACTION_CAPABILITY_SPEC.id: EXTRACTION_CAPABILITY_SPEC,
         }
 
         self.planner = PlannerAgent(
@@ -73,6 +81,11 @@ class Container:
 
         cleaning_capability = CleaningCapability(self.data_operations)
         self.capabilities.register(cleaning_capability)
+
+        extraction_capability = ExtractionCapability(
+            self.agents.extraction
+        )
+        self.capabilities.register(extraction_capability)
 
         validation_capability = ValidationCapability(self.workflow)
         self.capabilities.register(validation_capability)

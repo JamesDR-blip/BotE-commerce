@@ -23,13 +23,10 @@ def make_spec(
 def make_catalog() -> dict[str, CapabilitySpec]:
     return {
         "data.clean": make_spec("data.clean"),
-        "data.extract": make_spec(
-            "data.extract",
-            required_capabilities=("data.clean",),
-        ),
+        "data.extract": make_spec("data.extract"),
         "data.validate": make_spec(
             "data.validate",
-            required_capabilities=("data.extract",),
+            required_capabilities=("data.clean",),
         ),
     }
 
@@ -49,7 +46,6 @@ def test_planner_builds_execution_plan_from_requested_capabilities():
     assert isinstance(plan, ExecutionPlan)
     assert [step.capability_id for step in plan.steps] == [
         "data.clean",
-        "data.extract",
         "data.validate",
     ]
 
@@ -95,6 +91,44 @@ def test_planner_does_not_add_unrequested_capabilities():
 
     assert [step.capability_id for step in plan.steps] == [
         "data.clean",
+    ]
+
+
+def test_planner_builds_plan_for_extraction_only():
+    planner = PlannerAgent(
+        catalog=make_catalog(),
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.extract",),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert [step.capability_id for step in plan.steps] == [
+        "data.extract",
+    ]
+
+
+def test_planner_composes_cleaning_and_extraction():
+    planner = PlannerAgent(
+        catalog=make_catalog(),
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=(
+            "data.clean",
+            "data.extract",
+        ),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert [step.capability_id for step in plan.steps] == [
+        "data.clean",
+        "data.extract",
     ]
 
 

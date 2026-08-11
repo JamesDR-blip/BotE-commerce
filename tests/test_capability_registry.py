@@ -127,3 +127,37 @@ def test_registry_specs_returns_tuple():
     specs = registry.specs()
 
     assert isinstance(specs, tuple)
+
+
+def test_registry_returns_capability_catalog():
+    registry = CapabilityRegistry()
+
+    validate = FakeCapability(
+        CapabilitySpec(
+            id="data.validate",
+            version="1.0",
+            description="Validate data",
+            input_keys=("frame",),
+            output_keys=("result",),
+        )
+    )
+
+    extract = FakeCapability(
+        CapabilitySpec(
+            id="data.extract",
+            version="1.0",
+            description="Extract data",
+            input_keys=("frame",),
+            output_keys=("extractions",),
+        )
+    )
+
+    registry.register(validate)
+    registry.register(extract)
+
+    catalog = registry.catalog()
+
+    assert catalog == {
+        "data.validate": validate.spec,
+        "data.extract": extract.spec,
+    }
