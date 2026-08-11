@@ -18,3 +18,18 @@ def test_capability_registry_is_separate_from_validator_registry():
     container = Container(Settings())
 
     assert container.capabilities is not container.registry
+
+
+def test_container_exposes_capability_executor():
+    container = Container(Settings())
+
+    assert container.capability_executor is not None
+
+
+def test_container_executor_uses_capability_registry():
+    container = Container(Settings())
+
+    capability = container.capabilities.get("data.validate")
+
+    assert container.capability_executor is not None
+    assert capability.spec.id == "data.validate"

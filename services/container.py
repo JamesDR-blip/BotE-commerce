@@ -11,6 +11,7 @@ from services.health_score_service import HealthScoreService
 from services.validation_service import ValidationService
 from services.data_operations import DataOperationsService
 from services.mapping_service import MappingService
+from services.capability_executor import CapabilityExecutor
 from plugins.registry import ValidatorRegistry
 from agents.workflow import Agents, AutoFixAgent, ClassifierAgent, QAAgent, RuleRetrieverAgent, ValidatorAgent
 from agents.requirement import RequirementAgent
@@ -55,6 +56,10 @@ class Container:
 
         validation_capability = ValidationCapability(self.workflow)
         self.capabilities.register(validation_capability)
+
+        self.capability_executor = CapabilityExecutor(
+            self.capabilities
+        )
         
         self.reports = ReportAgent(settings.reports_path)
         self.reporter = ReporterAgent(self.reports)
