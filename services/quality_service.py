@@ -25,11 +25,21 @@ class QualityService:
         )
 
         try:
-            result = self._container.workflow.run(
-                frame,
-                requested_category,
-                execution_id,
+            requirement = self._container.agents.requirements.interpret(
+                requested_category=requested_category,
+                requested_capabilities=("data.validate",),
             )
+
+            outputs = self._container.capability_execution.execute(
+                requirement=requirement,
+                inputs={
+                    "frame": frame,
+                    "requested_category": requested_category,
+                },
+                execution_id=execution_id,
+            )
+
+            result = outputs["validation_result"]
 
             self._container.executions.update_status(
                 execution_id,

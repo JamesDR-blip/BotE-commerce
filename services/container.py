@@ -2,9 +2,11 @@
 from __future__ import annotations
 from configs.settings import Settings
 from database.models import make_session_factory
+
 from repositories.executions import ExecutionRepository
 from repositories.users import UserRepository
 from repositories.rules import RuleRepository
+
 from services.cache import TTLCache
 from services.upload_reader import TabularUploadReader
 from services.health_score_service import HealthScoreService
@@ -12,7 +14,10 @@ from services.validation_service import ValidationService
 from services.data_operations import DataOperationsService
 from services.mapping_service import MappingService
 from services.capability_executor import CapabilityExecutor
+from services.capability_execution_service import CapabilityExecutionService
+
 from plugins.registry import ValidatorRegistry
+
 from agents.workflow import Agents, AutoFixAgent, ClassifierAgent, QAAgent, RuleRetrieverAgent, ValidatorAgent
 from agents.requirement import RequirementAgent
 from agents.reporter import ReporterAgent
@@ -21,9 +26,12 @@ from agents.planner import PlannerAgent
 from extractors.deterministic import DeterministicProductExtractor
 from agents.graph import WorkflowBuilder
 from agents.llm import LLMAssistantAgent
+
 from reports.generator import ReportAgent
+
 from domain.capability_registry import CapabilityRegistry
 from domain.dependency_resolver import DependencyResolver
+
 from capabilities.validation import ValidationCapability, VALIDATION_CAPABILITY_SPEC
 
 
@@ -43,7 +51,7 @@ class Container:
             VALIDATION_CAPABILITY_SPEC.id: VALIDATION_CAPABILITY_SPEC,
         }
 
-        planner = PlannerAgent(
+        self.planner = PlannerAgent(
             catalog=capability_catalog,
             resolver=DependencyResolver(),
         )
@@ -51,7 +59,7 @@ class Container:
         self.workflow = WorkflowBuilder(
             self.agents,
             self.registry,
-            planner=planner,
+            planner=self.planner,
         )
 
         validation_capability = ValidationCapability(self.workflow)
@@ -59,6 +67,11 @@ class Container:
 
         self.capability_executor = CapabilityExecutor(
             self.capabilities
+        )
+
+        self.capability_execution = CapabilityExecutionService(
+            planner=self.planner,
+            executor=self.capability_executor,
         )
         
         self.reports = ReportAgent(settings.reports_path)
