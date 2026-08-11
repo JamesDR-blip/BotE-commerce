@@ -3,7 +3,8 @@ from agents.requirement import ValidationRequirement
 from domain.capabilities import CapabilitySpec
 from domain.dependency_resolver import DependencyResolver
 from domain.plans import ExecutionPlan
-
+from capabilities.cleaning import CLEANING_CAPABILITY_SPEC
+from capabilities.validation import VALIDATION_CAPABILITY_SPEC
 
 def make_spec(
     capability_id: str,
@@ -110,3 +111,66 @@ def test_planner_marks_plan_source():
     plan = planner.plan(requirement)
 
     assert plan.metadata["source"] == "planner"
+
+
+def test_planner_can_build_plan_for_cleaning_and_validation():
+    catalog = {
+        CLEANING_CAPABILITY_SPEC.id: CLEANING_CAPABILITY_SPEC,
+        VALIDATION_CAPABILITY_SPEC.id: VALIDATION_CAPABILITY_SPEC,
+    }
+
+    planner = PlannerAgent(
+        catalog=catalog,
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=(
+            "data.validate",
+        ),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert [step.capability_id for step in plan.steps] == [
+        "data.clean",
+        "data.validate",
+    ]
+
+
+def test_planner_resolves_validation_dependencies():
+    cleaning_spec = CapabilitySpec(
+        id="data.clean",
+        version="1.0",
+        description="Clean ecommerce data",
+        input_keys=("frame",),
+        output_keys=("frame",),
+    )
+
+    validation_spec = CapabilitySpec(
+        id="data.validate",
+        version="1.0",
+        description="Validate ecommerce data",
+        input_keys=("frame",),
+        output_keys=("validation_result",),
+        required_capabilities=("data.clean",),
+    )
+
+    planner = PlannerAgent(
+        catalog={
+            "data.clean": cleaning_spec,
+            "data.validate": validation_spec,
+        },
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.validate",),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert [step.capability_id for step in plan.steps] == [
+        "data.clean",
+        "data.validate",
+    ]

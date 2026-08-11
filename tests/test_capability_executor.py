@@ -323,3 +323,30 @@ def test_executor_propagates_capability_exception():
             inputs={},
             execution_id="test-execution",
         )
+
+
+def test_executor_passes_step_parameters_to_capability():
+    registry = CapabilityRegistry()
+    registry.register(ConfigCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.config",
+                capability_version="1.0",
+                parameters={
+                    "prefix": "validated-",
+                },
+            ),
+        )
+    )
+
+    result = executor.execute(
+        plan,
+        inputs={"value": "product"},
+        execution_id="test-execution",
+    )
+
+    assert result["result"] == "validated-product"

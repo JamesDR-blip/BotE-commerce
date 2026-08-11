@@ -23,24 +23,6 @@ class FakeExecutions:
     def save_result(self, **kwargs):
         pass
 
-
-class FakeWorkflow:
-    def __init__(self, error=None):
-        self.error = error
-
-    def run(self, frame, requested_category, execution_id):
-        if self.error is not None:
-            raise self.error
-
-        return ValidationResult(
-            category="Fashion",
-            clean=frame,
-            quarantine=pd.DataFrame(),
-            issues=[],
-            health_score=95.0,
-            rule_version="1",
-        )
-
 class FakeRequirements:
     def interpret(
         self,
@@ -70,9 +52,8 @@ class FakeSettings:
 
 
 class FakeContainer:
-    def __init__(self, workflow):
+    def __init__(self):
         self.executions = FakeExecutions()
-        self.workflow = workflow
         self.agents = FakeAgents()
         self.cache = FakeCache()
         self.settings = FakeSettings()
@@ -109,7 +90,7 @@ def test_quality_service_marks_execution_completed():
         }
     )
 
-    container = FakeContainer(FakeWorkflow())
+    container = FakeContainer()
 
     container.capability_execution = FakeCapabilityExecution(
         ValidationResult(
@@ -152,7 +133,7 @@ def test_quality_service_marks_execution_failed_and_reraises():
 
     error = RuntimeError("workflow failed")
 
-    container = FakeContainer(FakeWorkflow())
+    container = FakeContainer()
 
     container.capability_execution = FakeCapabilityExecution(
         error=error
@@ -194,7 +175,7 @@ def test_quality_service_uses_capability_execution_service():
         rule_version="1",
     )
 
-    container = FakeContainer(FakeWorkflow())
+    container = FakeContainer()
 
     capability_execution = FakeCapabilityExecution(
         validation_result

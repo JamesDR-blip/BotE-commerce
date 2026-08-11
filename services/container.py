@@ -33,7 +33,10 @@ from domain.capability_registry import CapabilityRegistry
 from domain.dependency_resolver import DependencyResolver
 
 from capabilities.validation import ValidationCapability, VALIDATION_CAPABILITY_SPEC
-
+from capabilities.cleaning import (
+    CleaningCapability,
+    CLEANING_CAPABILITY_SPEC,
+)
 
 class Container:
     def __init__(self, settings: Settings) -> None:
@@ -47,8 +50,14 @@ class Container:
 
         self.capabilities = CapabilityRegistry()
 
+        self.data_operations = DataOperationsService(
+            self.agents,
+            self.registry,
+        )
+
         capability_catalog = {
             VALIDATION_CAPABILITY_SPEC.id: VALIDATION_CAPABILITY_SPEC,
+            CLEANING_CAPABILITY_SPEC.id: CLEANING_CAPABILITY_SPEC,
         }
 
         self.planner = PlannerAgent(
@@ -62,6 +71,9 @@ class Container:
             planner=self.planner,
         )
 
+        cleaning_capability = CleaningCapability(self.data_operations)
+        self.capabilities.register(cleaning_capability)
+
         validation_capability = ValidationCapability(self.workflow)
         self.capabilities.register(validation_capability)
 
@@ -69,6 +81,7 @@ class Container:
             self.capabilities
         )
 
+        
         self.capability_execution = CapabilityExecutionService(
             planner=self.planner,
             executor=self.capability_executor,
@@ -80,5 +93,4 @@ class Container:
         self.users = UserRepository(sessions)
         self.cache = TTLCache(settings.cache_ttl_seconds)
         self.uploads = TabularUploadReader(settings.max_upload_bytes)
-        self.data_operations = DataOperationsService(self.agents, self.registry)
         self.mapping = MappingService()

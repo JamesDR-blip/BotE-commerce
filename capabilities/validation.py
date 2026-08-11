@@ -23,6 +23,7 @@ VALIDATION_CAPABILITY_SPEC = CapabilitySpec(
     output_keys=(
         "validation_result",
     ),
+    required_capabilities=("data.clean",),
 )
 
 

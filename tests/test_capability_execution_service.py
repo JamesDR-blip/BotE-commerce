@@ -60,3 +60,152 @@ def test_execution_service_plans_then_executes():
     )
 
     assert result["echo"] == "hello"
+
+
+@dataclass
+class CleanCapability:
+    spec = CapabilitySpec(
+        id="test.clean",
+        version="1.0",
+        description="Clean input",
+        input_keys=("value",),
+        output_keys=("value",),
+    )
+
+    def execute(self, context: CapabilityContext) -> CapabilityResult:
+        return CapabilityResult(
+            outputs={
+                "value": context.inputs["value"].strip(),
+            }
+        )
+
+@dataclass
+class ValidateCapability:
+    spec = CapabilitySpec(
+        id="test.validate",
+        version="1.0",
+        description="Validate cleaned input",
+        input_keys=("value",),
+        output_keys=("valid",),
+        required_capabilities=("test.clean",),
+    )
+
+    def execute(self, context: CapabilityContext) -> CapabilityResult:
+        return CapabilityResult(
+            outputs={
+                "valid": context.inputs["value"] == "hello",
+            }
+        )
+
+
+def test_execution_service_executes_multiple_capabilities_in_plan():
+    registry = CapabilityRegistry()
+
+    clean = CleanCapability()
+    validate = ValidateCapability()
+
+    registry.register(clean)
+    registry.register(validate)
+
+    planner = PlannerAgent(
+        catalog={
+            clean.spec.id: clean.spec,
+            validate.spec.id: validate.spec,
+        },
+        resolver=DependencyResolver(),
+    )
+
+    executor = CapabilityExecutor(registry)
+
+    service = CapabilityExecutionService(
+        planner=planner,
+        executor=executor,
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=(
+            "test.validate",
+        ),
+    )
+
+    result = service.execute(
+        requirement=requirement,
+        inputs={"value": " hello "},
+        execution_id="execution-123",
+    )
+
+    assert result["value"] == "hello"
+    assert result["valid"] is True
+
+
+def test_execution_service_resolves_capability_dependencies():
+    registry = CapabilityRegistry()
+
+    registry.register(CleanCapability())
+    registry.register(ValidateCapability())
+
+    planner = PlannerAgent(
+        catalog={
+            "test.clean": CleanCapability.spec,
+            "test.validate": ValidateCapability.spec,
+        },
+        resolver=DependencyResolver(),
+    )
+
+    executor = CapabilityExecutor(registry)
+
+    service = CapabilityExecutionService(
+        planner=planner,
+        executor=executor,
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("test.validate",),
+    )
+
+    result = service.execute(
+        requirement=requirement,
+        inputs={"value": "  hello  "},
+        execution_id="execution-123",
+    )
+
+    assert result["value"] == "hello"
+    assert result["valid"] is True
+
+
+def test_execution_service_executes_dependencies_before_requested_capability():
+    registry = CapabilityRegistry()
+
+    clean = CleanCapability()
+    validate = ValidateCapability()
+
+    registry.register(clean)
+    registry.register(validate)
+
+    planner = PlannerAgent(
+        catalog={
+            clean.spec.id: clean.spec,
+            validate.spec.id: validate.spec,
+        },
+        resolver=DependencyResolver(),
+    )
+
+    executor = CapabilityExecutor(registry)
+
+    service = CapabilityExecutionService(
+        planner=planner,
+        executor=executor,
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("test.validate",),
+    )
+
+    result = service.execute(
+        requirement=requirement,
+        inputs={"value": " hello "},
+        execution_id="execution-123",
+    )
+
+    assert result["value"] == "hello"
+    assert result["valid"] is True

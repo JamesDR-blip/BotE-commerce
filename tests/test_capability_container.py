@@ -6,6 +6,7 @@ from services.container import Container
 def test_container_registers_validation_capability():
     container = Container(Settings())
 
+    assert container.capabilities.has("data.clean")
     assert container.capabilities.has("data.validate")
 
     capability = container.capabilities.get("data.validate")
