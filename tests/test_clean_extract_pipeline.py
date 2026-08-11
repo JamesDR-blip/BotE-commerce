@@ -94,7 +94,7 @@ def test_clean_output_is_passed_to_extract_capability():
     )
 
     assert "frame" in result
-    assert result["requested_category"] == "Fashion"
+    assert result["category"] == "Fashion"
 
     assert "extractions" in result
     assert len(result["extractions"]) == 1

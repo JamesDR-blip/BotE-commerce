@@ -1,5 +1,6 @@
 from capabilities.validation import ValidationCapability
 from capabilities.cleaning import CleaningCapability
+from capabilities.extraction import ExtractionCapability
 from configs.settings import Settings
 from services.container import Container
 
@@ -46,3 +47,14 @@ def test_container_registers_cleaning_capability():
 
     assert isinstance(capability, CleaningCapability)
     assert capability.spec.id == "data.clean"
+
+
+def test_container_registers_extraction_capability():
+    container = Container(Settings())
+
+    assert container.capabilities.has("data.extract")
+
+    capability = container.capabilities.get("data.extract")
+
+    assert isinstance(capability, ExtractionCapability)
+    assert capability.spec.id == "data.extract"

@@ -34,6 +34,7 @@ class QualityService:
                 requirement=requirement,
                 inputs={
                     "frame": frame,
+                    "category": requested_category,
                     "requested_category": requested_category,
                 },
                 execution_id=execution_id,
