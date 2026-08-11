@@ -38,6 +38,7 @@ class CapabilityExecutor:
                 CapabilityContext(
                     execution_id=execution_id,
                     inputs=context,
+                    config=step.parameters,
                 )
             )
 
