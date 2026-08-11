@@ -43,10 +43,13 @@ def test_validation_capability_exposes_correct_spec():
     assert capability.spec.version == "1.0"
     assert capability.spec.input_keys == (
         "frame",
-        "requested_category",
+        "category",
     )
     assert capability.spec.output_keys == (
         "validation_result",
+    )
+    assert capability.spec.required_capabilities == (
+        "data.clean",
     )
 
 
@@ -64,7 +67,7 @@ def test_validation_capability_delegates_to_workflow():
         execution_id="execution-123",
         inputs={
             "frame": frame,
-            "requested_category": "fashion",
+            "category": "fashion",
         },
     )
 

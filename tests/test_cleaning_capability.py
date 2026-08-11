@@ -60,7 +60,7 @@ def test_cleaning_capability_returns_cleaned_frame_and_category():
         )
     )
 
-    assert result.outputs["requested_category"] == "Fashion"
+    assert result.outputs["category"] == "Fashion"
 
     cleaned_frame = result.outputs["frame"]
 

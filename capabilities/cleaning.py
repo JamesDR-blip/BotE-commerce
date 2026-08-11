@@ -22,7 +22,7 @@ CLEANING_CAPABILITY_SPEC = CapabilitySpec(
     ),
     output_keys=(
         "frame",
-        "requested_category",
+        "category",
     ),
 )
 
@@ -52,7 +52,7 @@ class CleaningCapability:
         return CapabilityResult(
             outputs={
                 "frame": cleaned_frame,
-                "requested_category": category,
+                "category": category,
             }
         )
 

@@ -18,12 +18,14 @@ VALIDATION_CAPABILITY_SPEC = CapabilitySpec(
     description="Validate ecommerce tabular data.",
     input_keys=(
         "frame",
-        "requested_category",
+        "category",
     ),
     output_keys=(
         "validation_result",
     ),
-    required_capabilities=("data.clean",),
+    required_capabilities=(
+        "data.clean",
+    ),
 )
 
 
@@ -39,14 +41,14 @@ class ValidationCapability:
 
     def execute(self, context: CapabilityContext) -> CapabilityResult:
         frame = context.inputs["frame"]
-        requested_category = context.inputs.get("requested_category")
+        category = context.inputs.get("category")
 
         if not isinstance(frame, pd.DataFrame):
             raise TypeError("data.validate requires a pandas DataFrame")
 
         result = self._workflow.run(
             frame=frame,
-            requested_category=requested_category,
+            requested_category=category,
             execution_id=context.execution_id,
         )
 

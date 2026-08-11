@@ -147,6 +147,24 @@ class FailingCapability:
     def execute(self, context: CapabilityContext) -> CapabilityResult:
         raise RuntimeError("capability execution failed")
 
+@dataclass
+class InvalidOutputCapability:
+    spec = CapabilitySpec(
+        id="test.invalid-output",
+        version="1.0",
+        description="Returns undeclared output",
+        input_keys=("value",),
+        output_keys=("result",),
+    )
+
+    def execute(self, context: CapabilityContext) -> CapabilityResult:
+        return CapabilityResult(
+            outputs={
+                "wrong_output": context.inputs["value"],
+            }
+        )
+
+
 
 def test_executor_passes_outputs_to_next_capability():
     registry = CapabilityRegistry()
@@ -350,3 +368,80 @@ def test_executor_passes_step_parameters_to_capability():
     )
 
     assert result["result"] == "validated-product"
+
+
+def test_executor_rejects_missing_required_input():
+    registry = CapabilityRegistry()
+    registry.register(EchoCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.echo",
+                capability_version="1.0",
+            ),
+        )
+    )
+
+    with pytest.raises(ValueError, match=r"(?i)missing required input"):
+        executor.execute(
+            plan,
+            inputs={},
+            execution_id="test-execution",
+        )
+
+def test_executor_rejects_unknown_step_parameter():
+    registry = CapabilityRegistry()
+    registry.register(ConfigCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.config",
+                capability_version="1.0",
+                parameters={
+                    "unknown": "value",
+                },
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)unknown parameter",
+    ):
+        executor.execute(
+            plan,
+            inputs={"value": "123"},
+            execution_id="test-execution",
+        )
+
+
+def test_executor_rejects_undeclared_output():
+    registry = CapabilityRegistry()
+    registry.register(InvalidOutputCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.invalid-output",
+                capability_version="1.0",
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)undeclared output",
+    ):
+        executor.execute(
+            plan,
+            inputs={"value": "hello"},
+            execution_id="test-execution",
+        )

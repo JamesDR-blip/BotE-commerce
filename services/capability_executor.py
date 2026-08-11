@@ -33,6 +33,30 @@ class CapabilityExecutor:
                     f"plan requires {step.capability_version}, "
                     f"registered capability is {capability.spec.version}"
                 )
+            missing_inputs = [
+                    key
+                    for key in capability.spec.input_keys
+                    if key not in context
+                ]
+
+            if missing_inputs:
+                raise ValueError(
+                    f"Missing required input for "
+                    f"{step.capability_id}: {', '.join(missing_inputs)}"
+                )
+            
+            unknown_parameters = [
+                key
+                for key in step.parameters
+                if key not in capability.spec.parameter_keys
+            ]
+
+            if unknown_parameters:
+                raise ValueError(
+                    f"Unknown parameter for "
+                    f"{step.capability_id}: "
+                    f"{', '.join(unknown_parameters)}"
+                )
 
             result = capability.execute(
                 CapabilityContext(
@@ -41,6 +65,18 @@ class CapabilityExecutor:
                     config=step.parameters,
                 )
             )
+            undeclared_outputs = [
+                key
+                for key in result.outputs
+                if key not in capability.spec.output_keys
+            ]
+
+            if undeclared_outputs:
+                raise ValueError(
+                    f"Undeclared output for "
+                    f"{step.capability_id}: "
+                    f"{', '.join(undeclared_outputs)}"
+                )
 
             context.update(result.outputs)
 
