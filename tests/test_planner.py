@@ -6,6 +6,19 @@ from domain.plans import ExecutionPlan
 from capabilities.cleaning import CLEANING_CAPABILITY_SPEC
 from capabilities.validation import VALIDATION_CAPABILITY_SPEC
 
+
+class FakeCapability:
+    spec = CapabilitySpec(
+        id="test.fake",
+        version="1.0",
+        description="Fake capability",
+        input_keys=(),
+        output_keys=(),
+    )
+
+    def execute(self, context):
+        raise NotImplementedError
+
 def make_spec(
     capability_id: str,
     required_capabilities: tuple[str, ...] = (),
@@ -468,3 +481,31 @@ def test_planner_preserves_requirement_parameters():
     assert plan.steps[0].parameters == {
         "attributes": ("brand", "model", "color"),
     }
+
+
+def test_planner_can_use_registry_catalog():
+    from domain.capability_registry import CapabilityRegistry
+
+    registry = CapabilityRegistry()
+
+    registry.register(
+        FakeCapability()
+    )
+
+    planner = PlannerAgent(
+        catalog=registry.catalog(),
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("test.fake",),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert [
+        step.capability_id
+        for step in plan.steps
+    ] == [
+        "test.fake",
+    ]

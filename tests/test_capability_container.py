@@ -58,3 +58,11 @@ def test_container_registers_extraction_capability():
 
     assert isinstance(capability, ExtractionCapability)
     assert capability.spec.id == "data.extract"
+
+
+def test_container_planner_catalog_matches_capability_registry():
+    container = Container(Settings())
+
+    registry_catalog = container.capabilities.catalog()
+
+    assert container.planner._catalog == registry_catalog

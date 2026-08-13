@@ -31,6 +31,7 @@ from agents.llm import LLMAssistantAgent
 
 from reports.generator import ReportAgent
 
+from domain.capability_catalog import build_capability_catalog
 from domain.capability_registry import CapabilityRegistry
 from domain.dependency_resolver import DependencyResolver
 
@@ -59,20 +60,24 @@ class Container:
 
         self.capabilities = CapabilityRegistry()
 
+        capability_specs = (
+            CLEANING_CAPABILITY_SPEC,
+            EXTRACTION_CAPABILITY_SPEC,
+            VALIDATION_CAPABILITY_SPEC,
+        )
+
+        capability_catalog = build_capability_catalog(
+            capability_specs
+        )
+
+        self.planner = PlannerAgent(
+                    catalog=capability_catalog,
+                    resolver=DependencyResolver(),
+                )
+
         self.data_operations = DataOperationsService(
             self.agents,
             self.registry,
-        )
-
-        capability_catalog = {
-            VALIDATION_CAPABILITY_SPEC.id: VALIDATION_CAPABILITY_SPEC,
-            CLEANING_CAPABILITY_SPEC.id: CLEANING_CAPABILITY_SPEC,
-            EXTRACTION_CAPABILITY_SPEC.id: EXTRACTION_CAPABILITY_SPEC,
-        }
-
-        self.planner = PlannerAgent(
-            catalog=capability_catalog,
-            resolver=DependencyResolver(),
         )
 
         self.workflow = WorkflowBuilder(
@@ -80,6 +85,7 @@ class Container:
             self.registry,
             planner=self.planner,
         )
+
 
         cleaning_capability = CleaningCapability(self.data_operations)
         self.capabilities.register(cleaning_capability)
