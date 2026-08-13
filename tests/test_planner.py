@@ -208,3 +208,45 @@ def test_planner_resolves_validation_dependencies():
         "data.clean",
         "data.validate",
     ]
+
+
+def test_planner_preserves_explicit_input_mapping():
+    cleaning_spec = CapabilitySpec(
+        id="data.clean",
+        version="1.0",
+        description="Clean ecommerce data",
+        input_keys=("frame",),
+        output_keys=("cleaned_frame",),
+    )
+
+    validation_spec = CapabilitySpec(
+        id="data.validate",
+        version="1.0",
+        description="Validate ecommerce data",
+        input_keys=("frame",),
+        output_keys=("validation_result",),
+        required_capabilities=("data.clean",),
+    )
+
+    planner = PlannerAgent(
+        catalog={
+            "data.clean": cleaning_spec,
+            "data.validate": validation_spec,
+        },
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.validate",),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert [step.capability_id for step in plan.steps] == [
+        "data.clean",
+        "data.validate",
+    ]
+
+    # Planner hiện chưa được phép tự đoán mapping.
+    assert plan.steps[0].input_mapping == {}
+    assert plan.steps[1].input_mapping == {}

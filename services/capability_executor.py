@@ -33,6 +33,19 @@ class CapabilityExecutor:
                     f"plan requires {step.capability_version}, "
                     f"registered capability is {capability.spec.version}"
                 )
+
+            unknown_mappings = [
+                key
+                for key in step.input_mapping
+                if key not in capability.spec.input_keys
+            ]
+
+            if unknown_mappings:
+                raise ValueError(
+                    f"Unknown input mapping for "
+                    f"{step.capability_id}: "
+                    f"{', '.join(unknown_mappings)}"
+                )
             
             unknown_parameters = [
                 key
