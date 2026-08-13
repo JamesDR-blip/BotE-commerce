@@ -66,3 +66,29 @@ def test_container_planner_catalog_matches_capability_registry():
     registry_catalog = container.capabilities.catalog()
 
     assert container.planner._catalog == registry_catalog
+
+
+def test_container_planner_catalog_is_derived_from_registered_capabilities():
+    container = Container(Settings())
+
+    assert container.planner._catalog == (
+        container.capabilities.catalog()
+    )
+
+def test_container_planner_uses_capability_registry_as_catalog_source():
+    container = Container(Settings())
+
+    assert container.planner._catalog == container.capabilities.catalog()
+
+
+def test_container_planner_catalog_contains_registered_capabilities():
+    container = Container(Settings())
+
+    registered_ids = {
+        capability.spec.id
+        for capability in container.capabilities.list()
+    }
+
+    planner_ids = set(container.planner._catalog)
+
+    assert planner_ids == registered_ids

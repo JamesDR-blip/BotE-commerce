@@ -106,3 +106,36 @@ def test_unexpected_error_is_logged_without_exposing_details(caplog) -> None:
     assert response.json() == {"detail": "Internal server error"}
     assert "secret internal failure" not in response.text
     assert "unexpected_application_error" in caplog.text
+
+
+
+def test_validate_uses_real_capability_pipeline() -> None:
+    client = _client()
+
+    file = {
+        "file": (
+            "products.csv",
+            (
+                b"product_title,Price\n"
+                b"Nike Air Max 90,100\n"
+                b"Adidas Ultraboost,120\n"
+            ),
+            "text/csv",
+        )
+    }
+
+    response = client.post(
+        "/validate",
+        files=file,
+        data={"category": "Fashion"},
+    )
+
+    assert response.status_code == 200
+
+    payload = response.json()
+
+    assert payload["execution_id"]
+    assert payload["category"] == "Fashion"
+    assert isinstance(payload["health_score"], (int, float))
+    assert isinstance(payload["reports"], dict)
+    assert payload["cached"] is False

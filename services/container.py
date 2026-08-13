@@ -31,22 +31,12 @@ from agents.llm import LLMAssistantAgent
 
 from reports.generator import ReportAgent
 
-from domain.capability_catalog import build_capability_catalog
 from domain.capability_registry import CapabilityRegistry
 from domain.dependency_resolver import DependencyResolver
 
-from capabilities.validation import (
-    ValidationCapability,
-    VALIDATION_CAPABILITY_SPEC,
-)
-from capabilities.cleaning import (
-    CleaningCapability,
-    CLEANING_CAPABILITY_SPEC,
-)
-from capabilities.extraction import (
-    ExtractionCapability,
-    EXTRACTION_CAPABILITY_SPEC,
-)
+from capabilities.validation import ValidationCapability
+from capabilities.cleaning import CleaningCapability
+from capabilities.extraction import ExtractionCapability
 
 class Container:
     def __init__(self, settings: Settings) -> None:
@@ -60,24 +50,29 @@ class Container:
 
         self.capabilities = CapabilityRegistry()
 
-        capability_specs = (
-            CLEANING_CAPABILITY_SPEC,
-            EXTRACTION_CAPABILITY_SPEC,
-            VALIDATION_CAPABILITY_SPEC,
-        )
-
-        capability_catalog = build_capability_catalog(
-            capability_specs
-        )
-
-        self.planner = PlannerAgent(
-                    catalog=capability_catalog,
-                    resolver=DependencyResolver(),
-                )
-
         self.data_operations = DataOperationsService(
             self.agents,
             self.registry,
+        )
+
+        cleaning_capability = CleaningCapability(
+            self.data_operations
+        )
+        self.capabilities.register(cleaning_capability)
+
+        extraction_capability = ExtractionCapability(
+            self.agents.extraction
+        )
+        self.capabilities.register(extraction_capability)
+
+        validation_capability = ValidationCapability(
+            lambda: self.workflow
+        )
+        self.capabilities.register(validation_capability)
+
+        self.planner = PlannerAgent(
+            catalog=self.capabilities.catalog(),
+            resolver=DependencyResolver(),
         )
 
         self.workflow = WorkflowBuilder(
@@ -87,21 +82,9 @@ class Container:
         )
 
 
-        cleaning_capability = CleaningCapability(self.data_operations)
-        self.capabilities.register(cleaning_capability)
-
-        extraction_capability = ExtractionCapability(
-            self.agents.extraction
-        )
-        self.capabilities.register(extraction_capability)
-
-        validation_capability = ValidationCapability(self.workflow)
-        self.capabilities.register(validation_capability)
-
         self.capability_executor = CapabilityExecutor(
             self.capabilities
         )
-
         
         self.capability_execution = CapabilityExecutionService(
             planner=self.planner,

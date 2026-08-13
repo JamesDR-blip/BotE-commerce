@@ -209,3 +209,95 @@ def test_execution_service_executes_dependencies_before_requested_capability():
 
     assert result["value"] == "hello"
     assert result["valid"] is True
+
+
+@dataclass
+class RenameCleanCapability:
+    spec = CapabilitySpec(
+        id="test.rename_clean",
+        version="1.0",
+        description="Clean input and rename output",
+        input_keys=("value",),
+        output_keys=("cleaned_value",),
+    )
+
+    def execute(self, context: CapabilityContext) -> CapabilityResult:
+        return CapabilityResult(
+            outputs={
+                "cleaned_value": context.inputs["value"].strip(),
+            }
+        )
+
+
+@dataclass
+class RenameValidateCapability:
+    spec = CapabilitySpec(
+        id="test.rename_validate",
+        version="1.0",
+        description="Validate renamed cleaned input",
+        input_keys=("value",),
+        output_keys=("valid",),
+        required_capabilities=("test.rename_clean",),
+        input_mappings=(
+            ("value", "cleaned_value"),
+        ),
+    )
+
+    def execute(self, context: CapabilityContext) -> CapabilityResult:
+        return CapabilityResult(
+            outputs={
+                "valid": context.inputs["value"] == "hello",
+            }
+        )
+
+
+def test_execution_service_uses_explicit_mapping_between_renamed_outputs_and_inputs():
+    registry = CapabilityRegistry()
+
+    clean = RenameCleanCapability()
+    validate = RenameValidateCapability()
+
+    registry.register(clean)
+    registry.register(validate)
+
+    planner = PlannerAgent(
+        catalog={
+            clean.spec.id: clean.spec,
+            validate.spec.id: validate.spec,
+        },
+        resolver=DependencyResolver(),
+    )
+
+    executor = CapabilityExecutor(registry)
+
+    service = CapabilityExecutionService(
+        planner=planner,
+        executor=executor,
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("test.rename_validate",),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert [
+        step.capability_id
+        for step in plan.steps
+    ] == [
+        "test.rename_clean",
+        "test.rename_validate",
+    ]
+
+    assert plan.steps[1].input_mapping == {
+        "value": "cleaned_value",
+    }
+
+    result = service.execute(
+        requirement=requirement,
+        inputs={"value": " hello "},
+        execution_id="explicit-mapping-test",
+    )
+
+    assert result["cleaned_value"] == "hello"
+    assert result["valid"] is True

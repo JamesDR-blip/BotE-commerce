@@ -13,6 +13,7 @@ class CapabilityRegistry:
 
     def __init__(self) -> None:
         self._capabilities: dict[str, Capability] = {}
+        self._catalog: dict[str, CapabilitySpec] = {}
 
     def register(self, capability: Capability) -> None:
         capability_id = capability.spec.id
@@ -23,6 +24,7 @@ class CapabilityRegistry:
             )
 
         self._capabilities[capability_id] = capability
+        self._catalog[capability_id] = capability.spec
 
     def get(self, capability_id: str) -> Capability:
         try:
@@ -47,7 +49,4 @@ class CapabilityRegistry:
 
     def catalog(self) -> dict[str, CapabilitySpec]:
         """Return registered capability specifications keyed by ID."""
-        return {
-            capability.spec.id: capability.spec
-            for capability in self._capabilities.values()
-        }
+        return self._catalog
