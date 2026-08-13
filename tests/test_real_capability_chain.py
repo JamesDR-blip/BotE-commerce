@@ -162,3 +162,42 @@ def test_real_capability_chain_passes_cleaned_frame_to_validation():
     )
 
     assert result.clean is cleaned_frame
+
+
+def test_real_capability_chain_passes_extraction_parameters():
+    container = Container(Settings())
+
+    frame = pd.DataFrame(
+        {
+            "product_title": [
+                "Nike AM-90",
+            ],
+        }
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.extract",),
+        parameters={
+            "data.extract": {
+                "attributes": ("brand", "model"),
+            },
+        },
+    )
+
+    outputs = container.capability_execution.execute(
+        requirement=requirement,
+        inputs={
+            "frame": frame,
+        },
+        execution_id="real-extraction-parameters-test",
+    )
+
+    extractions = outputs["extractions"]
+
+    assert len(extractions) == 1
+
+    extraction = extractions[0]
+
+    assert extraction.brand == "Nike"
+    assert extraction.model == "AM-90"
+    assert extraction.color == ""

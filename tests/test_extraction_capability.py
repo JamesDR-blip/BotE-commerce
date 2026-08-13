@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from capabilities.extraction import (
     ExtractionCapability,
 )
 from domain.capabilities import CapabilityContext
+from extractors.base import ExtractedAttributes
 
 
 class FakeExtractionAgent:
@@ -15,10 +17,10 @@ class FakeExtractionAgent:
     def extract(self, frame: pd.DataFrame):
         self.calls.append(frame)
         return [
-            {
-                "brand": "Nike",
-                "model": "Air Max",
-            }
+            ExtractedAttributes(
+                brand="Nike",
+                model="Air Max",
+            )
         ]
 
 
@@ -33,6 +35,9 @@ def test_extraction_capability_exposes_correct_spec():
     )
     assert capability.spec.output_keys == (
         "extractions",
+    )
+    assert capability.spec.parameter_keys == (
+        "attributes",
     )
 
 
@@ -55,15 +60,45 @@ def test_extraction_capability_delegates_to_agent():
 
     result = capability.execute(context)
 
-    assert result.outputs["extractions"] == [
-        {
-            "brand": "Nike",
-            "model": "Air Max",
-        }
-    ]
+    extraction = result.outputs["extractions"][0]
+
+    assert extraction.brand == "Nike"
+    assert extraction.model == "Air Max"
 
     assert len(agent.calls) == 1
     assert agent.calls[0] is frame
+
+
+def test_extraction_capability_applies_requested_attributes():
+    agent = FakeExtractionAgent()
+    capability = ExtractionCapability(agent)
+
+    frame = pd.DataFrame(
+        {
+            "product_title": ["Nike Air Max"],
+        }
+    )
+
+    context = CapabilityContext(
+        execution_id="execution-789",
+        inputs={
+            "frame": frame,
+        },
+        config={
+            "attributes": (
+                "brand",
+            ),
+        },
+    )
+
+    result = capability.execute(context)
+
+    extraction = result.outputs["extractions"][0]
+
+    assert extraction.brand == "Nike"
+    assert extraction.model == ""
+    assert extraction.color == ""
+    assert extraction.size == ""
 
 
 def test_extraction_capability_rejects_invalid_frame():
@@ -83,3 +118,33 @@ def test_extraction_capability_rejects_invalid_frame():
         assert "pandas DataFrame" in str(exc)
     else:
         raise AssertionError("Expected TypeError")
+
+
+def test_extraction_capability_rejects_unknown_attribute():
+    agent = FakeExtractionAgent()
+    capability = ExtractionCapability(agent)
+
+    frame = pd.DataFrame(
+        {
+            "product_title": ["Nike Air Max"],
+        }
+    )
+
+    context = CapabilityContext(
+        execution_id="execution-unknown-attribute",
+        inputs={
+            "frame": frame,
+        },
+        config={
+            "attributes": (
+                "brand",
+                "not_an_attribute",
+            ),
+        },
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)unknown extraction attribute",
+    ):
+        capability.execute(context)

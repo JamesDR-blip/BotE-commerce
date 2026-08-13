@@ -10,7 +10,9 @@ from domain.capabilities import (
     CapabilityResult,
     CapabilitySpec,
 )
+from dataclasses import fields
 
+from extractors.base import ExtractedAttributes
 
 EXTRACTION_CAPABILITY_SPEC = CapabilitySpec(
     id="data.extract",
@@ -21,6 +23,9 @@ EXTRACTION_CAPABILITY_SPEC = CapabilitySpec(
     ),
     output_keys=(
         "extractions",
+    ),
+    parameter_keys=(
+        "attributes",
     ),
 )
 
@@ -45,12 +50,42 @@ class ExtractionCapability:
 
         extractions = self._agent.extract(frame)
 
+        requested_attributes = context.config.get("attributes")
+
+        if requested_attributes is not None:
+            allowed_attributes = {
+                field.name
+                for field in fields(ExtractedAttributes)
+            }
+            unknown_attributes = [
+                attribute
+                for attribute in requested_attributes
+                if attribute not in allowed_attributes
+            ]
+
+            if unknown_attributes:
+                raise ValueError(
+                    "Unknown extraction attribute: "
+                    + ", ".join(unknown_attributes)
+                )
+
+            extractions = [
+                ExtractedAttributes(
+                    **{
+                        attribute: getattr(extraction, attribute)
+                        if attribute in requested_attributes
+                        else ""
+                        for attribute in allowed_attributes
+                    }
+                )
+                for extraction in extractions
+            ]
+
         return CapabilityResult(
             outputs={
                 "extractions": extractions,
             }
         )
-
 
 __all__ = [
     "ExtractionCapability",

@@ -47,10 +47,22 @@ class PlannerAgent:
             capabilities=self._catalog,
         )
 
+        requirement_mappings = state.input_mappings or {}
+        requirement_parameters = state.parameters or {}
+
         steps = tuple(
             PlanStep(
                 capability_id=spec.id,
                 capability_version=spec.version,
+                parameters=dict(
+                    requirement_parameters.get(spec.id, {})
+                ),
+                input_mapping=dict(
+                    requirement_mappings.get(
+                        spec.id, 
+                        dict(spec.input_mappings),
+                    )
+                ),
             )
             for spec in specs
         )

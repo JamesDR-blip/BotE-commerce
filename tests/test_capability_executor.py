@@ -598,3 +598,162 @@ def test_executor_rejects_missing_input_mapping_source():
             inputs={"frame": "original"},
             execution_id="mapping-test",
         )
+
+
+def test_executor_uses_explicit_input_mapping_between_different_keys():
+    registry = CapabilityRegistry()
+
+    registry.register(RenamedCleanCapability())
+    registry.register(FrameConsumerCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.renamed-clean",
+                capability_version="1.0",
+            ),
+            PlanStep(
+                capability_id="test.frame-consumer",
+                capability_version="1.0",
+                input_mapping={
+                    "frame": "cleaned_frame",
+                },
+            ),
+        )
+    )
+
+    result = executor.execute(
+        plan,
+        inputs={"frame": "original"},
+        execution_id="mapping-test",
+    )
+
+    assert result["cleaned_frame"] == "original-cleaned"
+    assert result["result"] == "original-cleaned"
+
+
+def test_executor_rejects_input_mapping_with_missing_source():
+    registry = CapabilityRegistry()
+
+    registry.register(FrameConsumerCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.frame-consumer",
+                capability_version="1.0",
+                input_mapping={
+                    "frame": "missing_frame",
+                },
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)missing required input",
+    ):
+        executor.execute(
+            plan,
+            inputs={"frame": "original"},
+            execution_id="mapping-test",
+        )
+
+
+def test_executor_does_not_implicitly_remap_between_different_keys():
+    registry = CapabilityRegistry()
+
+    registry.register(RenamedCleanCapability())
+    registry.register(FrameConsumerCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.renamed-clean",
+                capability_version="1.0",
+            ),
+            PlanStep(
+                capability_id="test.frame-consumer",
+                capability_version="1.0",
+            ),
+        )
+    )
+
+    result = executor.execute(
+        plan,
+        inputs={"frame": "original"},
+        execution_id="mapping-test",
+    )
+
+    assert result["cleaned_frame"] == "original-cleaned"
+    assert result["result"] == "original"
+
+
+
+def test_executor_uses_explicit_input_mapping():
+    registry = CapabilityRegistry()
+
+    registry.register(RenamedCleanCapability())
+    registry.register(FrameConsumerCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.renamed-clean",
+                capability_version="1.0",
+            ),
+            PlanStep(
+                capability_id="test.frame-consumer",
+                capability_version="1.0",
+                input_mapping={
+                    "frame": "cleaned_frame",
+                },
+            ),
+        )
+    )
+
+    result = executor.execute(
+        plan,
+        inputs={"frame": "original"},
+        execution_id="mapping-test",
+    )
+
+    assert result["cleaned_frame"] == "original-cleaned"
+    assert result["result"] == "original-cleaned"
+
+
+def test_executor_rejects_unknown_parameter():
+    registry = CapabilityRegistry()
+    registry.register(ConfigCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.config",
+                capability_version="1.0",
+                parameters={
+                    "unknown": "value",
+                },
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)unknown parameter",
+    ):
+        executor.execute(
+            plan,
+            inputs={"value": "SKU-001"},
+            execution_id="parameter-test",
+        )

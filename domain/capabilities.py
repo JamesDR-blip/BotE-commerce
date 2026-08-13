@@ -15,6 +15,7 @@ class CapabilitySpec:
     output_keys: tuple[str, ...]
     required_capabilities: tuple[str, ...] = ()
     parameter_keys: tuple[str, ...] = ()
+    input_mappings: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)

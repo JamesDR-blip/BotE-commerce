@@ -250,3 +250,221 @@ def test_planner_preserves_explicit_input_mapping():
     # Planner hiện chưa được phép tự đoán mapping.
     assert plan.steps[0].input_mapping == {}
     assert plan.steps[1].input_mapping == {}
+
+
+def test_planner_does_not_infer_input_mapping():
+    planner = PlannerAgent(
+        catalog={
+            "data.clean": CapabilitySpec(
+                id="data.clean",
+                version="1.0",
+                description="Clean data",
+                input_keys=("frame",),
+                output_keys=("cleaned_frame",),
+            ),
+            "data.validate": CapabilitySpec(
+                id="data.validate",
+                version="1.0",
+                description="Validate data",
+                input_keys=("frame",),
+                output_keys=("validation_result",),
+                required_capabilities=("data.clean",),
+            ),
+        },
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.validate",),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert [step.capability_id for step in plan.steps] == [
+        "data.clean",
+        "data.validate",
+    ]
+
+    assert plan.steps[0].input_mapping == {}
+    assert plan.steps[1].input_mapping == {}
+
+def test_planner_builds_explicit_input_mapping_between_capabilities():
+    planner = PlannerAgent(
+        catalog={
+            "data.clean": CapabilitySpec(
+                id="data.clean",
+                version="1.0",
+                description="Clean data",
+                input_keys=("frame",),
+                output_keys=("cleaned_frame",),
+            ),
+            "data.validate": CapabilitySpec(
+                id="data.validate",
+                version="1.0",
+                description="Validate data",
+                input_keys=("frame",),
+                output_keys=("validation_result",),
+                required_capabilities=("data.clean",),
+                input_mappings=(
+                ("frame", "cleaned_frame"),
+                ),
+            ),
+        },
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.validate",),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert [step.capability_id for step in plan.steps] == [
+        "data.clean",
+        "data.validate",
+    ]
+
+    assert plan.steps[1].input_mapping == {
+        "frame": "cleaned_frame",
+    }
+
+
+def test_planner_does_not_infer_input_mapping_from_matching_output_names():
+    planner = PlannerAgent(
+        catalog={
+            "data.clean": CapabilitySpec(
+                id="data.clean",
+                version="1.0",
+                description="Clean data",
+                input_keys=("frame",),
+                output_keys=("cleaned_frame",),
+            ),
+            "data.validate": CapabilitySpec(
+                id="data.validate",
+                version="1.0",
+                description="Validate data",
+                input_keys=("frame",),
+                output_keys=("validation_result",),
+                required_capabilities=("data.clean",),
+            ),
+        },
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.validate",),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert plan.steps[1].input_mapping == {}
+
+
+def test_planner_preserves_requirement_input_mapping():
+    planner = PlannerAgent(
+        catalog={
+            "data.clean": CapabilitySpec(
+                id="data.clean",
+                version="1.0",
+                description="Clean data",
+                input_keys=("frame",),
+                output_keys=("cleaned_frame",),
+            ),
+            "data.validate": CapabilitySpec(
+                id="data.validate",
+                version="1.0",
+                description="Validate data",
+                input_keys=("frame",),
+                output_keys=("validation_result",),
+                required_capabilities=("data.clean",),
+            ),
+        },
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.validate",),
+        input_mappings={
+            "data.validate": {
+                "frame": "cleaned_frame",
+            },
+        },
+    )
+
+    plan = planner.plan(requirement)
+
+    assert plan.steps[1].input_mapping == {
+        "frame": "cleaned_frame",
+    }
+
+
+def test_planner_requirement_mapping_overrides_capability_mapping():
+    planner = PlannerAgent(
+        catalog={
+            "data.clean": CapabilitySpec(
+                id="data.clean",
+                version="1.0",
+                description="Clean data",
+                input_keys=("frame",),
+                output_keys=("cleaned_frame",),
+            ),
+            "data.validate": CapabilitySpec(
+                id="data.validate",
+                version="1.0",
+                description="Validate data",
+                input_keys=("frame",),
+                output_keys=("validation_result",),
+                required_capabilities=("data.clean",),
+                input_mappings=(
+                    ("frame", "cleaned_frame"),
+                ),
+            ),
+        },
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.validate",),
+        input_mappings={
+            "data.validate": {
+                "frame": "override_frame",
+            },
+        },
+    )
+
+    plan = planner.plan(requirement)
+
+    assert plan.steps[1].input_mapping == {
+        "frame": "override_frame",
+    }
+
+
+def test_planner_preserves_requirement_parameters():
+    planner = PlannerAgent(
+        catalog={
+            "data.extract": CapabilitySpec(
+                id="data.extract",
+                version="1.0",
+                description="Extract data",
+                input_keys=("frame",),
+                output_keys=("extractions",),
+                parameter_keys=("attributes",),
+            ),
+        },
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.extract",),
+        parameters={
+            "data.extract": {
+                "attributes": ("brand", "model", "color"),
+            },
+        },
+    )
+
+    plan = planner.plan(requirement)
+
+    assert plan.steps[0].parameters == {
+        "attributes": ("brand", "model", "color"),
+    }
