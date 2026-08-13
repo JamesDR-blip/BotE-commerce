@@ -1,23 +1,55 @@
 """Application orchestration for the multi-agent validation workflow."""
+
 from __future__ import annotations
+
 from hashlib import sha256
 from uuid import uuid4
+
 import pandas as pd
+
+from agents.requirement import RequirementAgent
 from database.models import ExecutionRecord
 from domain.models import ExecutionSummary
-from services.container import Container
-
+from services.cache import TTLCache
+from services.capability_execution_service import CapabilityExecutionService
+from agents.reporter import ReporterAgent
 
 class QualityService:
-    def __init__(self, container: Container) -> None: self._container = container
-    def validate(self, frame: pd.DataFrame, source_bytes: bytes, requested_category: str | None = None) -> ExecutionSummary:
-        execution_id = str(uuid4())
+    """Application service coordinating validation execution and persistence."""
 
-        self._container.executions.create(
+    def __init__(
+        self,
+        *,
+        requirements: RequirementAgent,
+        capability_execution: CapabilityExecutionService,
+        executions,
+        cache: TTLCache,
+        reporter: ReporterAgent,
+        enable_llm: bool = False,
+        llm=None,
+    ) -> None:
+        self._requirements = requirements
+        self._capability_execution = capability_execution
+        self._executions = executions
+        self._cache = cache
+        self._reporter = reporter
+        self._enable_llm = enable_llm
+        self._llm = llm
+
+    def validate(
+        self,
+        frame: pd.DataFrame,
+        source_bytes: bytes,
+        requested_category: str | None = None,
+    ) -> ExecutionSummary:
+        execution_id = str(uuid4())
+        source_hash = sha256(source_bytes).hexdigest()
+
+        self._executions.create(
             ExecutionRecord(
                 id=execution_id,
                 category=requested_category or "unknown",
-                source_hash=sha256(source_bytes).hexdigest(),
+                source_hash=source_hash,
                 rule_version="unknown",
                 health_score=0.0,
                 status="RUNNING",
@@ -25,12 +57,12 @@ class QualityService:
         )
 
         try:
-            requirement = self._container.agents.requirements.interpret(
+            requirement = self._requirements.interpret(
                 requested_category=requested_category,
                 requested_capabilities=("data.validate",),
             )
 
-            outputs = self._container.capability_execution.execute(
+            outputs = self._capability_execution.execute(
                 requirement=requirement,
                 inputs={
                     "frame": frame,
@@ -42,41 +74,71 @@ class QualityService:
 
             result = outputs["validation_result"]
 
-            self._container.executions.update_status(
+            self._executions.update_status(
                 execution_id,
                 "COMPLETED",
             )
 
-        except Exception as exc:
-            print(
-                f"[QUALITY SERVICE ERROR] "
-                f"{type(exc).__name__}: {exc}"
-            )
-            self._container.executions.update_status(
+        except Exception:
+            self._executions.update_status(
                 execution_id,
                 "FAILED",
             )
             raise
-        cache_key = sha256(source_bytes + result.category.encode() + result.rule_version.encode()).hexdigest()
-        cached = self._container.cache.get(cache_key)
-        if cached is not None: return ExecutionSummary(cached.execution_id, cached.category, cached.health_score, cached.report_paths, True)
-        category, version, issues = result.category, result.rule_version, result.issues
-        if self._container.settings.enable_llm:
+
+        cache_key = sha256(
+            source_bytes
+            + result.category.encode()
+            + result.rule_version.encode()
+        ).hexdigest()
+
+        cached = self._cache.get(cache_key)
+
+        if cached is not None:
+            return ExecutionSummary(
+                cached.execution_id,
+                cached.category,
+                cached.health_score,
+                cached.report_paths,
+                True,
+            )
+
+        category = result.category
+        version = result.rule_version
+        issues = result.issues
+
+        if self._enable_llm and self._llm is not None:
             result.metadata["llm"] = {
-                "error_explanation": self._container.llm.explain_errors(issues),
-                "suggested_fixes": self._container.llm.suggest_fixes(issues),
-                "summary": self._container.llm.summarize_report(issues),
+                "error_explanation": self._llm.explain_errors(issues),
+                "suggested_fixes": self._llm.suggest_fixes(issues),
+                "summary": self._llm.summarize_report(issues),
             }
-        paths = self._container.reporter.generate(execution_id, result)
-        self._container.executions.save_result(
+
+        paths = self._reporter.generate(
+            execution_id,
+            result,
+        )
+
+        self._executions.save_result(
             execution_id=execution_id,
             category=category,
-            source_hash=sha256(source_bytes).hexdigest(),
+            source_hash=source_hash,
             rule_version=version,
             health_score=result.health_score,
             issues=issues,
             reports=paths,
         )
-        summary = ExecutionSummary(execution_id, category, result.health_score, paths)
-        self._container.cache.set(cache_key, summary)
+
+        summary = ExecutionSummary(
+            execution_id,
+            category,
+            result.health_score,
+            paths,
+        )
+
+        self._cache.set(
+            cache_key,
+            summary,
+        )
+
         return summary

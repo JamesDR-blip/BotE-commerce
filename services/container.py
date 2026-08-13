@@ -1,5 +1,6 @@
 """Composition root: dependency injection without mutable module globals."""
 from __future__ import annotations
+from configs import settings
 from configs.settings import Settings
 from database.models import make_session_factory
 
@@ -15,6 +16,7 @@ from services.data_operations import DataOperationsService
 from services.mapping_service import MappingService
 from services.capability_executor import CapabilityExecutor
 from services.capability_execution_service import CapabilityExecutionService
+from services.quality_service import QualityService
 
 from plugins.registry import ValidatorRegistry
 
@@ -107,3 +109,12 @@ class Container:
         self.cache = TTLCache(settings.cache_ttl_seconds)
         self.uploads = TabularUploadReader(settings.max_upload_bytes)
         self.mapping = MappingService()
+
+        self.quality_service = QualityService(
+            requirements=self.agents.requirements,
+            capability_execution=self.capability_execution,
+            executions=self.executions,
+            cache=self.cache,
+            reporter=self.reporter,
+            enable_llm=settings.enable_llm,
+        )

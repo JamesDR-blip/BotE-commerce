@@ -103,7 +103,7 @@ def test_quality_service_marks_execution_completed():
         )
     )
 
-    service = QualityService(container)
+    service = make_service(container)
 
     result = service.validate(
         frame,
@@ -139,7 +139,7 @@ def test_quality_service_marks_execution_failed_and_reraises():
         error=error
     )
 
-    service = QualityService(container)
+    service = make_service(container)
 
     with pytest.raises(RuntimeError, match="workflow failed"):
         service.validate(
@@ -183,7 +183,7 @@ def test_quality_service_uses_capability_execution_service():
 
     container.capability_execution = capability_execution
 
-    service = QualityService(container)
+    service = make_service(container)
 
     result = service.validate(
         frame,
@@ -201,3 +201,14 @@ def test_quality_service_uses_capability_execution_service():
     assert call["inputs"]["frame"] is frame
     assert call["inputs"]["requested_category"] == "Fashion"
     assert call["execution_id"]
+
+
+def make_service(container):
+    return QualityService(
+        requirements=container.agents.requirements,
+        capability_execution=container.capability_execution,
+        executions=container.executions,
+        cache=container.cache,
+        reporter=container.reporter,
+        enable_llm=container.settings.enable_llm,
+    )

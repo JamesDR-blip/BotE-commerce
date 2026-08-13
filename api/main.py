@@ -34,7 +34,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     configure_logging(settings.log_level)
     logger.info("application_configured", extra={"event": "application_configured", "environment": settings.environment})
-    container = Container(settings); service = QualityService(container)
+    container = Container(settings);service = container.quality_service
     app = FastAPI(title="AI Data Quality Platform", version="1.0.0")
     app.add_exception_handler(Exception, _internal_server_error)
     app.state.container = container
