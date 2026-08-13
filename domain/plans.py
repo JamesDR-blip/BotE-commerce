@@ -13,7 +13,7 @@ class PlanStep:
     capability_id: str
     capability_version: str = "1.0"
     parameters: dict[str, Any] = field(default_factory=dict)
-
+    input_mapping: dict[str, str] = field(default_factory=dict)
 
 @dataclass(frozen=True)
 class ExecutionPlan:

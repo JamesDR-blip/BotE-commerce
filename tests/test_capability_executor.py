@@ -445,3 +445,87 @@ def test_executor_rejects_undeclared_output():
             inputs={"value": "hello"},
             execution_id="test-execution",
         )
+
+
+@dataclass
+class RenamedCleanCapability:
+    spec = CapabilitySpec(
+        id="test.renamed-clean",
+        version="1.0",
+        description="Returns a renamed cleaned frame",
+        input_keys=("frame",),
+        output_keys=("cleaned_frame",),
+    )
+
+    def execute(self, context: CapabilityContext) -> CapabilityResult:
+        return CapabilityResult(
+            outputs={
+                "cleaned_frame": f"{context.inputs['frame']}-cleaned",
+            }
+        )
+
+
+@dataclass
+class FrameConsumerCapability:
+    spec = CapabilitySpec(
+        id="test.frame-consumer",
+        version="1.0",
+        description="Consumes a frame",
+        input_keys=("frame",),
+        output_keys=("result",),
+    )
+
+    def execute(self, context: CapabilityContext) -> CapabilityResult:
+        return CapabilityResult(
+            outputs={
+                "result": context.inputs["frame"],
+            }
+        )
+
+
+def test_executor_does_not_implicitly_remap_renamed_output():
+    registry = CapabilityRegistry()
+
+    registry.register(RenamedCleanCapability())
+    registry.register(FrameConsumerCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.renamed-clean",
+                capability_version="1.0",
+            ),
+            PlanStep(
+                capability_id="test.frame-consumer",
+                capability_version="1.0",
+            ),
+        )
+    )
+
+    result = executor.execute(
+        plan,
+        inputs={"frame": "original"},
+        execution_id="mapping-test",
+    )
+
+    assert result["cleaned_frame"] == "original-cleaned"
+
+    # Current behavior: frame-consumer receives the original
+    # frame because there is no explicit input mapping.
+    assert result["result"] == "original"
+
+
+def test_plan_step_supports_input_mapping():
+    step = PlanStep(
+        capability_id="test.frame-consumer",
+        capability_version="1.0",
+        input_mapping={
+            "frame": "cleaned_frame",
+        },
+    )
+
+    assert step.input_mapping == {
+        "frame": "cleaned_frame",
+    }

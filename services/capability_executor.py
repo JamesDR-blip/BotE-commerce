@@ -33,17 +33,6 @@ class CapabilityExecutor:
                     f"plan requires {step.capability_version}, "
                     f"registered capability is {capability.spec.version}"
                 )
-            missing_inputs = [
-                    key
-                    for key in capability.spec.input_keys
-                    if key not in context
-                ]
-
-            if missing_inputs:
-                raise ValueError(
-                    f"Missing required input for "
-                    f"{step.capability_id}: {', '.join(missing_inputs)}"
-                )
             
             unknown_parameters = [
                 key
@@ -58,13 +47,29 @@ class CapabilityExecutor:
                     f"{', '.join(unknown_parameters)}"
                 )
 
+            mapped_inputs = {}
+
+            for input_key in capability.spec.input_keys:
+                source_key = step.input_mapping.get(input_key, input_key)
+
+                if source_key not in context:
+                    raise ValueError(
+                        f"Missing required input for "
+                        f"{step.capability_id}: "
+                        f"{input_key} "
+                        f"(source: {source_key})"
+                    )
+
+                mapped_inputs[input_key] = context[source_key]
+
             result = capability.execute(
                 CapabilityContext(
                     execution_id=execution_id,
-                    inputs=context,
+                    inputs=mapped_inputs,
                     config=step.parameters,
                 )
             )
+
             undeclared_outputs = [
                 key
                 for key in result.outputs
