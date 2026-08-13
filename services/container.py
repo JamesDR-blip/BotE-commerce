@@ -71,7 +71,7 @@ class Container:
         self.capabilities.register(validation_capability)
 
         self.planner = PlannerAgent(
-            catalog=self.capabilities.catalog(),
+            registry=self.capabilities,
             resolver=DependencyResolver(),
         )
 

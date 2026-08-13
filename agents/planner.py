@@ -3,6 +3,8 @@ from collections.abc import Sequence
 from domain.plans import ExecutionPlan, PlanStep
 from domain.dependency_resolver import DependencyResolver
 from domain.capabilities import CapabilitySpec
+from domain.capability_registry import CapabilityRegistry
+
 from .requirement import ValidationRequirement
 from .state import WorkflowState
 
@@ -22,10 +24,17 @@ class PlannerAgent:
 
     def __init__(
         self,
-        catalog: dict[str, CapabilitySpec] | None = None,
+        registry: CapabilityRegistry | None = None,
         resolver: DependencyResolver | None = None,
+        catalog: dict[str, CapabilitySpec] | None = None,
     ) -> None:
-        self._catalog = catalog or {}
+        if registry is not None and catalog is not None:
+            raise ValueError(
+                "PlannerAgent accepts either registry or catalog, not both"
+            )
+
+        self._registry = registry
+        self._catalog = catalog
         self._resolver = resolver or DependencyResolver()
 
     def plan(
@@ -42,9 +51,18 @@ class PlannerAgent:
         # Capability-driven planner contract.
         requested = state.requested_capabilities
 
+        if self._registry is not None:
+            capabilities = self._registry.catalog()
+        elif self._catalog is not None:
+            capabilities = self._catalog
+        else:
+            raise ValueError(
+                "Planner requires a capability registry or catalog"
+            )
+
         specs = self._resolver.resolve(
             requested=requested,
-            capabilities=self._catalog,
+            capabilities=capabilities,
         )
 
         requirement_mappings = state.input_mappings or {}

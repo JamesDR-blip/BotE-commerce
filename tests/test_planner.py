@@ -1,8 +1,11 @@
 from agents.planner import PlannerAgent
 from agents.requirement import ValidationRequirement
+
+from domain.capability_registry import CapabilityRegistry
 from domain.capabilities import CapabilitySpec
 from domain.dependency_resolver import DependencyResolver
 from domain.plans import ExecutionPlan
+
 from capabilities.cleaning import CLEANING_CAPABILITY_SPEC
 from capabilities.validation import VALIDATION_CAPABILITY_SPEC
 
@@ -18,7 +21,14 @@ class FakeCapability:
 
     def execute(self, context):
         raise NotImplementedError
+    
+class FakeCapabilityWithSpec:
+    def __init__(self, spec: CapabilitySpec) -> None:
+        self.spec = spec
 
+    def execute(self, context):
+        raise NotImplementedError
+    
 def make_spec(
     capability_id: str,
     required_capabilities: tuple[str, ...] = (),
@@ -44,9 +54,22 @@ def make_catalog() -> dict[str, CapabilitySpec]:
     }
 
 
+
+def make_registry(
+    catalog: dict[str, CapabilitySpec],
+) -> CapabilityRegistry:
+    registry = CapabilityRegistry()
+
+    for spec in catalog.values():
+        registry.register(
+            FakeCapabilityWithSpec(spec)
+        )
+
+    return registry
+
 def test_planner_builds_execution_plan_from_requested_capabilities():
     planner = PlannerAgent(
-        catalog=make_catalog(),
+        registry=make_registry(make_catalog()),
         resolver=DependencyResolver(),
     )
 
@@ -75,7 +98,7 @@ def test_planner_preserves_capability_versions():
     }
 
     planner = PlannerAgent(
-        catalog=catalog,
+        registry=make_registry(catalog),
         resolver=DependencyResolver(),
     )
 
@@ -92,7 +115,7 @@ def test_planner_preserves_capability_versions():
 
 def test_planner_does_not_add_unrequested_capabilities():
     planner = PlannerAgent(
-        catalog=make_catalog(),
+        registry=make_registry(make_catalog()),
         resolver=DependencyResolver(),
     )
 
@@ -109,7 +132,7 @@ def test_planner_does_not_add_unrequested_capabilities():
 
 def test_planner_builds_plan_for_extraction_only():
     planner = PlannerAgent(
-        catalog=make_catalog(),
+        registry=make_registry(make_catalog()),
         resolver=DependencyResolver(),
     )
 
@@ -126,7 +149,7 @@ def test_planner_builds_plan_for_extraction_only():
 
 def test_planner_composes_cleaning_and_extraction():
     planner = PlannerAgent(
-        catalog=make_catalog(),
+        registry=make_registry(make_catalog()),
         resolver=DependencyResolver(),
     )
 
@@ -147,7 +170,7 @@ def test_planner_composes_cleaning_and_extraction():
 
 def test_planner_marks_plan_source():
     planner = PlannerAgent(
-        catalog=make_catalog(),
+        registry=make_registry(make_catalog()),
         resolver=DependencyResolver(),
     )
 
@@ -167,7 +190,7 @@ def test_planner_can_build_plan_for_cleaning_and_validation():
     }
 
     planner = PlannerAgent(
-        catalog=catalog,
+        registry=make_registry(catalog),
         resolver=DependencyResolver(),
     )
 
@@ -204,10 +227,10 @@ def test_planner_resolves_validation_dependencies():
     )
 
     planner = PlannerAgent(
-        catalog={
+        registry=make_registry({
             "data.clean": cleaning_spec,
             "data.validate": validation_spec,
-        },
+        }),
         resolver=DependencyResolver(),
     )
 
@@ -242,10 +265,10 @@ def test_planner_preserves_explicit_input_mapping():
     )
 
     planner = PlannerAgent(
-        catalog={
+        registry=make_registry({
             "data.clean": cleaning_spec,
             "data.validate": validation_spec,
-        },
+        }),
         resolver=DependencyResolver(),
     )
 
@@ -267,7 +290,7 @@ def test_planner_preserves_explicit_input_mapping():
 
 def test_planner_does_not_infer_input_mapping():
     planner = PlannerAgent(
-        catalog={
+        registry=make_registry({
             "data.clean": CapabilitySpec(
                 id="data.clean",
                 version="1.0",
@@ -283,7 +306,7 @@ def test_planner_does_not_infer_input_mapping():
                 output_keys=("validation_result",),
                 required_capabilities=("data.clean",),
             ),
-        },
+        }),
         resolver=DependencyResolver(),
     )
 
@@ -303,7 +326,7 @@ def test_planner_does_not_infer_input_mapping():
 
 def test_planner_builds_explicit_input_mapping_between_capabilities():
     planner = PlannerAgent(
-        catalog={
+        registry=make_registry({
             "data.clean": CapabilitySpec(
                 id="data.clean",
                 version="1.0",
@@ -322,7 +345,7 @@ def test_planner_builds_explicit_input_mapping_between_capabilities():
                 ("frame", "cleaned_frame"),
                 ),
             ),
-        },
+        }),
         resolver=DependencyResolver(),
     )
 
@@ -344,7 +367,7 @@ def test_planner_builds_explicit_input_mapping_between_capabilities():
 
 def test_planner_does_not_infer_input_mapping_from_matching_output_names():
     planner = PlannerAgent(
-        catalog={
+        registry=make_registry({
             "data.clean": CapabilitySpec(
                 id="data.clean",
                 version="1.0",
@@ -360,7 +383,7 @@ def test_planner_does_not_infer_input_mapping_from_matching_output_names():
                 output_keys=("validation_result",),
                 required_capabilities=("data.clean",),
             ),
-        },
+        }),
         resolver=DependencyResolver(),
     )
 
@@ -375,7 +398,7 @@ def test_planner_does_not_infer_input_mapping_from_matching_output_names():
 
 def test_planner_preserves_requirement_input_mapping():
     planner = PlannerAgent(
-        catalog={
+        registry=make_registry({
             "data.clean": CapabilitySpec(
                 id="data.clean",
                 version="1.0",
@@ -391,7 +414,7 @@ def test_planner_preserves_requirement_input_mapping():
                 output_keys=("validation_result",),
                 required_capabilities=("data.clean",),
             ),
-        },
+        }),
         resolver=DependencyResolver(),
     )
 
@@ -413,7 +436,7 @@ def test_planner_preserves_requirement_input_mapping():
 
 def test_planner_requirement_mapping_overrides_capability_mapping():
     planner = PlannerAgent(
-        catalog={
+        registry=make_registry({
             "data.clean": CapabilitySpec(
                 id="data.clean",
                 version="1.0",
@@ -432,7 +455,7 @@ def test_planner_requirement_mapping_overrides_capability_mapping():
                     ("frame", "cleaned_frame"),
                 ),
             ),
-        },
+        }),
         resolver=DependencyResolver(),
     )
 
@@ -454,7 +477,7 @@ def test_planner_requirement_mapping_overrides_capability_mapping():
 
 def test_planner_preserves_requirement_parameters():
     planner = PlannerAgent(
-        catalog={
+        registry=make_registry({
             "data.extract": CapabilitySpec(
                 id="data.extract",
                 version="1.0",
@@ -463,7 +486,7 @@ def test_planner_preserves_requirement_parameters():
                 output_keys=("extractions",),
                 parameter_keys=("attributes",),
             ),
-        },
+        }),
         resolver=DependencyResolver(),
     )
 
@@ -483,17 +506,13 @@ def test_planner_preserves_requirement_parameters():
     }
 
 
-def test_planner_can_use_registry_catalog():
-    from domain.capability_registry import CapabilityRegistry
-
+def test_planner_reads_capabilities_from_registry():
     registry = CapabilityRegistry()
 
-    registry.register(
-        FakeCapability()
-    )
+    registry.register(FakeCapability())
 
     planner = PlannerAgent(
-        catalog=registry.catalog(),
+        registry=registry,
         resolver=DependencyResolver(),
     )
 
@@ -506,6 +525,26 @@ def test_planner_can_use_registry_catalog():
     assert [
         step.capability_id
         for step in plan.steps
-    ] == [
-        "test.fake",
-    ]
+    ] == ["test.fake"]
+
+
+def test_planner_sees_capability_registered_after_planner_creation():
+    registry = CapabilityRegistry()
+
+    planner = PlannerAgent(
+        registry=registry,
+        resolver=DependencyResolver(),
+    )
+
+    registry.register(FakeCapability())
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("test.fake",),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert [
+        step.capability_id
+        for step in plan.steps
+    ] == ["test.fake"]

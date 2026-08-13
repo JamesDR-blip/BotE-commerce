@@ -60,28 +60,22 @@ def test_container_registers_extraction_capability():
     assert capability.spec.id == "data.extract"
 
 
-def test_container_planner_catalog_matches_capability_registry():
+def test_container_planner_uses_capability_registry():
     container = Container(Settings())
 
-    registry_catalog = container.capabilities.catalog()
-
-    assert container.planner._catalog == registry_catalog
+    assert container.planner._registry is container.capabilities
 
 
-def test_container_planner_catalog_is_derived_from_registered_capabilities():
+def test_container_planner_catalog_is_derived_from_registry():
     container = Container(Settings())
 
-    assert container.planner._catalog == (
-        container.capabilities.catalog()
+    assert (
+        container.planner._registry.catalog()
+        == container.capabilities.catalog()
     )
 
-def test_container_planner_uses_capability_registry_as_catalog_source():
-    container = Container(Settings())
 
-    assert container.planner._catalog == container.capabilities.catalog()
-
-
-def test_container_planner_catalog_contains_registered_capabilities():
+def test_container_planner_sees_registered_capabilities():
     container = Container(Settings())
 
     registered_ids = {
@@ -89,6 +83,42 @@ def test_container_planner_catalog_contains_registered_capabilities():
         for capability in container.capabilities.list()
     }
 
-    planner_ids = set(container.planner._catalog)
+    planner_ids = set(
+        container.planner._registry.catalog()
+    )
 
     assert planner_ids == registered_ids
+
+
+def test_container_planner_sees_capability_registered_after_creation():
+    from domain.capabilities import CapabilityResult, CapabilitySpec
+    from agents.requirement import ValidationRequirement
+
+    class LateCapability:
+        spec = CapabilitySpec(
+            id="test.late",
+            version="1.0",
+            description="Late registered capability",
+            input_keys=(),
+            output_keys=("result",),
+        )
+
+        def execute(self, context):
+            return CapabilityResult(
+                outputs={"result": "late"},
+            )
+
+    container = Container(Settings())
+
+    container.capabilities.register(LateCapability())
+
+    plan = container.planner.plan(
+        ValidationRequirement(
+            requested_capabilities=("test.late",),
+        )
+    )
+
+    assert [
+        step.capability_id
+        for step in plan.steps
+    ] == ["test.late"]
