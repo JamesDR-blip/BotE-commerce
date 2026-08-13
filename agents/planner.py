@@ -1,26 +1,15 @@
-from collections.abc import Sequence
+from __future__ import annotations
 
-from domain.plans import ExecutionPlan, PlanStep
 from domain.dependency_resolver import DependencyResolver
 from domain.capabilities import CapabilitySpec
 from domain.capability_registry import CapabilityRegistry
+from domain.plans import ExecutionPlan, PlanStep
 
 from .requirement import ValidationRequirement
-from .state import WorkflowState
 
 
 class PlannerAgent:
-    """Build deterministic execution plans from requested capabilities."""
-
-    _VALIDATION_PLAN = (
-        "requirements",
-        "classify",
-        "retrieve_rules",
-        "extract",
-        "autofix",
-        "validate",
-        "qa",
-    )
+    """Build deterministic execution plans from registered capabilities."""
 
     def __init__(
         self,
@@ -34,39 +23,37 @@ class PlannerAgent:
             )
 
         self._registry = registry
-        self._catalog = catalog
+        self._catalog_snapshot = catalog
         self._resolver = resolver or DependencyResolver()
 
-    def plan(
-        self,
-        state: WorkflowState | ValidationRequirement,
-    ):
-        # Legacy LangGraph planner contract.
-        if isinstance(state, dict):
-            if not state["categories"]:
-                raise ValueError("No validator categories are registered")
-
-            return {"plan": self._VALIDATION_PLAN}
-
-        # Capability-driven planner contract.
-        requested = state.requested_capabilities
-
+    @property
+    def _catalog(self) -> dict[str, CapabilitySpec]:
         if self._registry is not None:
-            capabilities = self._registry.catalog()
-        elif self._catalog is not None:
-            capabilities = self._catalog
-        else:
+            return self._registry.catalog()
+
+        return self._catalog_snapshot or {}
+
+    def plan(self, requirement: ValidationRequirement) -> ExecutionPlan:
+        """Build an execution plan from a validated requirement."""
+
+        if self._registry is None and self._catalog_snapshot is None:
             raise ValueError(
                 "Planner requires a capability registry or catalog"
             )
 
-        specs = self._resolver.resolve(
-            requested=requested,
-            capabilities=capabilities,
+        catalog = (
+            self._registry.catalog()
+            if self._registry is not None
+            else self._catalog_snapshot
         )
 
-        requirement_mappings = state.input_mappings or {}
-        requirement_parameters = state.parameters or {}
+        specs = self._resolver.resolve(
+            requested=requirement.requested_capabilities,
+            capabilities=catalog,
+        )
+
+        requirement_mappings = requirement.input_mappings or {}
+        requirement_parameters = requirement.parameters or {}
 
         steps = tuple(
             PlanStep(
@@ -77,7 +64,7 @@ class PlannerAgent:
                 ),
                 input_mapping=dict(
                     requirement_mappings.get(
-                        spec.id, 
+                        spec.id,
                         dict(spec.input_mappings),
                     )
                 ),

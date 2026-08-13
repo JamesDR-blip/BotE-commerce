@@ -11,8 +11,6 @@ from domain.capabilities import (
 )
 from domain.validation_workflow import ValidationWorkflow
 
-from collections.abc import Callable
-
 
 VALIDATION_CAPABILITY_SPEC = CapabilitySpec(
     id="data.validate",
@@ -34,10 +32,7 @@ VALIDATION_CAPABILITY_SPEC = CapabilitySpec(
 class ValidationCapability:
     """Expose the existing validation workflow as a platform capability."""
 
-    def __init__(
-        self,
-        workflow: Callable[[], ValidationWorkflow],
-    ) -> None:
+    def __init__(self, workflow: ValidationWorkflow) -> None:
         self._workflow = workflow
 
     @property
@@ -50,13 +45,8 @@ class ValidationCapability:
 
         if not isinstance(frame, pd.DataFrame):
             raise TypeError("data.validate requires a pandas DataFrame")
-
-        workflow = (
-            self._workflow()
-            if callable(self._workflow)
-            else self._workflow
-        )
-        result = workflow.run(
+        
+        result = self._workflow.run(
             frame=frame,
             requested_category=requested_category,
             execution_id=context.execution_id,

@@ -17,6 +17,9 @@ from services.mapping_service import MappingService
 from services.capability_executor import CapabilityExecutor
 from services.capability_execution_service import CapabilityExecutionService
 from services.quality_service import QualityService
+from services.deterministic_validation_workflow import (
+    DeterministicValidationWorkflow,
+)
 
 from plugins.registry import ValidatorRegistry
 
@@ -26,7 +29,6 @@ from agents.reporter import ReporterAgent
 from agents.extraction import ExtractionAgent
 from agents.planner import PlannerAgent
 from extractors.deterministic import DeterministicProductExtractor
-from agents.graph import WorkflowBuilder
 from agents.llm import LLMAssistantAgent
 
 from reports.generator import ReportAgent
@@ -65,8 +67,19 @@ class Container:
         )
         self.capabilities.register(extraction_capability)
 
+        self.workflow = DeterministicValidationWorkflow(
+            requirements=self.agents.requirements,
+            classifier=self.agents.classifier,
+            rules=self.agents.rules,
+            extraction=self.agents.extraction,
+            fixer=self.agents.fixer,
+            validator=self.agents.validator,
+            qa=self.agents.qa,
+            registry=self.registry,
+        )
+
         validation_capability = ValidationCapability(
-            lambda: self.workflow
+            self.workflow
         )
         self.capabilities.register(validation_capability)
 
@@ -74,13 +87,6 @@ class Container:
             registry=self.capabilities,
             resolver=DependencyResolver(),
         )
-
-        self.workflow = WorkflowBuilder(
-            self.agents,
-            self.registry,
-            planner=self.planner,
-        )
-
 
         self.capability_executor = CapabilityExecutor(
             self.capabilities
