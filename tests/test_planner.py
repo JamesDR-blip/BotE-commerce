@@ -798,3 +798,85 @@ def test_planner_rejects_input_mapping_for_unrequested_capability():
         match=r"(?i)mapping.*not.*planned|not.*requested",
     ):
         planner.plan(requirement)
+
+
+def test_planner_expands_capability_dependencies():
+    planner = PlannerAgent(
+        registry=make_registry({
+            "data.clean": CapabilitySpec(
+                id="data.clean",
+                version="1.0",
+                description="Clean data",
+                input_keys=("frame",),
+                output_keys=("frame",),
+            ),
+            "data.validate": CapabilitySpec(
+                id="data.validate",
+                version="1.0",
+                description="Validate data",
+                input_keys=("frame",),
+                output_keys=("issues",),
+                required_capabilities=(
+                    "data.clean",
+                ),
+            ),
+            "data.qa": CapabilitySpec(
+                id="data.qa",
+                version="1.0",
+                description="QA result",
+                input_keys=("issues",),
+                output_keys=("validation_result",),
+                required_capabilities=(
+                    "data.validate",
+                ),
+            ),
+        }),
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=(
+            "data.qa",
+        ),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert tuple(
+        step.capability_id
+        for step in plan.steps
+    ) == (
+        "data.clean",
+        "data.validate",
+        "data.qa",
+    )
+
+
+def test_planner_rejects_invalid_capability_type_contract():
+    planner = PlannerAgent(
+        registry=make_registry({
+            "data.bad": CapabilitySpec(
+                id="data.bad",
+                version="1.0",
+                description="Bad contract",
+                input_keys=("frame",),
+                output_keys=("result",),
+                input_types={
+                    "frame": str,
+                },
+            ),
+        }),
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=(
+            "data.bad",
+        ),
+    )
+
+    with pytest.raises(
+        TypeError,
+        match="input type",
+    ):
+        planner.plan(requirement)
