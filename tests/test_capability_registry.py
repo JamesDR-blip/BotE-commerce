@@ -161,3 +161,42 @@ def test_registry_returns_capability_catalog():
         "data.validate": validate.spec,
         "data.extract": extract.spec,
     }
+
+
+def test_registry_returns_capability_metadata():
+    registry = CapabilityRegistry()
+
+    capability = FakeCapability(
+        CapabilitySpec(
+            id="data.extract",
+            version="1.0",
+            description="Extract product attributes",
+            input_keys=("frame",),
+            output_keys=("extractions",),
+            intents=(
+                "extract_brand",
+                "extract_color",
+            ),
+        )
+    )
+
+    registry.register(capability)
+
+    metadata = registry.metadata()
+
+    assert metadata == (
+        {
+            "id": "data.extract",
+            "description": "Extract product attributes",
+            "intents": (
+                "extract_brand",
+                "extract_color",
+            ),
+            "inputs": (
+                "frame",
+            ),
+            "outputs": (
+                "extractions",
+            ),
+        },
+    )

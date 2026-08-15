@@ -50,3 +50,15 @@ class CapabilityRegistry:
     def catalog(self) -> dict[str, CapabilitySpec]:
         """Return registered capability specifications keyed by ID."""
         return self._catalog
+
+    def metadata(self) -> tuple[dict[str, object], ...]:
+        return tuple(
+            {
+                "id": capability.spec.id,
+                "description": capability.spec.description,
+                "intents": capability.spec.intents,
+                "inputs": capability.spec.input_keys,
+                "outputs": capability.spec.output_keys,
+            }
+            for capability in self._capabilities.values()
+        )

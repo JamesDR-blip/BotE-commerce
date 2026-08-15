@@ -1,5 +1,5 @@
 from domain.capabilities import CapabilitySpec
-
+from domain.capability_dependency import CapabilityDependency
 
 def test_capability_spec_supports_parameter_keys():
     spec = CapabilitySpec(
@@ -24,3 +24,24 @@ def test_capability_spec_parameter_keys_default_to_empty():
     )
 
     assert spec.parameter_keys == ()
+
+def test_capability_spec_supports_versioned_dependencies():
+
+    spec = CapabilitySpec(
+        id="data.validate",
+        version="1.0",
+        description="Validate ecommerce data.",
+        input_keys=("frame",),
+        output_keys=("result",),
+        required_capabilities=(
+            CapabilityDependency(
+                capability_id="data.clean",
+                version_constraint=">=1.0",
+            ),
+        ),
+    )
+
+    dependency = spec.required_capabilities[0]
+
+    assert dependency.capability_id == "data.clean"
+    assert dependency.version_constraint == ">=1.0"

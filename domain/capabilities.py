@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol
 
+from domain.capability_dependency import CapabilityDependency
 
 @dataclass(frozen=True)
 class CapabilitySpec:
@@ -11,9 +12,14 @@ class CapabilitySpec:
     id: str
     version: str
     description: str
+
     input_keys: tuple[str, ...]
     output_keys: tuple[str, ...]
-    required_capabilities: tuple[str, ...] = ()
+
+    required_capabilities: tuple[
+        str | CapabilityDependency,
+        ...
+    ] = ()
     parameter_keys: tuple[str, ...] = ()
     input_mappings: tuple[tuple[str, str], ...] = ()
 
@@ -25,6 +31,7 @@ class CapabilitySpec:
         default_factory=dict
     )
 
+    intents: tuple[str, ...] = ()
 
 @dataclass(frozen=True)
 class CapabilityContext:

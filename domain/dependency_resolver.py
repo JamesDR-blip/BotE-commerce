@@ -6,10 +6,17 @@ from typing import Mapping, Sequence
 
 from domain.capabilities import CapabilitySpec
 from domain.dependencies import CapabilityDependencyResolver
+from domain.dependencies import CapabilityDependency
 from domain.exceptions import (
     CapabilityDependencyCycleError,
     CapabilityDependencyMissingError,
 )
+from domain.exceptions import (
+    CapabilityDependencyCycleError,
+    CapabilityDependencyMissingError,
+    CapabilityDependencyVersionError,
+)
+from domain.versioning import satisfies
 
 
 class DependencyResolver:
@@ -42,7 +49,36 @@ class DependencyResolver:
 
             spec = capabilities[capability_id]
 
-            for dependency_id in spec.required_capabilities:
+            for dependency in spec.required_capabilities:
+
+                version_constraint = ""
+
+                if isinstance(dependency, str):
+                    dependency_id = dependency
+                else:
+                    dependency_id = dependency.capability_id
+                    version_constraint = dependency.version_constraint
+
+                dependency_spec = capabilities.get(
+                    dependency_id
+                )
+
+                if dependency_spec is None:
+                    raise CapabilityDependencyMissingError(
+                        f"Capability dependency not found: {dependency_id}"
+                    )
+
+                if not satisfies(
+                    dependency_spec.version,
+                    version_constraint,
+                ):
+                    raise CapabilityDependencyVersionError(
+                        f"Capability {dependency_id} "
+                        f"version {dependency_spec.version} "
+                        f"does not satisfy "
+                        f"{version_constraint}"
+                    )
+
                 visit(dependency_id)
 
             visiting.remove(capability_id)

@@ -32,3 +32,13 @@ class CapabilityDependencyMissingError(CapabilityDependencyError):
 
 class CapabilityDependencyCycleError(CapabilityDependencyError):
     """Raised when capability dependencies contain a cycle."""
+
+class CapabilityDependencyVersionError(
+    CapabilityDependencyError
+):
+    """Raised when dependency version constraint is not satisfied."""
+
+class CapabilityDependencyContractError(
+    CapabilityDependencyError
+):
+    """Raised when capability input/output contracts are incompatible."""
