@@ -4,58 +4,108 @@ import pandas as pd
 
 from capabilities.validation import ValidationCapability
 from domain.capabilities import CapabilityContext
-from domain.models import ValidationResult
+from domain.models import ValidationIssue
+from rule_engine.models import RuleSet
 
 
-class FakeValidationWorkflow:
+class FakeRules:
     def __init__(self) -> None:
         self.calls = []
 
-    def run(
-        self,
-        frame: pd.DataFrame,
-        requested_category: str | None = None,
-        execution_id: str | None = None,
-    ) -> ValidationResult:
+    def get(self, category: str):
+        self.calls.append(category)
+
+        return (
+            RuleSet(category=category),
+            "test-version",
+        )
+
+
+class FakeRuleRetriever:
+    def __init__(self) -> None:
+        self.calls = []
+
+    def retrieve(self, category: str):
+        self.calls.append(category)
+
+        return (
+            RuleSet(category=category),
+            "test-version",
+        )
+
+
+class FakeValidator:
+    def __init__(self) -> None:
+        self.calls = []
+
+    def validate(self, frame, validator, rules):
         self.calls.append(
             {
                 "frame": frame,
-                "requested_category": requested_category,
-                "execution_id": execution_id,
+                "validator": validator,
+                "rules": rules,
             }
         )
 
-        return ValidationResult(
-            category=requested_category or "unknown",
-            clean=frame,
-            quarantine=frame.iloc[0:0],
-            issues=[],
-            health_score=1.0,
-            rule_version="test",
-        )
+        return [
+            ValidationIssue(
+                row=2,
+                field="color",
+                code="missing",
+                message="Missing color",
+            )
+        ]
+
+
+class FakeRegistry:
+    def __init__(self) -> None:
+        self.validator = object()
+        self.calls = []
+
+    def get(self, category: str):
+        self.calls.append(category)
+        return self.validator
+
+
+def make_capability():
+    rules = FakeRuleRetriever()
+    validator = FakeValidator()
+    registry = FakeRegistry()
+
+    capability = ValidationCapability(
+        rules=rules,
+        validator=validator,
+        registry=registry,
+    )
+
+    return capability, rules, validator, registry
 
 
 def test_validation_capability_exposes_correct_spec():
-    workflow = FakeValidationWorkflow()
-    capability = ValidationCapability(workflow)
+    capability, _, _, _ = make_capability()
 
     assert capability.spec.id == "data.validate"
     assert capability.spec.version == "1.0"
+
     assert capability.spec.input_keys == (
         "frame",
-        "requested_category",
+        "category",
     )
+
     assert capability.spec.output_keys == (
-        "validation_result",
+        "frame",
+        "category",
+        "issues",
+        "rule_version",
     )
+
     assert capability.spec.required_capabilities == (
         "data.clean",
     )
 
 
-def test_validation_capability_delegates_to_workflow():
-    workflow = FakeValidationWorkflow()
-    capability = ValidationCapability(workflow)
+def test_validation_capability_executes_deterministic_validation():
+    capability, rules, validator, registry = make_capability()
 
     frame = pd.DataFrame(
         {
@@ -67,27 +117,33 @@ def test_validation_capability_delegates_to_workflow():
         execution_id="execution-123",
         inputs={
             "frame": frame,
-            "requested_category": "fashion",
+            "category": "Fashion",
         },
     )
 
     result = capability.execute(context)
 
-    assert result.outputs["validation_result"].category == "fashion"
+    assert result.outputs["frame"] is frame
+    assert result.outputs["category"] == "Fashion"
+    assert result.outputs["rule_version"] == "test-version"
 
-    assert len(workflow.calls) == 1
-    assert workflow.calls[0]["frame"] is frame
-    assert workflow.calls[0]["requested_category"] == "fashion"
-    assert workflow.calls[0]["execution_id"] == "execution-123"
+    assert len(result.outputs["issues"]) == 1
+    assert result.outputs["issues"][0].code == "missing"
+
+    assert rules.calls == ["Fashion"]
+    assert registry.calls == ["Fashion"]
+
+    assert len(validator.calls) == 1
+    assert validator.calls[0]["frame"] is frame
+    assert validator.calls[0]["rules"].category == "Fashion"
 
 
-def test_validation_capability_allows_missing_requested_category():
-    workflow = FakeValidationWorkflow()
-    capability = ValidationCapability(workflow)
+def test_validation_capability_requires_category():
+    capability, _, _, _ = make_capability()
 
     frame = pd.DataFrame(
         {
-            "product_title": ["Test Product"],
+            "product_title": ["Nike Air Max"],
         }
     )
 
@@ -98,19 +154,22 @@ def test_validation_capability_allows_missing_requested_category():
         },
     )
 
-    result = capability.execute(context)
-
-    assert result.outputs["validation_result"].category == "unknown"
+    try:
+        capability.execute(context)
+    except KeyError as exc:
+        assert exc.args[0] == "category"
+    else:
+        raise AssertionError("Expected KeyError")
 
 
 def test_validation_capability_rejects_invalid_frame():
-    workflow = FakeValidationWorkflow()
-    capability = ValidationCapability(workflow)
+    capability, _, _, _ = make_capability()
 
     context = CapabilityContext(
         execution_id="execution-789",
         inputs={
             "frame": ["not", "a", "dataframe"],
+            "category": "Fashion",
         },
     )
 

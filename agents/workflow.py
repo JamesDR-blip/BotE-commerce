@@ -21,10 +21,25 @@ class AutoFixAgent:
 
 
 class ValidatorAgent:
-    def __init__(self, service: ValidationService | None = None) -> None: self._service = service
-    def validate(self, frame: pd.DataFrame, validator, rules: RuleSet) -> list[ValidationIssue]:
-        return self._service.validate(frame, validator, rules)
+    def __init__(self, service: ValidationService | None = None) -> None:
+        self._service = service
 
+    def validate(
+        self,
+        frame: pd.DataFrame,
+        validator,
+        rules: RuleSet,
+    ) -> list[ValidationIssue]:
+        if self._service is None:
+            raise RuntimeError(
+                "ValidatorAgent requires a ValidationService"
+            )
+
+        return self._service.validate(
+            frame,
+            validator,
+            rules,
+        )
 
 class LLMExplanationAgent:
     """Optional explanation seam. Production adapters may call an LLM but return text only."""

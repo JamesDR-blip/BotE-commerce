@@ -2,17 +2,14 @@ from __future__ import annotations
 
 import pandas as pd
 
+from agents.requirement import ValidationRequirement
 from configs.settings import Settings
-from services.container import Container
-from capabilities.validation import ValidationCapability
-from domain.capabilities import CapabilityContext
 from domain.models import ValidationResult
+from services.container import Container
 
 
 def test_validation_capability_executes_real_workflow():
     container = Container(Settings())
-
-    capability = ValidationCapability(container.workflow)
 
     frame = pd.DataFrame(
         {
@@ -23,17 +20,22 @@ def test_validation_capability_executes_real_workflow():
         }
     )
 
-    context = CapabilityContext(
-        execution_id="integration-test",
+    requirement = ValidationRequirement(
+        requested_capabilities=(
+            "data.qa",
+        ),
+    )
+
+    outputs = container.capability_execution.execute(
+        requirement=requirement,
         inputs={
             "frame": frame,
             "requested_category": None,
         },
+        execution_id="integration-test",
     )
 
-    result = capability.execute(context)
-
-    validation_result = result.outputs["validation_result"]
+    validation_result = outputs["validation_result"]
 
     assert isinstance(validation_result, ValidationResult)
     assert validation_result.category

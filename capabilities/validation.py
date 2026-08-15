@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import pandas as pd
 
+from agents.rule_retriever import RuleRetrieverAgent
+from agents.workflow import ValidatorAgent
 from domain.capabilities import (
     CapabilityContext,
     CapabilityResult,
     CapabilitySpec,
 )
-from domain.validation_workflow import ValidationWorkflow
+from domain.models import ValidationIssue
+from plugins.registry import ValidatorRegistry
 
 
 VALIDATION_CAPABILITY_SPEC = CapabilitySpec(
@@ -18,10 +21,13 @@ VALIDATION_CAPABILITY_SPEC = CapabilitySpec(
     description="Validate ecommerce tabular data.",
     input_keys=(
         "frame",
-        "requested_category",
+        "category",
     ),
     output_keys=(
-        "validation_result",
+        "frame",
+        "category",
+        "issues",
+        "rule_version",
     ),
     required_capabilities=(
         "data.clean",
@@ -30,31 +36,68 @@ VALIDATION_CAPABILITY_SPEC = CapabilitySpec(
 
 
 class ValidationCapability:
-    """Expose the existing validation workflow as a platform capability."""
+    """Expose deterministic validation as a platform capability."""
 
-    def __init__(self, workflow: ValidationWorkflow) -> None:
-        self._workflow = workflow
+    def __init__(
+        self,
+        rules: RuleRetrieverAgent,
+        validator: ValidatorAgent,
+        registry: ValidatorRegistry,
+    ) -> None:
+        self._rules = rules
+        self._validator = validator
+        self._registry = registry
 
     @property
     def spec(self) -> CapabilitySpec:
         return VALIDATION_CAPABILITY_SPEC
 
-    def execute(self, context: CapabilityContext) -> CapabilityResult:
+    def execute(
+        self,
+        context: CapabilityContext,
+    ) -> CapabilityResult:
         frame = context.inputs["frame"]
-        requested_category = context.inputs.get("requested_category")
+        category = context.inputs["category"]
 
         if not isinstance(frame, pd.DataFrame):
-            raise TypeError("data.validate requires a pandas DataFrame")
-        
-        result = self._workflow.run(
-            frame=frame,
-            requested_category=requested_category,
-            execution_id=context.execution_id,
+            raise TypeError(
+                "data.validate requires a pandas DataFrame"
+            )
+
+        if not isinstance(category, str):
+            raise TypeError(
+                "data.validate requires a string category"
+            )
+
+        rules, rule_version = self._rules.retrieve(category)
+
+        validator = self._registry.get(category)
+
+        issues = self._validator.validate(
+            frame,
+            validator,
+            rules,
         )
+
+        if not isinstance(issues, list):
+            raise TypeError(
+                "validator must return a list of ValidationIssue"
+            )
+
+        if not all(
+            isinstance(issue, ValidationIssue)
+            for issue in issues
+        ):
+            raise TypeError(
+                "validator must return ValidationIssue objects"
+            )
 
         return CapabilityResult(
             outputs={
-                "validation_result": result,
+                "frame": frame,
+                "category": category,
+                "issues": issues,
+                "rule_version": rule_version,
             }
         )
 

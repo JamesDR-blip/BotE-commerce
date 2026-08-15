@@ -42,6 +42,7 @@ from capabilities.validation import ValidationCapability
 from capabilities.cleaning import CleaningCapability
 from capabilities.extraction import ExtractionCapability
 from capabilities.normalization import NormalizationCapability
+from capabilities.qa import QACapability
 
 class Container:
     def __init__(self, settings: Settings) -> None:
@@ -88,9 +89,16 @@ class Container:
         )
 
         validation_capability = ValidationCapability(
-            self.workflow
+            rules=self.agents.rules,
+            validator=self.agents.validator,
+            registry=self.registry,
         )
         self.capabilities.register(validation_capability)
+
+        qa_capability = QACapability(
+            self.agents.qa
+        )
+        self.capabilities.register(qa_capability)
 
         selector = CapabilitySelector(
             available_capabilities=lambda: self.capabilities.catalog().keys(),

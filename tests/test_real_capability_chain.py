@@ -13,7 +13,7 @@ def test_real_validation_capability_chain():
 
     requirement = ValidationRequirement(
         requested_category="Fashion",
-        requested_capabilities=("data.validate",),
+        requested_capabilities=("data.qa",),
     )
 
     frame = pd.DataFrame(
@@ -78,12 +78,15 @@ def test_real_capability_chain_clean_then_validate():
         execution_id="real-chain-test",
     )
 
-    result = outputs["validation_result"]
+    assert "frame" in outputs
+    assert "category" in outputs
+    assert "issues" in outputs
+    assert "rule_version" in outputs
 
-    assert result.category
-    assert isinstance(result.issues, list)
-    assert isinstance(result.clean, pd.DataFrame)
-    assert isinstance(result.quarantine, pd.DataFrame)
+    assert isinstance(outputs["frame"], pd.DataFrame)
+    assert isinstance(outputs["category"], str)
+    assert isinstance(outputs["issues"], list)
+    assert isinstance(outputs["rule_version"], str)
 
 
 def test_real_capability_chain_passes_cleaned_frame_to_validation():
@@ -112,28 +115,21 @@ def test_real_capability_chain_passes_cleaned_frame_to_validation():
     cleaning_capability = container.capabilities.get("data.clean")
     cleaning_capability._service.clean = fake_clean
 
-    class SpyWorkflow:
-        def run(
-            self,
-            frame,
-            requested_category=None,
-            execution_id=None,
-        ):
-            captured["validation_frame"] = frame
-            captured["validation_requested_category"] = requested_category
-            captured["validation_execution_id"] = execution_id
-
-            return ValidationResult(
-                category=requested_category or "unknown",
-                clean=frame,
-                quarantine=frame.iloc[0:0],
-                issues=[],
-                health_score=100.0,
-                rule_version="test",
-            )
 
     validation_capability = container.capabilities.get("data.validate")
-    validation_capability._workflow = SpyWorkflow()
+
+    captured_validation = {}
+
+    original_validate = validation_capability._validator.validate
+
+    def spy_validate(frame, validator, rules):
+        captured_validation["frame"] = frame
+        captured_validation["validator"] = validator
+        captured_validation["rules"] = rules
+
+        return original_validate(frame, validator, rules)
+
+    validation_capability._validator.validate = spy_validate
 
     requirement = ValidationRequirement(
         requested_capabilities=("data.validate",),
@@ -148,21 +144,16 @@ def test_real_capability_chain_passes_cleaned_frame_to_validation():
         execution_id="data-flow-test",
     )
 
-    result = outputs["validation_result"]
-
     assert captured["clean_input"] is original_frame
-    assert captured["validation_frame"] is cleaned_frame
+    assert captured["clean_requested_category"] == "Fashion"
 
-    assert captured["validation_frame"].equals(
-        cleaned_frame
-    )
+    assert captured_validation["frame"] is cleaned_frame
 
-    assert not captured["validation_frame"].equals(
-        original_frame
-    )
-
-    assert result.clean is cleaned_frame
-
+    assert outputs["frame"] is cleaned_frame
+    assert outputs["category"] == "Fashion"
+    assert isinstance(outputs["issues"], list)
+    assert len(outputs["issues"]) >= 0
+    assert isinstance(outputs["rule_version"], str)
 
 def test_real_capability_chain_passes_extraction_parameters():
     container = Container(Settings())
