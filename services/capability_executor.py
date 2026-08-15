@@ -24,6 +24,7 @@ class CapabilityExecutor:
         plan: ExecutionPlan,
         inputs: Mapping[str, Any],
         execution_id: str,
+        trace_collector=None,
     ) -> dict[str, Any]:
         context: dict[str, Any] = dict(inputs)
 
@@ -77,13 +78,39 @@ class CapabilityExecutor:
                     step.capability_id,
                 )
 
-            result = capability.execute(
-                CapabilityContext(
-                    execution_id=execution_id,
-                    inputs=mapped_inputs,
-                    config=step.parameters,
+            trace_index = None
+
+            if trace_collector:
+                trace_index = trace_collector.start(
+                    capability.spec.id,
+                    capability.spec.version,
                 )
-            )
+
+            try:
+                result = capability.execute(
+                    CapabilityContext(
+                        execution_id=execution_id,
+                        inputs=mapped_inputs,
+                        config=step.parameters,
+                    )
+                )
+
+            except Exception as exc:
+
+                if trace_collector and trace_index is not None:
+                    trace_collector.fail(
+                        trace_index,
+                        exc,
+                    )
+
+                raise
+
+
+            if trace_collector and trace_index is not None:
+                trace_collector.complete(
+                    trace_index,
+                    dict(result.outputs),
+                )
             self._validate_output_types(
                 capability.spec.output_types,
                 result.outputs,
