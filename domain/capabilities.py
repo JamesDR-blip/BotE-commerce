@@ -48,7 +48,14 @@ class CapabilityResult:
     """Normalized result returned by a capability."""
 
     outputs: Mapping[str, Any]
-    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    metadata: Mapping[str, Any] = field(
+        default_factory=dict
+    )
+
+    success: bool = True
+
+    error: str | None = None
 
 
 class Capability(Protocol):

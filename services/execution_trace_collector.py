@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, UTC
+from typing import Any, Mapping
 
 from domain.execution_trace import (
     CapabilityExecutionRecord,
@@ -45,7 +46,7 @@ class ExecutionTraceCollector:
     def complete(
         self,
         index: int,
-        outputs: dict,
+        outputs: Mapping[str, Any],
     ) -> None:
         """Mark capability execution as completed."""
 
