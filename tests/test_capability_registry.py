@@ -177,6 +177,7 @@ def test_registry_returns_capability_metadata():
                 "extract_brand",
                 "extract_color",
             ),
+            
         )
     )
 

@@ -33,6 +33,13 @@ class CapabilitySpec:
 
     intents: tuple[str, ...] = ()
 
+    intent_keywords: Mapping[
+        str,
+        tuple[str, ...],
+    ] = field(
+        default_factory=dict
+    )
+
     def __post_init__(self) -> None:
         if not self.id.strip():
             raise ValueError(
@@ -76,6 +83,19 @@ class CapabilitySpec:
                 f"Output types reference unknown keys "
                 f"for {self.id}: "
                 f"{sorted(unknown_output_types)}"
+            )
+
+        unknown_intent_keywords = (
+            set(self.intent_keywords)
+            -
+            set(self.intents)
+        )
+
+        if unknown_intent_keywords:
+            raise ValueError(
+                f"Intent keywords reference unknown intents "
+                f"for {self.id}: "
+                f"{sorted(unknown_intent_keywords)}"
             )
 
 @dataclass(frozen=True)

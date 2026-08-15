@@ -32,6 +32,7 @@ from domain.intent_resolver import IntentResolver
 from agents.planner import PlannerAgent
 from extractors.deterministic import DeterministicProductExtractor
 from agents.llm import LLMAssistantAgent
+from agents.intent_classifier import IntentClassifier
 
 from reports.generator import ReportAgent
 
@@ -53,8 +54,17 @@ class Container:
         self.rules = RuleRepository(settings.rules_path)
         self.validation = ValidationService()
         self.health_scores = HealthScoreService()
-        self.agents = Agents(RequirementAgent(), ClassifierAgent(), RuleRetrieverAgent(self.rules), ExtractionAgent(DeterministicProductExtractor()), AutoFixAgent(), ValidatorAgent(self.validation), QAAgent(self.health_scores))
-
+        self.agents = Agents(
+            RequirementAgent(),
+            ClassifierAgent(),
+            RuleRetrieverAgent(self.rules),
+            ExtractionAgent(
+                DeterministicProductExtractor()
+            ),
+            AutoFixAgent(),
+            ValidatorAgent(self.validation),
+            QAAgent(self.health_scores),
+        )
         self.capabilities = CapabilityRegistry()
 
         self.data_operations = DataOperationsService(
@@ -78,17 +88,6 @@ class Container:
         )
         self.capabilities.register(extraction_capability)
 
-        self.workflow = DeterministicValidationWorkflow(
-            requirements=self.agents.requirements,
-            classifier=self.agents.classifier,
-            rules=self.agents.rules,
-            extraction=self.agents.extraction,
-            fixer=self.agents.fixer,
-            validator=self.agents.validator,
-            qa=self.agents.qa,
-            registry=self.registry,
-        )
-
         validation_capability = ValidationCapability(
             rules=self.agents.rules,
             validator=self.agents.validator,
@@ -101,24 +100,38 @@ class Container:
         )
         self.capabilities.register(qa_capability)
 
+        intent_classifier = IntentClassifier.from_registry(
+            self.capabilities
+        )
+
+        self.agents.requirements = RequirementAgent(
+            classifier=intent_classifier
+        )
+
+        self.workflow = DeterministicValidationWorkflow(
+            requirements=self.agents.requirements,
+            classifier=self.agents.classifier,
+            rules=self.agents.rules,
+            extraction=self.agents.extraction,
+            fixer=self.agents.fixer,
+            validator=self.agents.validator,
+            qa=self.agents.qa,
+            registry=self.registry,
+        )
+
         selector = CapabilitySelector(
             available_capabilities=lambda: self.capabilities.catalog().keys(),
         )
 
-        intent_mapping = {
-            intent: (capability_id,)
-            for capability_id, spec
-            in self.capabilities.catalog().items()
-            for intent in spec.intents
-        }
-        intent_resolver = IntentResolver(
-            intent_mapping
+        intent_resolver = IntentResolver.from_registry(
+            self.capabilities
         )
 
         self.planner = PlannerAgent(
             registry=self.capabilities,
             resolver=DependencyResolver(),
             intent_resolver=intent_resolver,
+            selector=selector,
         )
 
         self.capability_executor = CapabilityExecutor(
