@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from domain.execution_status import ExecutionStatus
 
 @dataclass(frozen=True)
 class CapabilityExecutionRecord:
@@ -13,7 +14,7 @@ class CapabilityExecutionRecord:
 
     capability_id: str
     capability_version: str
-    status: str
+    status: ExecutionStatus
 
     started_at: datetime
     finished_at: datetime | None = None
@@ -45,6 +46,41 @@ class ExecutionTrace:
     metadata: dict[str, Any] = field(
         default_factory=dict
     )
+
+
+    def summary(self) -> dict[str, object]:
+
+        completed = sum(
+            1
+            for record in self.records
+            if record.status == ExecutionStatus.COMPLETED
+        )
+
+        failed = sum(
+            1
+            for record in self.records
+            if record.status == ExecutionStatus.FAILED
+        )
+
+        running = sum(
+            1
+            for record in self.records
+            if record.status == ExecutionStatus.RUNNING
+        )
+
+        duration_ms = sum(
+            record.duration_ms or 0
+            for record in self.records
+        )
+
+        return {
+            "execution_id": self.execution_id,
+            "total_steps": len(self.records),
+            "completed": completed,
+            "failed": failed,
+            "running": running,
+            "duration_ms": duration_ms,
+        }
 
 
 __all__ = [

@@ -3,7 +3,12 @@ from __future__ import annotations
 from typing import Callable
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from database.models import ExecutionRecord, ReportRecord, ValidationLogRecord
+from database.models import (
+    ExecutionRecord,
+    ReportRecord,
+    ValidationLogRecord,
+    CapabilityExecutionTraceRecord,
+)
 from domain.models import ValidationIssue
 
 
@@ -83,3 +88,38 @@ class ExecutionRepository:
     def report_path(self, execution_id: str, report_format: str) -> str | None:
         with self._sessions() as session:
             return session.scalar(select(ReportRecord.path).where(ReportRecord.execution_id == execution_id, ReportRecord.format == report_format))
+
+    def save_trace(
+        self,
+        execution_id: str,
+        trace,
+    ) -> None:
+        with self._sessions() as session:
+            record = session.get(
+                ExecutionRecord,
+                execution_id,
+            )
+
+            if record is None:
+                raise ValueError(
+                    f"Execution {execution_id} does not exist"
+                )
+
+            session.add_all(
+                CapabilityExecutionTraceRecord(
+                    execution_id=execution_id,
+                    capability_id=item.capability_id,
+                    capability_version=item.capability_version,
+                    status=item.status.value
+                    if hasattr(item.status, "value")
+                    else str(item.status),
+                    started_at=item.started_at,
+                    finished_at=item.finished_at,
+                    duration_ms=item.duration_ms,
+                    error=item.error,
+                    outputs_json=item.outputs or {},
+                )
+                for item in trace.records
+            )
+
+            session.commit()

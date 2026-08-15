@@ -33,9 +33,20 @@ class ExecutionRecord(Base):
         )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
     user: Mapped[UserRecord | None] = relationship(back_populates="executions")
-    reports: Mapped[list["ReportRecord"]] = relationship(back_populates="execution", cascade="all, delete-orphan")
-    logs: Mapped[list["ValidationLogRecord"]] = relationship(back_populates="execution", cascade="all, delete-orphan")
+    reports: Mapped[list["ReportRecord"]] = relationship(
+        back_populates="execution",
+        cascade="all, delete-orphan"
+    )
 
+    logs: Mapped[list["ValidationLogRecord"]] = relationship(
+        back_populates="execution",
+        cascade="all, delete-orphan"
+    )
+
+    traces: Mapped[list["CapabilityExecutionTraceRecord"]] = relationship(
+        back_populates="execution",
+        cascade="all, delete-orphan"
+    )
 
 class ValidationLogRecord(Base):
     __tablename__ = "validation_logs"
@@ -48,6 +59,61 @@ class ValidationLogRecord(Base):
     severity: Mapped[str] = mapped_column(String(20))
     execution: Mapped[ExecutionRecord] = relationship(back_populates="logs")
 
+class CapabilityExecutionTraceRecord(Base):
+    __tablename__ = "capability_execution_traces"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    execution_id: Mapped[str] = mapped_column(
+        ForeignKey("executions.id"),
+        index=True,
+    )
+
+    capability_id: Mapped[str] = mapped_column(
+        String(100),
+        index=True,
+    )
+
+    capability_version: Mapped[str] = mapped_column(
+        String(64),
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+    )
+
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+    )
+
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    duration_ms: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    error: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    outputs_json: Mapped[dict] = mapped_column(
+        JSON,
+        default=dict,
+    )
+
+    execution: Mapped[ExecutionRecord] = relationship(
+        back_populates="traces"
+    )
 
 class ReportRecord(Base):
     __tablename__ = "reports"

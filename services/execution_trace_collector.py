@@ -8,6 +8,7 @@ from domain.execution_trace import (
     CapabilityExecutionRecord,
     ExecutionTrace,
 )
+from domain.execution_status import ExecutionStatus
 
 
 class ExecutionTraceCollector:
@@ -32,7 +33,7 @@ class ExecutionTraceCollector:
         record = CapabilityExecutionRecord(
             capability_id=capability_id,
             capability_version=capability_version,
-            status="RUNNING",
+            status=ExecutionStatus.RUNNING,
             started_at=datetime.now(UTC),
         )
 
@@ -59,7 +60,7 @@ class ExecutionTraceCollector:
         self._records[index] = CapabilityExecutionRecord(
             capability_id=current.capability_id,
             capability_version=current.capability_version,
-            status="COMPLETED",
+            status=ExecutionStatus.COMPLETED,
             started_at=current.started_at,
             finished_at=finished,
             duration_ms=duration,
@@ -85,7 +86,7 @@ class ExecutionTraceCollector:
         self._records[index] = CapabilityExecutionRecord(
             capability_id=current.capability_id,
             capability_version=current.capability_version,
-            status="FAILED",
+            status=ExecutionStatus.FAILED,
             started_at=current.started_at,
             finished_at=finished,
             duration_ms=duration,

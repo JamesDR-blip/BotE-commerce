@@ -1,6 +1,7 @@
 from services.execution_trace_collector import (
     ExecutionTraceCollector,
 )
+from domain.execution_status import ExecutionStatus
 
 
 def test_collector_tracks_completed_execution():
@@ -28,7 +29,7 @@ def test_collector_tracks_completed_execution():
     record = trace.records[0]
 
     assert record.capability_id == "data.clean"
-    assert record.status == "COMPLETED"
+    assert record.status == ExecutionStatus.COMPLETED
     assert record.outputs["cleaned"] is True
 
 
@@ -50,5 +51,5 @@ def test_collector_tracks_failed_execution():
 
     record = collector.trace().records[0]
 
-    assert record.status == "FAILED"
+    assert record.status == ExecutionStatus.FAILED
     assert "invalid data" in record.error

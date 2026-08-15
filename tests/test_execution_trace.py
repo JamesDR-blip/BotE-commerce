@@ -4,6 +4,7 @@ from domain.execution_trace import (
     CapabilityExecutionRecord,
     ExecutionTrace,
 )
+from domain.execution_status import ExecutionStatus
 
 
 def test_capability_execution_record_contract():
@@ -19,7 +20,7 @@ def test_capability_execution_record_contract():
     )
 
     assert record.capability_id == "data.clean"
-    assert record.status == "COMPLETED"
+    assert record.status == ExecutionStatus.COMPLETED
     assert record.duration_ms == 10.5
 
 
