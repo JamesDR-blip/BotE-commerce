@@ -7,6 +7,7 @@ from typing import Any, Mapping
 from agents.planner import PlannerAgent
 from agents.requirement import ValidationRequirement
 from services.capability_executor import CapabilityExecutor
+from services.plan_validator import PlanValidator
 
 
 class CapabilityExecutionService:
@@ -14,11 +15,13 @@ class CapabilityExecutionService:
 
     def __init__(
         self,
-        planner: PlannerAgent,
-        executor: CapabilityExecutor,
-    ) -> None:
+        planner,
+        executor,
+        validator=None,
+    ):
         self._planner = planner
         self._executor = executor
+        self._validator = validator or PlanValidator()
 
     def execute(
         self,
@@ -27,12 +30,17 @@ class CapabilityExecutionService:
         execution_id: str,
     ) -> dict[str, Any]:
         plan = self._planner.plan(requirement)
+        self._validator.validate(
+            plan,
+            self._executor.registry,
+        )
 
-        return self._executor.execute(
+        result = self._executor.execute(
             plan=plan,
             inputs=inputs,
             execution_id=execution_id,
         )
+        return result
 
 
 __all__ = ["CapabilityExecutionService"]

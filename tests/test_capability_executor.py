@@ -12,7 +12,6 @@ from domain.plans import ExecutionPlan, PlanStep
 from domain.exceptions import CapabilityNotFoundError
 from services.capability_executor import CapabilityExecutor
 
-
 @dataclass
 class EchoCapability:
     spec = CapabilitySpec(
@@ -228,33 +227,6 @@ def test_executor_passes_outputs_to_next_capability():
 
     assert result["echo"] == "hello"
     assert result["upper"] == "HELLO"
-
-
-def test_executor_rejects_capability_version_mismatch():
-    registry = CapabilityRegistry()
-    registry.register(EchoCapability())
-
-    executor = CapabilityExecutor(registry)
-
-    plan = ExecutionPlan(
-        steps=(
-            PlanStep(
-                capability_id="test.echo",
-                capability_version="2.0",
-            ),
-        )
-    )
-
-    try:
-        executor.execute(
-            plan,
-            inputs={"value": "hello"},
-            execution_id="test-execution",
-        )
-        assert False, "Expected version mismatch"
-    except ValueError as exc:
-        assert "version mismatch" in str(exc).lower()
-
 
 def test_executor_rejects_unknown_capability():
     registry = CapabilityRegistry()

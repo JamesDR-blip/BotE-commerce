@@ -15,6 +15,10 @@ class CapabilityExecutor:
     def __init__(self, registry: CapabilityRegistry) -> None:
         self._registry = registry
 
+    @property
+    def registry(self) -> CapabilityRegistry:
+        return self._registry
+
     def execute(
         self,
         plan: ExecutionPlan,
@@ -25,14 +29,6 @@ class CapabilityExecutor:
 
         for step in plan.steps:
             capability = self._registry.get(step.capability_id)
-
-            if capability.spec.version != step.capability_version:
-                raise ValueError(
-                    f"Capability version mismatch for "
-                    f"{step.capability_id}: "
-                    f"plan requires {step.capability_version}, "
-                    f"registered capability is {capability.spec.version}"
-                )
 
             unknown_mappings = [
                 key

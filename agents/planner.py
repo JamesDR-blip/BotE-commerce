@@ -46,6 +46,31 @@ class PlannerAgent:
 
         return self._catalog_snapshot or {}
 
+    def _validate_dependency_mapping(
+        self,
+        spec: CapabilitySpec,
+        input_mapping: dict[str, str],
+        available_outputs: set[str],
+        allow_external: bool = False,
+    ) -> None:
+
+        unknown_sources = [
+            source
+            for source in input_mapping.values()
+            if (
+                source not in available_outputs
+                and source not in spec.input_keys
+                and not allow_external
+            )
+        ]
+
+        if unknown_sources:
+            raise ValueError(
+                f"Unknown input mapping source for "
+                f"{spec.id}: "
+                + ", ".join(unknown_sources)
+            )
+
     def _validate_input_mapping(
         self,
         spec: CapabilitySpec,
@@ -82,31 +107,36 @@ class PlannerAgent:
         self,
         spec: CapabilitySpec,
     ) -> None:
-        unknown_input_types = [
-            key
-            for key in spec.input_types
-            if key not in spec.input_keys
-        ]
+        for key, declared_type in spec.input_types.items():
+            if key not in TYPE_CONTRACTS:
+                raise TypeError(
+                    f"Unknown input type contract: {key}"
+                )
 
-        if unknown_input_types:
-            raise TypeError(
-                f"Invalid input type contract for "
-                f"{spec.id}: "
-                f"{', '.join(unknown_input_types)}"
-            )
+            expected_type = TYPE_CONTRACTS[key]
 
-        unknown_output_types = [
-            key
-            for key in spec.output_types
-            if key not in spec.output_keys
-        ]
+            if declared_type is not expected_type:
+                raise TypeError(
+                    f"Invalid input type for "
+                    f"{spec.id}: {key}"
+                )
 
-        if unknown_output_types:
-            raise TypeError(
-                f"Invalid output type contract for "
-                f"{spec.id}: "
-                f"{', '.join(unknown_output_types)}"
-            )
+        for key, declared_type in spec.output_types.items():
+            if key not in TYPE_CONTRACTS:
+                raise TypeError(
+                    f"Unknown output type contract: {key}"
+                )
+
+            expected_type = TYPE_CONTRACTS[key]
+
+            if (
+                expected_type is not object
+                and declared_type is not expected_type
+            ):
+                raise TypeError(
+                    f"Invalid output type for "
+                    f"{spec.id}: {key}"
+                )
 
     def plan(self, requirement: ValidationRequirement) -> ExecutionPlan:
         """Build an execution plan from a validated requirement."""
@@ -189,6 +219,13 @@ class PlannerAgent:
             else:
                 input_mapping = dict(spec.input_mappings)
 
+            self._validate_dependency_mapping(
+                spec,
+                input_mapping,
+                available_outputs,
+                allow_external=has_requirement_mapping,
+            )
+
             unknown_input_keys = [
                 key
                 for key in input_mapping
@@ -237,37 +274,3 @@ class PlannerAgent:
             steps=steps,
             metadata={"source": "planner"},
         )
-    def _validate_type_contract(
-        self,
-        spec: CapabilitySpec,
-    ) -> None:
-        for key, declared_type in spec.input_types.items():
-            if key not in TYPE_CONTRACTS:
-                raise TypeError(
-                    f"Unknown input type contract: {key}"
-                )
-
-            expected_type = TYPE_CONTRACTS[key]
-
-            if declared_type is not expected_type:
-                raise TypeError(
-                    f"Invalid input type for "
-                    f"{spec.id}: {key}"
-                )
-
-        for key, declared_type in spec.output_types.items():
-            if key not in TYPE_CONTRACTS:
-                raise TypeError(
-                    f"Unknown output type contract: {key}"
-                )
-
-            expected_type = TYPE_CONTRACTS[key]
-
-            if (
-                expected_type is not object
-                and declared_type is not expected_type
-            ):
-                raise TypeError(
-                    f"Invalid output type for "
-                    f"{spec.id}: {key}"
-                )
