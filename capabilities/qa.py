@@ -29,6 +29,10 @@ QA_CAPABILITY_SPEC = CapabilitySpec(
     required_capabilities=(
         "data.validate",
     ),
+    intents=(
+        "generate_quality_report",
+        "assess_data_quality",
+    ),
 )
 
 

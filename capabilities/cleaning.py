@@ -24,6 +24,10 @@ CLEANING_CAPABILITY_SPEC = CapabilitySpec(
         "frame",
         "category",
     ),
+    intents=(
+        "clean_product_data",
+        "clean_product_titles",
+    ),
 )
 
 

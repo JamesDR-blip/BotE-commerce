@@ -28,6 +28,7 @@ from agents.workflow import Agents, AutoFixAgent, ClassifierAgent, QAAgent, Rule
 from agents.requirement import RequirementAgent
 from agents.reporter import ReporterAgent
 from agents.extraction import ExtractionAgent
+from domain.intent_resolver import IntentResolver
 from agents.planner import PlannerAgent
 from extractors.deterministic import DeterministicProductExtractor
 from agents.llm import LLMAssistantAgent
@@ -104,10 +105,20 @@ class Container:
             available_capabilities=lambda: self.capabilities.catalog().keys(),
         )
 
+        intent_mapping = {
+            intent: (capability_id,)
+            for capability_id, spec
+            in self.capabilities.catalog().items()
+            for intent in spec.intents
+        }
+        intent_resolver = IntentResolver(
+            intent_mapping
+        )
+
         self.planner = PlannerAgent(
             registry=self.capabilities,
             resolver=DependencyResolver(),
-            selector=selector,
+            intent_resolver=intent_resolver,
         )
 
         self.capability_executor = CapabilityExecutor(

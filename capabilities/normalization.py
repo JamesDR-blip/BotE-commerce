@@ -25,6 +25,10 @@ NORMALIZATION_CAPABILITY_SPEC = CapabilitySpec(
     parameter_keys=(
         "fields",
     ),
+    intents=(
+        "normalize_product_data",
+        "standardize_product_fields",
+    ),
 )
 
 

@@ -27,6 +27,10 @@ EXTRACTION_CAPABILITY_SPEC = CapabilitySpec(
     parameter_keys=(
         "attributes",
     ),
+    intents=(
+        "extract_product_attributes",
+        "extract_brand_model",
+    ),
 )
 
 

@@ -36,6 +36,10 @@ VALIDATION_CAPABILITY_SPEC = CapabilitySpec(
     required_capabilities=(
         "data.clean",
     ),
+    intents=(
+        "validate_product_quality",
+        "check_data_quality",
+    ),
 )
 
 

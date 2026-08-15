@@ -6,6 +6,7 @@ from domain.capability_registry import CapabilityRegistry
 from domain.capability_selector import CapabilitySelector
 from domain.plans import ExecutionPlan, PlanStep
 from domain.type_contracts import TYPE_CONTRACTS
+from domain.intent_resolver import IntentResolver
 
 from .requirement import ValidationRequirement
 
@@ -19,6 +20,7 @@ class PlannerAgent:
         resolver: DependencyResolver | None = None,
         catalog: dict[str, CapabilitySpec] | None = None,
         selector: CapabilitySelector | None = None,
+        intent_resolver: IntentResolver | None = None,
     ) -> None:
         if registry is not None and catalog is not None:
             raise ValueError(
@@ -28,6 +30,7 @@ class PlannerAgent:
         self._registry = registry
         self._catalog_snapshot = catalog
         self._resolver = resolver or DependencyResolver()
+        self._intent_resolver = intent_resolver
 
         if selector is not None:
             self._selector = selector
@@ -152,11 +155,26 @@ class PlannerAgent:
             else self._catalog_snapshot
         )
 
-        requested_capabilities = requirement.requested_capabilities
+        requested_capabilities = (
+            requirement.requested_capabilities
+        )
+
+        if (
+            not requested_capabilities
+            and requirement.requested_intents
+            and self._intent_resolver
+        ):
+            requested_capabilities = (
+                self._intent_resolver.resolve(
+                    requirement.requested_intents
+                )
+            )
 
         if self._selector is not None:
             requested_capabilities = self._selector.select(
-                requirement
+                ValidationRequirement(
+                    requested_capabilities=requested_capabilities,
+                )
             )
 
         specs = self._resolver.resolve(
