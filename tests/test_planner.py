@@ -554,6 +554,24 @@ def test_planner_sees_capability_registered_after_planner_creation():
         for step in plan.steps
     ] == ["test.fake"]
 
+def test_planner_default_selector_rejects_unknown_capability():
+    registry = CapabilityRegistry()
+
+    planner = PlannerAgent(
+        registry=registry,
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("test.unknown",),
+    )
+
+    try:
+        planner.plan(requirement)
+    except ValueError as exc:
+        assert "test.unknown" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError")
 
 def test_planner_uses_capability_selector():
     registry = CapabilityRegistry()

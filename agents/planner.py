@@ -27,7 +27,17 @@ class PlannerAgent:
         self._registry = registry
         self._catalog_snapshot = catalog
         self._resolver = resolver or DependencyResolver()
-        self._selector = selector
+
+        if selector is not None:
+            self._selector = selector
+        elif registry is not None:
+            self._selector = CapabilitySelector(
+                lambda: registry.catalog().keys()
+            )
+        else:
+            self._selector = CapabilitySelector(
+                lambda: (catalog or {}).keys()
+            )
     @property
     def _catalog(self) -> dict[str, CapabilitySpec]:
         if self._registry is not None:
