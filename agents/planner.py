@@ -45,6 +45,38 @@ class PlannerAgent:
 
         return self._catalog_snapshot or {}
 
+    def _validate_input_mapping(
+        self,
+        spec: CapabilitySpec,
+        input_mapping: dict[str, str],
+        previous_outputs: set[str],
+    ) -> None:
+        unknown_input_keys = [
+            key
+            for key in input_mapping
+            if key not in spec.input_keys
+        ]
+
+        if unknown_input_keys:
+            raise ValueError(
+                f"Unknown input mapping key for "
+                f"{spec.id}: "
+                f"{', '.join(unknown_input_keys)}"
+            )
+
+        unknown_sources = [
+            source
+            for source in input_mapping.values()
+            if source not in previous_outputs
+        ]
+
+        if unknown_sources:
+            raise ValueError(
+                f"Unknown input mapping source for "
+                f"{spec.id}: "
+                f"{', '.join(unknown_sources)}"
+            )
+
     def plan(self, requirement: ValidationRequirement) -> ExecutionPlan:
         """Build an execution plan from a validated requirement."""
 
@@ -74,22 +106,62 @@ class PlannerAgent:
         requirement_mappings = requirement.input_mappings or {}
         requirement_parameters = requirement.parameters or {}
 
-        steps = tuple(
-            PlanStep(
+        steps_list: list[PlanStep] = []
+        available_outputs: set[str] = set()
+
+        for spec in specs:
+            has_requirement_mapping = spec.id in requirement_mappings
+
+            if has_requirement_mapping:
+                input_mapping = dict(
+                    requirement_mappings[spec.id]
+                )
+            else:
+                input_mapping = dict(spec.input_mappings)
+
+            unknown_input_keys = [
+                key
+                for key in input_mapping
+                if key not in spec.input_keys
+            ]
+
+            if unknown_input_keys:
+                raise ValueError(
+                    f"Unknown input mapping key for "
+                    f"{spec.id}: "
+                    f"{', '.join(unknown_input_keys)}"
+                )
+
+            if not has_requirement_mapping:
+                unknown_sources = [
+                    source
+                    for source in input_mapping.values()
+                    if (
+                        source not in available_outputs
+                        and source not in spec.input_keys
+                    )
+                ]
+
+                if unknown_sources:
+                    raise ValueError(
+                        f"Unknown input mapping source for "
+                        f"{spec.id}: "
+                        f"{', '.join(unknown_sources)}"
+                    )
+                
+            step = PlanStep(
                 capability_id=spec.id,
                 capability_version=spec.version,
                 parameters=dict(
                     requirement_parameters.get(spec.id, {})
                 ),
-                input_mapping=dict(
-                    requirement_mappings.get(
-                        spec.id,
-                        dict(spec.input_mappings),
-                    )
-                ),
+                input_mapping=input_mapping,
             )
-            for spec in specs
-        )
+
+            steps_list.append(step)
+            available_outputs.update(spec.output_keys)
+
+        steps = tuple(steps_list)
 
         return ExecutionPlan(
             steps=steps,

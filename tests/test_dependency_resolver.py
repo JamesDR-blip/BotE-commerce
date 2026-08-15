@@ -171,3 +171,91 @@ def test_cycle_raises():
         raise AssertionError(
             "Expected CapabilityDependencyCycleError"
         )
+
+
+def test_resolves_complex_shared_dependency_tree_once():
+    catalog = {
+        "data.clean": make_spec("data.clean"),
+        "data.normalize": make_spec(
+            "data.normalize",
+            ("data.clean",),
+        ),
+        "data.extract": make_spec(
+            "data.extract",
+            ("data.normalize",),
+        ),
+        "data.validate": make_spec(
+            "data.validate",
+            ("data.normalize",),
+        ),
+        "shopify.map": make_spec(
+            "shopify.map",
+            ("data.extract", "data.validate"),
+        ),
+    }
+
+    result = DependencyResolver().resolve(
+        ["shopify.map"],
+        catalog,
+    )
+
+    assert [spec.id for spec in result] == [
+        "data.clean",
+        "data.normalize",
+        "data.extract",
+        "data.validate",
+        "shopify.map",
+    ]
+
+
+def test_resolves_multiple_requested_roots_deterministically():
+    catalog = {
+        "data.clean": make_spec("data.clean"),
+        "data.normalize": make_spec(
+            "data.normalize",
+            ("data.clean",),
+        ),
+        "data.extract": make_spec(
+            "data.extract",
+            ("data.normalize",),
+        ),
+        "data.validate": make_spec(
+            "data.validate",
+            ("data.normalize",),
+        ),
+    }
+
+    result = DependencyResolver().resolve(
+        ["data.extract", "data.validate"],
+        catalog,
+    )
+
+    assert [spec.id for spec in result] == [
+        "data.clean",
+        "data.normalize",
+        "data.extract",
+        "data.validate",
+    ]
+
+
+def test_resolver_preserves_dependency_declaration_order():
+    catalog = {
+        "data.clean": make_spec("data.clean"),
+        "data.normalize": make_spec("data.normalize"),
+        "data.extract": make_spec("data.extract"),
+        "data.validate": make_spec(
+            "data.validate",
+            ("data.extract", "data.normalize"),
+        ),
+    }
+
+    result = DependencyResolver().resolve(
+        ["data.validate"],
+        catalog,
+    )
+
+    assert [spec.id for spec in result] == [
+        "data.extract",
+        "data.normalize",
+        "data.validate",
+    ]

@@ -30,6 +30,40 @@ class EchoCapability:
             }
         )
 
+@dataclass
+class ReplaceValueCapability:
+    spec = CapabilitySpec(
+        id="test.replace-value",
+        version="1.0",
+        description="Replaces an existing context value",
+        input_keys=("value",),
+        output_keys=("value",),
+    )
+
+    def execute(self, context: CapabilityContext) -> CapabilityResult:
+        return CapabilityResult(
+            outputs={
+                "value": f"{context.inputs['value']}-replaced",
+            }
+        )
+
+
+@dataclass
+class MissingDeclaredOutputCapability:
+    spec = CapabilitySpec(
+        id="test.missing-output",
+        version="1.0",
+        description="Returns only part of declared outputs",
+        input_keys=("value",),
+        output_keys=("result", "category"),
+    )
+
+    def execute(self, context: CapabilityContext) -> CapabilityResult:
+        return CapabilityResult(
+            outputs={
+                "result": context.inputs["value"],
+            }
+        )
 
 def test_executor_executes_capability():
     registry = CapabilityRegistry()
@@ -756,4 +790,129 @@ def test_executor_rejects_unknown_parameter():
             plan,
             inputs={"value": "SKU-001"},
             execution_id="parameter-test",
+        )
+
+
+def test_executor_allows_declared_output_to_replace_existing_context_value():
+    registry = CapabilityRegistry()
+    registry.register(ReplaceValueCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.replace-value",
+                capability_version="1.0",
+            ),
+        )
+    )
+
+    result = executor.execute(
+        plan,
+        inputs={"value": "original"},
+        execution_id="overwrite-test",
+    )
+
+    assert result["value"] == "original-replaced"
+
+
+@dataclass
+class NormalizeValueCapability:
+    spec = CapabilitySpec(
+        id="test.normalize-value",
+        version="1.0",
+        description="Normalizes a value",
+        input_keys=("raw_value",),
+        output_keys=("normalized_value",),
+    )
+
+    def execute(self, context: CapabilityContext) -> CapabilityResult:
+        return CapabilityResult(
+            outputs={
+                "normalized_value": context.inputs["raw_value"].strip().lower(),
+            }
+        )
+
+
+@dataclass
+class ExtractValueCapability:
+    spec = CapabilitySpec(
+        id="test.extract-value",
+        version="1.0",
+        description="Extracts a value",
+        input_keys=("normalized_value",),
+        output_keys=("extracted_value",),
+    )
+
+    def execute(self, context: CapabilityContext) -> CapabilityResult:
+        return CapabilityResult(
+            outputs={
+                "extracted_value": context.inputs["normalized_value"].upper(),
+            }
+        )
+
+
+def test_executor_composes_multiple_explicit_input_mappings():
+    registry = CapabilityRegistry()
+
+    registry.register(NormalizeValueCapability())
+    registry.register(ExtractValueCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.normalize-value",
+                capability_version="1.0",
+                input_mapping={
+                    "raw_value": "value",
+                },
+            ),
+            PlanStep(
+                capability_id="test.extract-value",
+                capability_version="1.0",
+                input_mapping={
+                    "normalized_value": "normalized_value",
+                },
+            ),
+        )
+    )
+
+    result = executor.execute(
+        plan,
+        inputs={
+            "value": "  nike  ",
+        },
+        execution_id="multi-step-mapping-test",
+    )
+
+    assert result["normalized_value"] == "nike"
+    assert result["extracted_value"] == "NIKE"
+
+
+def test_executor_rejects_missing_declared_output():
+    registry = CapabilityRegistry()
+    registry.register(MissingDeclaredOutputCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.missing-output",
+                capability_version="1.0",
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)missing declared output",
+    ):
+        executor.execute(
+            plan,
+            inputs={"value": "hello"},
+            execution_id="test-execution",
         )

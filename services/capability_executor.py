@@ -96,6 +96,19 @@ class CapabilityExecutor:
                     f"{', '.join(undeclared_outputs)}"
                 )
 
+            missing_outputs = [
+                key
+                for key in capability.spec.output_keys
+                if key not in result.outputs
+            ]
+
+            if missing_outputs:
+                raise ValueError(
+                    f"Missing declared output for "
+                    f"{step.capability_id}: "
+                    f"{', '.join(missing_outputs)}"
+                )
+
             context.update(result.outputs)
 
         return context

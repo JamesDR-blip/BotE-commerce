@@ -1,3 +1,5 @@
+import pytest
+
 from agents.planner import PlannerAgent
 from agents.requirement import ValidationRequirement
 
@@ -629,3 +631,64 @@ def test_planner_uses_capability_selector():
         "data.extract",
         "data.clean",
     ]
+
+
+def test_planner_rejects_input_mapping_to_unknown_source():
+    planner = PlannerAgent(
+        registry=make_registry({
+            "data.clean": CapabilitySpec(
+                id="data.clean",
+                version="1.0",
+                description="Clean data",
+                input_keys=("frame",),
+                output_keys=("cleaned_frame",),
+            ),
+            "data.validate": CapabilitySpec(
+                id="data.validate",
+                version="1.0",
+                description="Validate data",
+                input_keys=("frame",),
+                output_keys=("validation_result",),
+                required_capabilities=("data.clean",),
+                input_mappings=(
+                    ("frame", "does_not_exist"),
+                ),
+            ),
+        }),
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.validate",),
+    )
+
+    with pytest.raises(ValueError, match=r"(?i)unknown input mapping source"):
+        planner.plan(requirement)
+
+
+def test_planner_allows_input_mapping_from_external_input():
+    planner = PlannerAgent(
+        registry=make_registry({
+            "data.extract": CapabilitySpec(
+                id="data.extract",
+                version="1.0",
+                description="Extract data",
+                input_keys=("frame",),
+                output_keys=("extractions",),
+                input_mappings=(
+                    ("frame", "frame"),
+                ),
+            ),
+        }),
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.extract",),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert plan.steps[0].input_mapping == {
+        "frame": "frame",
+    }
