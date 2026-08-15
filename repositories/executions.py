@@ -1,5 +1,6 @@
 """Repository for execution audit records."""
 from __future__ import annotations
+import json
 from typing import Callable
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -123,3 +124,54 @@ class ExecutionRepository:
             )
 
             session.commit()
+
+    def save_trace(
+        self,
+        execution_id: str,
+        trace,
+    ) -> None:
+        pass
+
+    def save_trace(
+        self,
+        execution_id: str,
+        trace,
+    ) -> None:
+
+        with self._sessions() as session:
+
+            session.add_all(
+                CapabilityExecutionTraceRecord(
+                    execution_id=execution_id,
+                    capability_id=record.capability_id,
+                    capability_version=record.capability_version,
+                    status=record.status.value,
+                    started_at=record.started_at,
+                    finished_at=record.finished_at,
+                    duration_ms=record.duration_ms,
+                    inputs_json=_serialize_json(record.inputs),
+                    outputs_json=_serialize_json(record.outputs),
+                    error=record.error,
+                )
+                for record in trace.records
+            )
+
+            session.commit()
+
+def _serialize_json(value):
+    if value is None:
+        return None
+
+    if isinstance(value, (str, int, float, bool)):
+        return value
+
+    if isinstance(value, dict):
+        return json.dumps(
+            {
+                key: _serialize_json(item)
+                for key, item in value.items()
+            },
+            default=str,
+        )
+
+    return json.dumps(str(value))

@@ -73,6 +73,16 @@ class QualityService:
 
             result = outputs["validation_result"]
 
+            trace = outputs.get(
+                "_execution_trace"
+            )
+
+            if trace is not None:
+                self._executions.save_trace(
+                    execution_id,
+                    trace,
+                )
+
             self._executions.update_status(
                 execution_id,
                 "COMPLETED",
