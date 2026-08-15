@@ -75,12 +75,23 @@ class CapabilityExecutor:
 
                 mapped_inputs[input_key] = context[source_key]
 
+                self._validate_input_types(
+                    capability.spec.input_types,
+                    mapped_inputs,
+                    step.capability_id,
+                )
+
             result = capability.execute(
                 CapabilityContext(
                     execution_id=execution_id,
                     inputs=mapped_inputs,
                     config=step.parameters,
                 )
+            )
+            self._validate_output_types(
+                capability.spec.output_types,
+                result.outputs,
+                step.capability_id,
             )
 
             undeclared_outputs = [
@@ -112,6 +123,48 @@ class CapabilityExecutor:
             context.update(result.outputs)
 
         return context
+    
+    def _validate_input_types(
+        self,
+        expected_types: Mapping[str, type],
+        inputs: Mapping[str, Any],
+        capability_id: str,
+    ) -> None:
+        for key, expected_type in expected_types.items():
+            if key not in inputs:
+                continue
+
+            value = inputs[key]
+
+            if not isinstance(value, expected_type):
+                raise TypeError(
+                    f"Invalid input type for "
+                    f"{capability_id}: "
+                    f"{key} expected "
+                    f"{expected_type.__name__}, "
+                    f"got {type(value).__name__}"
+                )
+
+    def _validate_output_types(
+        self,
+        expected_types: Mapping[str, type],
+        outputs: Mapping[str, Any],
+        capability_id: str,
+    ) -> None:
+        for key, expected_type in expected_types.items():
+            if key not in outputs:
+                continue
+
+            value = outputs[key]
+
+            if not isinstance(value, expected_type):
+                raise TypeError(
+                    f"Invalid output type for "
+                    f"{capability_id}: "
+                    f"{key} expected "
+                    f"{expected_type.__name__}, "
+                    f"got {type(value).__name__}"
+                )
 
 
 __all__ = ["CapabilityExecutor"]

@@ -17,6 +17,14 @@ class CapabilitySpec:
     parameter_keys: tuple[str, ...] = ()
     input_mappings: tuple[tuple[str, str], ...] = ()
 
+    input_types: Mapping[str, type] = field(
+        default_factory=dict
+    )
+
+    output_types: Mapping[str, type] = field(
+        default_factory=dict
+    )
+
 
 @dataclass(frozen=True)
 class CapabilityContext:
