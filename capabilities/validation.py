@@ -29,6 +29,10 @@ VALIDATION_CAPABILITY_SPEC = CapabilitySpec(
         "issues",
         "rule_version",
     ),
+    input_mappings=(
+        ("frame", "frame"),
+        ("category", "category"),
+    ),
     required_capabilities=(
         "data.clean",
     ),

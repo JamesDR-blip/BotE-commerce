@@ -33,6 +33,51 @@ class CapabilitySpec:
 
     intents: tuple[str, ...] = ()
 
+    def __post_init__(self) -> None:
+        if not self.id.strip():
+            raise ValueError(
+                "Capability id cannot be empty"
+            )
+
+        if not self.version.strip():
+            raise ValueError(
+                f"Capability version missing: {self.id}"
+            )
+
+        if len(set(self.input_keys)) != len(self.input_keys):
+            raise ValueError(
+                f"Duplicate input key in capability: {self.id}"
+            )
+
+        if len(set(self.output_keys)) != len(self.output_keys):
+            raise ValueError(
+                f"Duplicate output key in capability: {self.id}"
+            )
+
+        unknown_input_types = (
+            set(self.input_types)
+            - set(self.input_keys)
+        )
+
+        if unknown_input_types:
+            raise ValueError(
+                f"Input types reference unknown keys "
+                f"for {self.id}: "
+                f"{sorted(unknown_input_types)}"
+            )
+
+        unknown_output_types = (
+            set(self.output_types)
+            - set(self.output_keys)
+        )
+
+        if unknown_output_types:
+            raise ValueError(
+                f"Output types reference unknown keys "
+                f"for {self.id}: "
+                f"{sorted(unknown_output_types)}"
+            )
+
 @dataclass(frozen=True)
 class CapabilityContext:
     """Runtime context supplied to a capability."""
