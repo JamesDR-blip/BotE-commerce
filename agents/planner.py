@@ -103,8 +103,44 @@ class PlannerAgent:
             capabilities=catalog,
         )
 
+        planned_capability_ids = {
+            spec.id
+            for spec in specs
+        }
+
         requirement_mappings = requirement.input_mappings or {}
         requirement_parameters = requirement.parameters or {}
+
+        for capability_id in requirement_mappings:
+            if capability_id not in planned_capability_ids:
+                raise ValueError(
+                    f"Input mapping target capability "
+                    f"that is not planned: "
+                    f"{capability_id}"
+                )
+
+        for capability_id, parameters in requirement_parameters.items():
+            if capability_id not in planned_capability_ids:
+                raise ValueError(
+                    f"Parameters target capability "
+                    f"that is not planned: "
+                    f"{capability_id}"
+                )
+
+            spec = catalog[capability_id]
+
+            unknown_parameters = [
+                key
+                for key in parameters
+                if key not in spec.parameter_keys
+            ]
+
+            if unknown_parameters:
+                raise ValueError(
+                    f"Unknown parameter for "
+                    f"{capability_id}: "
+                    f"{', '.join(unknown_parameters)}"
+                )
 
         steps_list: list[PlanStep] = []
         available_outputs: set[str] = set()

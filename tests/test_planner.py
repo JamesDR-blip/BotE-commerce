@@ -692,3 +692,109 @@ def test_planner_allows_input_mapping_from_external_input():
     assert plan.steps[0].input_mapping == {
         "frame": "frame",
     }
+
+
+def test_planner_rejects_unknown_capability_parameters():
+    planner = PlannerAgent(
+        registry=make_registry({
+            "data.extract": CapabilitySpec(
+                id="data.extract",
+                version="1.0",
+                description="Extract data",
+                input_keys=("frame",),
+                output_keys=("extractions",),
+                parameter_keys=("attributes",),
+            ),
+        }),
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.extract",),
+        parameters={
+            "data.extract": {
+                "unknown_parameter": True,
+            },
+        },
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)unknown parameter",
+    ):
+        planner.plan(requirement)
+
+
+def test_planner_rejects_parameters_for_unrequested_capability():
+    planner = PlannerAgent(
+        registry=make_registry({
+            "data.clean": CapabilitySpec(
+                id="data.clean",
+                version="1.0",
+                description="Clean data",
+                input_keys=("frame",),
+                output_keys=("frame",),
+            ),
+            "data.extract": CapabilitySpec(
+                id="data.extract",
+                version="1.0",
+                description="Extract data",
+                input_keys=("frame",),
+                output_keys=("extractions",),
+                parameter_keys=("attributes",),
+            ),
+        }),
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.clean",),
+        parameters={
+            "data.extract": {
+                "attributes": ("brand",),
+            },
+        },
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)parameters.*not.*planned|not.*requested",
+    ):
+        planner.plan(requirement)
+
+
+def test_planner_rejects_input_mapping_for_unrequested_capability():
+    planner = PlannerAgent(
+        registry=make_registry({
+            "data.clean": CapabilitySpec(
+                id="data.clean",
+                version="1.0",
+                description="Clean data",
+                input_keys=("frame",),
+                output_keys=("frame",),
+            ),
+            "data.extract": CapabilitySpec(
+                id="data.extract",
+                version="1.0",
+                description="Extract data",
+                input_keys=("frame",),
+                output_keys=("extractions",),
+            ),
+        }),
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("data.clean",),
+        input_mappings={
+            "data.extract": {
+                "frame": "frame",
+            },
+        },
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)mapping.*not.*planned|not.*requested",
+    ):
+        planner.plan(requirement)
