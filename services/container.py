@@ -17,6 +17,7 @@ from services.mapping_service import MappingService
 from services.capability_executor import CapabilityExecutor
 from services.capability_execution_service import CapabilityExecutionService
 from services.quality_service import QualityService
+from services.normalization_service import NormalizationService
 from services.deterministic_validation_workflow import (
     DeterministicValidationWorkflow,
 )
@@ -33,12 +34,14 @@ from agents.llm import LLMAssistantAgent
 
 from reports.generator import ReportAgent
 
+from domain.capability_selector import CapabilitySelector
 from domain.capability_registry import CapabilityRegistry
 from domain.dependency_resolver import DependencyResolver
 
 from capabilities.validation import ValidationCapability
 from capabilities.cleaning import CleaningCapability
 from capabilities.extraction import ExtractionCapability
+from capabilities.normalization import NormalizationCapability
 
 class Container:
     def __init__(self, settings: Settings) -> None:
@@ -56,6 +59,12 @@ class Container:
             self.agents,
             self.registry,
         )
+        self.normalization = NormalizationService()
+
+        normalization_capability = NormalizationCapability(
+            self.normalization
+        )
+        self.capabilities.register(normalization_capability)
 
         cleaning_capability = CleaningCapability(
             self.data_operations
@@ -83,9 +92,14 @@ class Container:
         )
         self.capabilities.register(validation_capability)
 
+        selector = CapabilitySelector(
+            available_capabilities=lambda: self.capabilities.catalog().keys(),
+        )
+
         self.planner = PlannerAgent(
             registry=self.capabilities,
             resolver=DependencyResolver(),
+            selector=selector,
         )
 
         self.capability_executor = CapabilityExecutor(

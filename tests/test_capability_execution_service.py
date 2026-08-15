@@ -301,3 +301,73 @@ def test_execution_service_uses_explicit_mapping_between_renamed_outputs_and_inp
 
     assert result["cleaned_value"] == "hello"
     assert result["valid"] is True
+
+
+
+@dataclass
+class FormatCapability:
+    spec = CapabilitySpec(
+        id="test.format",
+        version="1.0",
+        description="Format a value with a configurable prefix",
+        input_keys=("value",),
+        output_keys=("formatted",),
+        parameter_keys=("prefix",),
+    )
+
+    def execute(self, context: CapabilityContext) -> CapabilityResult:
+        return CapabilityResult(
+            outputs={
+                "formatted": (
+                    f"{context.config['prefix']}"
+                    f"{context.inputs['value']}"
+                ),
+            }
+        )
+
+
+def test_new_capability_is_plannable_and_executable_without_core_changes():
+    registry = CapabilityRegistry()
+
+    capability = FormatCapability()
+    registry.register(capability)
+
+    planner = PlannerAgent(
+        catalog={
+            capability.spec.id: capability.spec,
+        },
+        resolver=DependencyResolver(),
+    )
+
+    executor = CapabilityExecutor(registry)
+
+    service = CapabilityExecutionService(
+        planner=planner,
+        executor=executor,
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=("test.format",),
+        parameters={
+            "test.format": {
+                "prefix": "SKU-",
+            },
+        },
+    )
+
+    plan = planner.plan(requirement)
+
+    assert len(plan.steps) == 1
+    assert plan.steps[0].capability_id == "test.format"
+    assert plan.steps[0].capability_version == "1.0"
+    assert plan.steps[0].parameters == {
+        "prefix": "SKU-",
+    }
+
+    result = service.execute(
+        requirement=requirement,
+        inputs={"value": "12345"},
+        execution_id="extensibility-test",
+    )
+
+    assert result["formatted"] == "SKU-12345"

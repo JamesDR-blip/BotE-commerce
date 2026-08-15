@@ -1,6 +1,7 @@
 from agents.planner import PlannerAgent
 from agents.requirement import ValidationRequirement
 
+from domain.capability_selector import CapabilitySelector
 from domain.capability_registry import CapabilityRegistry
 from domain.capabilities import CapabilitySpec
 from domain.dependency_resolver import DependencyResolver
@@ -9,6 +10,10 @@ from domain.plans import ExecutionPlan
 from capabilities.cleaning import CLEANING_CAPABILITY_SPEC
 from capabilities.validation import VALIDATION_CAPABILITY_SPEC
 
+
+class _FakeCapability:
+    def __init__(self, spec: CapabilitySpec) -> None:
+        self.spec = spec
 
 class FakeCapability:
     spec = CapabilitySpec(
@@ -548,3 +553,61 @@ def test_planner_sees_capability_registered_after_planner_creation():
         step.capability_id
         for step in plan.steps
     ] == ["test.fake"]
+
+
+def test_planner_uses_capability_selector():
+    registry = CapabilityRegistry()
+
+    registry.register(
+        _FakeCapability(
+            CapabilitySpec(
+                id="data.clean",
+                version="1.0",
+                description="Clean data",
+                input_keys=("frame",),
+                output_keys=("frame",),
+            )
+        )
+    )
+
+    registry.register(
+        _FakeCapability(
+            CapabilitySpec(
+                id="data.extract",
+                version="1.0",
+                description="Extract data",
+                input_keys=("frame",),
+                output_keys=("extractions",),
+            )
+        )
+    )
+
+    selector = CapabilitySelector(
+        available_capabilities=(
+            "data.clean",
+            "data.extract",
+        )
+    )
+
+    planner = PlannerAgent(
+        registry=registry,
+        resolver=DependencyResolver(),
+        selector=selector,
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=(
+            "data.extract",
+            "data.clean",
+        )
+    )
+
+    plan = planner.plan(requirement)
+
+    assert [
+        step.capability_id
+        for step in plan.steps
+    ] == [
+        "data.extract",
+        "data.clean",
+    ]
