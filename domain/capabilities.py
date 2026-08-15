@@ -35,7 +35,7 @@ class CapabilitySpec:
 
     intent_keywords: Mapping[
         str,
-        tuple[str, ...],
+        tuple[str, ...]
     ] = field(
         default_factory=dict
     )
@@ -96,6 +96,18 @@ class CapabilitySpec:
                 f"Intent keywords reference unknown intents "
                 f"for {self.id}: "
                 f"{sorted(unknown_intent_keywords)}"
+            )
+        unknown_intents = (
+            set(self.intent_keywords)
+            -
+            set(self.intents)
+        )
+
+        if unknown_intents:
+            raise ValueError(
+                "Intent keywords reference unknown intents "
+                f"for {self.id}: "
+                f"{sorted(unknown_intents)}"
             )
 
 @dataclass(frozen=True)
