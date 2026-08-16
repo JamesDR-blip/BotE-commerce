@@ -53,7 +53,10 @@ class NormalizationCapability:
                 "data.normalize requires a pandas DataFrame"
             )
 
-        fields = context.config.get("fields")
+        fields = context.config.get(
+            "fields",
+            []
+        )
 
         normalized_frame = self._service.normalize(
             frame=frame,

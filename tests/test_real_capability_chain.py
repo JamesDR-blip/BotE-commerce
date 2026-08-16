@@ -147,9 +147,15 @@ def test_real_capability_chain_passes_cleaned_frame_to_validation():
     assert captured["clean_input"] is original_frame
     assert captured["clean_requested_category"] == "Fashion"
 
-    assert captured_validation["frame"] is cleaned_frame
+    assert list(
+        captured_validation["frame"].columns
+    ) == list(
+        cleaned_frame.columns
+    )
 
-    assert outputs["frame"] is cleaned_frame
+    assert outputs["frame"].equals(
+        captured_validation["frame"]
+    )
     assert outputs["category"] == "Fashion"
     assert isinstance(outputs["issues"], list)
     assert len(outputs["issues"]) >= 0

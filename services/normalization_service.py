@@ -19,9 +19,12 @@ class NormalizationService:
     def normalize(
         self,
         frame: pd.DataFrame,
-        fields: Iterable[str],
+        fields: Iterable[str] | None = None,
     ) -> pd.DataFrame:
         """Return a normalized copy of the input DataFrame."""
+
+        fields = fields or []
+
         unknown_fields = [
             field
             for field in fields
