@@ -48,7 +48,7 @@ def test_plan_validator_accepts_matching_version():
     PlanValidator().validate(
         plan,
         registry,
-        external_inputs={"external_frame"},
+        external_inputs={"value"},
     )
 
 def test_plan_validator_rejects_version_mismatch():
@@ -209,7 +209,7 @@ def test_plan_validator_accepts_mapping_from_previous_step_output():
     PlanValidator().validate(
         plan,
         registry,
-        external_inputs={"external_frame"},
+        external_inputs={"frame"},
     )
 
 
@@ -296,3 +296,143 @@ def test_plan_validator_accepts_external_input_mapping():
         registry,
         external_inputs={"external_frame"},
     )
+
+
+def test_plan_validator_rejects_required_input_without_mapping_or_external_input():
+    registry = CapabilityRegistry()
+
+    registry.register(
+        TypedEchoCapability()
+    )
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.typed_echo",
+                capability_version="1.0",
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)missing required input",
+    ):
+        PlanValidator().validate(
+            plan,
+            registry,
+            external_inputs=set(),
+        )
+
+
+def test_plan_validator_accepts_unmapped_input_when_external_input_exists():
+    registry = CapabilityRegistry()
+
+    registry.register(
+        TypedEchoCapability()
+    )
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.typed_echo",
+                capability_version="1.0",
+            ),
+        )
+    )
+
+    PlanValidator().validate(
+        plan,
+        registry,
+        external_inputs={"value"},
+    )
+
+
+def test_plan_validator_accepts_mapped_input_from_previous_output():
+    registry = CapabilityRegistry()
+
+    registry.register(CleanCapability())
+    registry.register(ExtractCapability())
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.clean",
+                capability_version="1.0",
+            ),
+            PlanStep(
+                capability_id="test.extract",
+                capability_version="1.0",
+                input_mapping={
+                    "cleaned_frame": "cleaned_frame",
+                },
+            ),
+        )
+    )
+
+    PlanValidator().validate(
+        plan,
+        registry,
+        external_inputs={"frame"},
+    )
+
+
+def test_plan_validator_rejects_mapping_from_current_step_output():
+    registry = CapabilityRegistry()
+
+    registry.register(
+        CleanCapability()
+    )
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.clean",
+                capability_version="1.0",
+                input_mapping={
+                    "frame": "cleaned_frame",
+                },
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)unknown input mapping source",
+    ):
+        PlanValidator().validate(
+            plan,
+            registry,
+            external_inputs={"frame"},
+        )
+
+
+def test_plan_validator_rejects_output_collision():
+    registry = CapabilityRegistry()
+
+    registry.register(
+        TypedEchoCapability()
+    )
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.typed_echo",
+                capability_version="1.0",
+            ),
+            PlanStep(
+                capability_id="test.typed_echo",
+                capability_version="1.0",
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)output collision",
+    ):
+        PlanValidator().validate(
+            plan,
+            registry,
+            external_inputs={"value"},
+        )
