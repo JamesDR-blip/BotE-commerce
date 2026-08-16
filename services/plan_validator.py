@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Collection
+
 from domain.capability_registry import CapabilityRegistry
 from domain.plans import ExecutionPlan
 
@@ -13,7 +15,10 @@ class PlanValidator:
         self,
         plan: ExecutionPlan,
         registry: CapabilityRegistry,
+        external_inputs: Collection[str] = (),
     ) -> None:
+        available_outputs = set(external_inputs)
+
         for step in plan.steps:
             capability = registry.get(step.capability_id)
             spec = capability.spec
@@ -52,6 +57,21 @@ class PlanValidator:
                     f"{step.capability_id}: "
                     f"{', '.join(unknown_mappings)}"
                 )
+
+            unknown_sources = [
+                source
+                for source in step.input_mapping.values()
+                if source not in available_outputs
+            ]
+
+            if unknown_sources:
+                raise ValueError(
+                    f"Unknown input mapping source for "
+                    f"{step.capability_id}: "
+                    f"{', '.join(unknown_sources)}"
+                )
+
+            available_outputs.update(spec.output_keys)
 
 
 __all__ = [

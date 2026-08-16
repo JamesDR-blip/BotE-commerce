@@ -37,6 +37,7 @@ class CapabilityExecutionService:
         self._validator.validate(
             plan,
             self._executor.registry,
+            external_inputs=inputs.keys(),
         )
 
         collector = (
