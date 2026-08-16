@@ -48,12 +48,13 @@ class DependencyResolver:
 
             spec = capabilities[capability_id]
 
+            dependency_specs: list[CapabilitySpec] = []
+
             for dependency in spec.required_capabilities:
 
                 if isinstance(dependency, str):
                     dependency_id = dependency
                     version_constraint = None
-
                 else:
                     dependency_id = dependency.capability_id
                     version_constraint = dependency.version_constraint
@@ -73,12 +74,16 @@ class DependencyResolver:
                         version_constraint,
                     )
 
-                self._validate_dependency_contract(
-                    dependency_spec,
-                    spec,
+                visit(dependency_id)
+
+                dependency_specs.append(
+                    dependency_spec
                 )
 
-                visit(dependency_id)
+            self._validate_dependency_contract(
+                dependency_specs,
+                spec,
+            )
 
             visiting.remove(capability_id)
             visited.add(capability_id)
@@ -110,31 +115,47 @@ class DependencyResolver:
 
     def _validate_dependency_contract(
         self,
-        dependency: CapabilitySpec,
+        dependencies: Sequence[CapabilitySpec],
         consumer: CapabilitySpec,
     ) -> None:
 
-        # Explicit mapping sẽ được Planner xử lý
+        dependency_outputs = {
+            output
+            for dependency in dependencies
+            for output in dependency.output_keys
+        }
+
+        # Explicit input mappings:
+        # - If there are no dependencies, mappings may reference
+        #   external execution inputs.
+        # - If dependencies exist, a mapped source must be produced
+        #   by at least one dependency.
         if consumer.input_mappings:
+
+            if not dependencies:
+               return
+
             for consumer_input, dependency_output in (
                 consumer.input_mappings
             ):
                 if (
                     consumer_input in consumer.input_keys
-                    and dependency_output
-                    not in dependency.output_keys
+                    and dependency_output not in dependency_outputs
                 ):
                     raise CapabilityDependencyContractError(
-                        f"{dependency.id} does not provide "
+                        f"Dependencies do not provide "
                         f"required output "
                         f"{dependency_output} for "
                         f"{consumer.id}: "
                         f"{consumer_input}"
                     )
-                
+
             return
-        
-        # Dependency contract validation
+
+        # No dependencies means the capability's inputs are
+        if not dependencies:
+            return
+
         missing_inputs = [
             key
             for key in consumer.input_keys
@@ -143,12 +164,12 @@ class DependencyResolver:
                 or key.endswith("_result")
                 or key.endswith("_data")
             )
-            and key not in dependency.output_keys
+            and key not in dependency_outputs
         ]
 
         if missing_inputs:
             raise CapabilityDependencyContractError(
-                f"{dependency.id} does not provide "
+                f"Dependencies do not provide "
                 f"required inputs for {consumer.id}: "
                 + ", ".join(missing_inputs)
             )

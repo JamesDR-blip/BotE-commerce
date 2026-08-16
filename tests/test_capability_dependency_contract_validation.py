@@ -150,3 +150,92 @@ def test_dependency_contract_rejects_invalid_explicit_input_mapping():
             requested=("data.validate",),
             capabilities=capabilities,
         )
+
+
+def test_dependency_contract_accepts_output_from_one_of_multiple_dependencies():
+    capabilities = {
+        "data.clean": CapabilitySpec(
+            id="data.clean",
+            version="1.0",
+            description="clean",
+            input_keys=("frame",),
+            output_keys=("cleaned_frame",),
+        ),
+        "data.extract": CapabilitySpec(
+            id="data.extract",
+            version="1.0",
+            description="extract",
+            input_keys=("cleaned_frame",),
+            output_keys=("extracted",),
+        ),
+        "data.validate": CapabilitySpec(
+            id="data.validate",
+            version="1.0",
+            description="validate",
+            input_keys=("frame",),
+            output_keys=("result",),
+            required_capabilities=(
+                "data.clean",
+                "data.extract",
+            ),
+            input_mappings=(
+                ("frame", "cleaned_frame"),
+            ),
+        ),
+    }
+
+    result = DependencyResolver().resolve(
+        requested=("data.validate",),
+        capabilities=capabilities,
+    )
+
+    assert tuple(
+        spec.id
+        for spec in result
+    ) == (
+        "data.clean",
+        "data.extract",
+        "data.validate",
+    )
+
+
+def test_dependency_contract_rejects_mapping_source_not_provided_by_any_dependency():
+    capabilities = {
+        "data.clean": CapabilitySpec(
+            id="data.clean",
+            version="1.0",
+            description="clean",
+            input_keys=("frame",),
+            output_keys=("cleaned_frame",),
+        ),
+        "data.extract": CapabilitySpec(
+            id="data.extract",
+            version="1.0",
+            description="extract",
+            input_keys=("cleaned_frame",),
+            output_keys=("extracted",),
+        ),
+        "data.validate": CapabilitySpec(
+            id="data.validate",
+            version="1.0",
+            description="validate",
+            input_keys=("frame",),
+            output_keys=("result",),
+            required_capabilities=(
+                "data.clean",
+                "data.extract",
+            ),
+            input_mappings=(
+                ("frame", "does_not_exist"),
+            ),
+        ),
+    }
+
+    with pytest.raises(
+        CapabilityDependencyContractError,
+        match="does_not_exist",
+    ):
+        DependencyResolver().resolve(
+            requested=("data.validate",),
+            capabilities=capabilities,
+        )
