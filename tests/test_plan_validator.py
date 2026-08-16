@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+import pandas as pd
 
 
 from domain.capability_registry import CapabilityRegistry
@@ -422,6 +423,157 @@ def test_plan_validator_rejects_output_collision():
             ),
             PlanStep(
                 capability_id="test.typed_echo",
+                capability_version="1.0",
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)output collision",
+    ):
+        PlanValidator().validate(
+            plan,
+            registry,
+            external_inputs={"value"},
+        )
+
+
+class TypedProducerCapability:
+    @property
+    def spec(self):
+        from domain.capabilities import CapabilitySpec
+
+        return CapabilitySpec(
+            id="test.typed_producer",
+            version="1.0",
+            description="typed producer",
+            input_keys=("value",),
+            output_keys=("cleaned_frame",),
+            output_types={
+                "cleaned_frame": str,
+            },
+        )
+
+    def execute(self, context):
+        from domain.capabilities import CapabilityResult
+
+        return CapabilityResult(
+            outputs={
+                "cleaned_frame": "invalid-frame",
+            }
+        )
+
+
+class TypedConsumerCapability:
+    @property
+    def spec(self):
+        from domain.capabilities import CapabilitySpec
+
+        return CapabilitySpec(
+            id="test.typed_consumer",
+            version="1.0",
+            description="typed consumer",
+            input_keys=("frame",),
+            output_keys=("result",),
+            input_types={
+                "frame": pd.DataFrame,
+            },
+        )
+
+    def execute(self, context):
+        from domain.capabilities import CapabilityResult
+
+        return CapabilityResult(
+            outputs={
+                "result": context.inputs["frame"],
+            }
+        )
+
+def test_plan_validator_rejects_incompatible_mapping_types():
+    registry = CapabilityRegistry()
+
+    registry.register(
+        TypedProducerCapability()
+    )
+
+    registry.register(
+        TypedConsumerCapability()
+    )
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.typed_producer",
+                capability_version="1.0",
+            ),
+            PlanStep(
+                capability_id="test.typed_consumer",
+                capability_version="1.0",
+                input_mapping={
+                    "frame": "cleaned_frame",
+                },
+            ),
+        )
+    )
+
+    with pytest.raises(
+        TypeError,
+        match=r"(?i)incompatible input type",
+    ):
+        PlanValidator().validate(
+            plan,
+            registry,
+            external_inputs={"value"},
+        )
+
+
+def test_plan_validator_rejects_output_type_collision():
+    registry = CapabilityRegistry()
+
+    class StringOutputCapability:
+        @property
+        def spec(self):
+            from domain.capabilities import CapabilitySpec
+
+            return CapabilitySpec(
+                id="test.string_output",
+                version="1.0",
+                description="string output",
+                input_keys=("value",),
+                output_keys=("value",),
+                output_types={
+                    "value": str,
+                },
+            )
+
+    class IntOutputCapability:
+        @property
+        def spec(self):
+            from domain.capabilities import CapabilitySpec
+
+            return CapabilitySpec(
+                id="test.int_output",
+                version="1.0",
+                description="int output",
+                input_keys=("value",),
+                output_keys=("value",),
+                output_types={
+                    "value": int,
+                },
+            )
+
+    registry.register(StringOutputCapability())
+    registry.register(IntOutputCapability())
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.string_output",
+                capability_version="1.0",
+            ),
+            PlanStep(
+                capability_id="test.int_output",
                 capability_version="1.0",
             ),
         )

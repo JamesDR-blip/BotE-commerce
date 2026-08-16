@@ -5,9 +5,9 @@ from domain.capabilities import CapabilitySpec
 from domain.capability_registry import CapabilityRegistry
 from domain.capability_selector import CapabilitySelector
 from domain.plans import ExecutionPlan, PlanStep
-from domain.type_contracts import TYPE_CONTRACTS
 from domain.intent_resolver import IntentResolver
 from domain.exceptions import CapabilityDependencyContractError
+from domain.type_contracts import TYPE_CONTRACTS
 
 from .requirement import ValidationRequirement
 
@@ -112,33 +112,28 @@ class PlannerAgent:
         spec: CapabilitySpec,
     ) -> None:
         for key, declared_type in spec.input_types.items():
-            if key not in TYPE_CONTRACTS:
+            if key not in spec.input_keys:
                 raise TypeError(
-                    f"Unknown input type contract: {key}"
+                    f"Input type declared for unknown input "
+                    f"{spec.id}: {key}"
                 )
 
-            expected_type = TYPE_CONTRACTS[key]
-
-            if declared_type is not expected_type:
+            if not isinstance(declared_type, type):
                 raise TypeError(
-                    f"Invalid input type for "
+                    f"Invalid input type declaration for "
                     f"{spec.id}: {key}"
                 )
 
         for key, declared_type in spec.output_types.items():
-            if key not in TYPE_CONTRACTS:
+            if key not in spec.output_keys:
                 raise TypeError(
-                    f"Unknown output type contract: {key}"
+                    f"Output type declared for unknown output "
+                    f"{spec.id}: {key}"
                 )
 
-            expected_type = TYPE_CONTRACTS[key]
-
-            if (
-                expected_type is not object
-                and declared_type is not expected_type
-            ):
+            if not isinstance(declared_type, type):
                 raise TypeError(
-                    f"Invalid output type for "
+                    f"Invalid output type declaration for "
                     f"{spec.id}: {key}"
                 )
 
@@ -190,6 +185,7 @@ class PlannerAgent:
 
         for spec in specs:
             self._validate_type_contract(spec)
+            self._validate_input_contract(spec)
 
         planned_capability_ids = {
             spec.id
@@ -298,3 +294,28 @@ class PlannerAgent:
             steps=steps,
             metadata={"source": "planner"},
         )
+
+    def _validate_input_contract(
+        self,
+        spec: CapabilitySpec,
+    ):
+
+        for key, expected_type in spec.input_types.items():
+
+            if key not in TYPE_CONTRACTS:
+                continue
+
+            provided_type = TYPE_CONTRACTS[key]
+
+            if not issubclass(
+                provided_type,
+                expected_type,
+            ):
+                raise TypeError(
+                    f"Incompatible input type for "
+                    f"{spec.id}: "
+                    f"{key} expects "
+                    f"{expected_type.__name__}, "
+                    f"but system provides "
+                    f"{provided_type.__name__}"
+                )
