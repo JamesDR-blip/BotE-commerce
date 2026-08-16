@@ -32,18 +32,24 @@ class ParameterResolver:
 
             capability_parameters: dict[str, object] = {}
 
-            if "attributes" in spec.parameter_keys:
+            for parameter_name, options in (
+                spec.parameter_keywords.items()
+            ):
 
-                attributes = []
+                matched_values = []
 
-                if "brand" in normalized:
-                    attributes.append("brand")
+                for value, keywords in options.items():
 
-                if "model" in normalized:
-                    attributes.append("model")
+                    if any(
+                        keyword.lower() in normalized
+                        for keyword in keywords
+                    ):
+                        matched_values.append(value)
 
-                if attributes:
-                    capability_parameters["attributes"] = attributes
+                if matched_values:
+                    capability_parameters[
+                        parameter_name
+                    ] = matched_values
 
             if capability_parameters:
                 parameters[capability_id] = capability_parameters

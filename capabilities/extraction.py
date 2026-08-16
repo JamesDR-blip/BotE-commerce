@@ -27,6 +27,27 @@ EXTRACTION_CAPABILITY_SPEC = CapabilitySpec(
     parameter_keys=(
         "attributes",
     ),
+    parameter_keywords={
+        "attributes": {
+            "brand": (
+                "brand",
+                "thương hiệu",
+            ),
+            "model": (
+                "model",
+                "mã máy",
+                "mẫu",
+            ),
+            "color": (
+                "color",
+                "màu",
+            ),
+            "size": (
+                "size",
+                "kích thước",
+            ),
+        }
+    },
     intents=(
         "extract_product_attributes",
         "extract_brand_model",

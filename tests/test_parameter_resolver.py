@@ -21,6 +21,16 @@ def test_parameter_resolver_extracts_attributes():
             parameter_keys=(
                 "attributes",
             ),
+            parameter_keywords={
+                "attributes": {
+                    "brand": (
+                        "brand",
+                    ),
+                    "model": (
+                        "model",
+                    ),
+                }
+            },
         )
     }
 

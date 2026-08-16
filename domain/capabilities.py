@@ -21,6 +21,13 @@ class CapabilitySpec:
         ...
     ] = ()
     parameter_keys: tuple[str, ...] = ()
+
+    parameter_keywords: Mapping[
+        str,
+        Mapping[str, tuple[str, ...]]
+    ] = field(
+        default_factory=dict
+    )
     input_mappings: tuple[tuple[str, str], ...] = ()
 
     input_types: Mapping[str, type] = field(
@@ -36,6 +43,12 @@ class CapabilitySpec:
     intent_keywords: Mapping[
         str,
         tuple[str, ...]
+    ] = field(
+        default_factory=dict
+    )
+    parameter_keywords: Mapping[
+        str,
+        Mapping[str, tuple[str, ...]]
     ] = field(
         default_factory=dict
     )
@@ -97,6 +110,20 @@ class CapabilitySpec:
                 f"for {self.id}: "
                 f"{sorted(unknown_intent_keywords)}"
             )
+
+        unknown_parameter_keywords = (
+            set(self.parameter_keywords)
+            -
+            set(self.parameter_keys)
+        )
+
+        if unknown_parameter_keywords:
+            raise ValueError(
+                f"Parameter keywords reference unknown parameters "
+                f"for {self.id}: "
+                f"{sorted(unknown_parameter_keywords)}"
+            )
+        
         unknown_intents = (
             set(self.intent_keywords)
             -
