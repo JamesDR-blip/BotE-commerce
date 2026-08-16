@@ -33,6 +33,21 @@ QA_CAPABILITY_SPEC = CapabilitySpec(
         "generate_quality_report",
         "assess_data_quality",
     ),
+    intent_keywords={
+        "generate_quality_report": (
+            "report",
+            "quality report",
+            "báo cáo chất lượng",
+            "tạo báo cáo chất lượng",
+        ),
+        "assess_data_quality": (
+            "quality",
+            "data quality",
+            "chất lượng dữ liệu",
+            "kiểm tra chất lượng",
+            "đánh giá chất lượng",
+        ),
+    },
 )
 
 

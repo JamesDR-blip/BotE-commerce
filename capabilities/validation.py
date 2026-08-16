@@ -39,7 +39,26 @@ VALIDATION_CAPABILITY_SPEC = CapabilitySpec(
     intents=(
         "validate_product_quality",
         "check_data_quality",
+        "assess_data_quality",
     ),
+    intent_keywords={
+        "validate_product_quality": (
+            "validate",
+            "kiểm tra dữ liệu",
+            "kiểm định dữ liệu",
+        ),
+        "check_data_quality": (
+            "check data",
+            "kiểm tra data",
+        ),
+        "assess_data_quality": (
+            "quality",
+            "data quality",
+            "chất lượng dữ liệu",
+            "kiểm tra chất lượng",
+            "đánh giá chất lượng",
+        ),
+    },
 )
 
 

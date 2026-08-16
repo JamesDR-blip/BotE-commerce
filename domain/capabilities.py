@@ -46,12 +46,6 @@ class CapabilitySpec:
     ] = field(
         default_factory=dict
     )
-    parameter_keywords: Mapping[
-        str,
-        Mapping[str, tuple[str, ...]]
-    ] = field(
-        default_factory=dict
-    )
 
     def __post_init__(self) -> None:
         if not self.id.strip():
@@ -124,19 +118,6 @@ class CapabilitySpec:
                 f"{sorted(unknown_parameter_keywords)}"
             )
         
-        unknown_intents = (
-            set(self.intent_keywords)
-            -
-            set(self.intents)
-        )
-
-        if unknown_intents:
-            raise ValueError(
-                "Intent keywords reference unknown intents "
-                f"for {self.id}: "
-                f"{sorted(unknown_intents)}"
-            )
-
 @dataclass(frozen=True)
 class CapabilityContext:
     """Runtime context supplied to a capability."""

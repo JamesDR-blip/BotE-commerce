@@ -29,6 +29,21 @@ NORMALIZATION_CAPABILITY_SPEC = CapabilitySpec(
         "normalize_product_data",
         "standardize_product_fields",
     ),
+    intent_keywords={
+        "normalize_product_data": (
+            "normalize",
+            "normalize data",
+            "chuẩn hóa",
+            "chuẩn hoá",
+            "chuẩn hóa dữ liệu",
+        ),
+        "standardize_product_fields": (
+            "standardize",
+            "standardize fields",
+            "chuẩn hóa trường",
+            "chuẩn hoá trường",
+        ),
+    },
 )
 
 

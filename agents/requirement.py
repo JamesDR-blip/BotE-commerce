@@ -1,4 +1,4 @@
-"""Interpret validation requests without invoking executable LLM output."""
+"""Interpret workflow requests without invoking executable LLM output."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -12,7 +12,7 @@ from collections.abc import Mapping
 
 
 @dataclass(frozen=True)
-class ValidationRequirement:
+class WorkflowRequirement:
     """The validated user intent available to the orchestration graph."""
 
     requested_category: str | None = None
@@ -21,6 +21,7 @@ class ValidationRequirement:
     input_mappings: dict[str, dict[str, str]] | None = None
     parameters: dict[str, dict[str, object]] | None = None
 
+ValidationRequirement = WorkflowRequirement
 
 class RequirementAgent:
     """Convert transport input into typed workflow requirement."""
@@ -51,7 +52,7 @@ class RequirementAgent:
         input_mappings: dict[str, dict[str, str]] | None = None,
         parameters: dict[str, dict[str, object]] | None = None,
         user_request: str | None = None,
-    ) -> ValidationRequirement:
+    ) -> WorkflowRequirement:
 
         if self._interpreter:
             (
@@ -65,7 +66,7 @@ class RequirementAgent:
                 parameters=parameters,
             )
 
-        return ValidationRequirement(
+        return WorkflowRequirement(
             requested_category=requested_category,
             requested_capabilities=requested_capabilities,
             requested_intents=requested_intents,

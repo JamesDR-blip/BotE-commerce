@@ -28,6 +28,20 @@ CLEANING_CAPABILITY_SPEC = CapabilitySpec(
         "clean_product_data",
         "clean_product_titles",
     ),
+    intent_keywords={
+        "clean_product_data": (
+            "clean",
+            "clean data",
+            "làm sạch",
+            "làm sạch dữ liệu",
+        ),
+        "clean_product_titles": (
+            "clean title",
+            "clean titles",
+            "làm sạch tiêu đề",
+            "làm sạch tên sản phẩm",
+        ),
+    },
 )
 
 

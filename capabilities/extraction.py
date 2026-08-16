@@ -52,6 +52,22 @@ EXTRACTION_CAPABILITY_SPEC = CapabilitySpec(
         "extract_product_attributes",
         "extract_brand_model",
     ),
+    intent_keywords={
+        "extract_product_attributes": (
+            "extract",
+            "extract attributes",
+            "trích xuất",
+            "trích xuất thuộc tính",
+            "thuộc tính",
+        ),
+        "extract_brand_model": (
+            "brand",
+            "model",
+            "thương hiệu",
+            "mã máy",
+            "mẫu",
+        ),
+    },
 )
 
 
