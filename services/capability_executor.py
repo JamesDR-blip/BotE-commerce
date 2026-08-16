@@ -96,22 +96,60 @@ class CapabilityExecutor:
                 )
 
                 if not result.success:
-                    if trace_collector and trace_index is not None:
-                        trace_collector.fail(
-                            trace_index,
-                            Exception(
-                                result.error
-                                or "Capability execution failed"
-                            ),
-                        )
-
                     raise RuntimeError(
                         result.error
                         or f"Capability failed: {step.capability_id}"
                     )
 
-            except Exception as exc:
+                self._validate_output_types(
+                    capability.spec.output_types,
+                    result.outputs,
+                    step.capability_id,
+                )
 
+                undeclared_outputs = [
+                    key
+                    for key in result.outputs
+                    if key not in capability.spec.output_keys
+                ]
+
+                if undeclared_outputs:
+                    raise ValueError(
+                        f"Undeclared output for "
+                        f"{step.capability_id}: "
+                        f"{', '.join(undeclared_outputs)}"
+                    )
+
+                missing_outputs = [
+                    key
+                    for key in capability.spec.output_keys
+                    if key not in result.outputs
+                ]
+
+                if missing_outputs:
+                    raise ValueError(
+                        f"Missing declared output for "
+                        f"{step.capability_id}: "
+                        f"{', '.join(missing_outputs)}"
+                    )
+
+                for key in result.outputs:
+                    if (
+                        key in context
+                        and key not in capability.spec.input_keys
+                    ):
+                        raise ValueError(
+                            f"Output collision for "
+                            f"{step.capability_id}: {key}"
+                        )
+
+                if trace_collector and trace_index is not None:
+                    trace_collector.complete(
+                        trace_index,
+                        dict(result.outputs),
+                    )
+
+            except Exception as exc:
                 if trace_collector and trace_index is not None:
                     trace_collector.fail(
                         trace_index,
@@ -119,54 +157,6 @@ class CapabilityExecutor:
                     )
 
                 raise
-
-
-            if trace_collector and trace_index is not None:
-                trace_collector.complete(
-                    trace_index,
-                    dict(result.outputs),
-                )
-            self._validate_output_types(
-                capability.spec.output_types,
-                result.outputs,
-                step.capability_id,
-            )
-
-            undeclared_outputs = [
-                key
-                for key in result.outputs
-                if key not in capability.spec.output_keys
-            ]
-
-            if undeclared_outputs:
-                raise ValueError(
-                    f"Undeclared output for "
-                    f"{step.capability_id}: "
-                    f"{', '.join(undeclared_outputs)}"
-                )
-
-            missing_outputs = [
-                key
-                for key in capability.spec.output_keys
-                if key not in result.outputs
-            ]
-
-            if missing_outputs:
-                raise ValueError(
-                    f"Missing declared output for "
-                    f"{step.capability_id}: "
-                    f"{', '.join(missing_outputs)}"
-                )
-
-            for key in result.outputs:
-                if (
-                    key in context
-                    and key not in capability.spec.input_keys
-                ):
-                    raise ValueError(
-                        f"Output collision for "
-                        f"{step.capability_id}: {key}"
-                    )
 
             context.update(result.outputs)
 

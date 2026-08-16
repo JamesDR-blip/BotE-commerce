@@ -116,8 +116,24 @@ class DependencyResolver:
 
         # Explicit mapping sẽ được Planner xử lý
         if consumer.input_mappings:
+            for consumer_input, dependency_output in (
+                consumer.input_mappings
+            ):
+                if (
+                    consumer_input in consumer.input_keys
+                    and dependency_output
+                    not in dependency.output_keys
+                ):
+                    raise CapabilityDependencyContractError(
+                        f"{dependency.id} does not provide "
+                        f"required output "
+                        f"{dependency_output} for "
+                        f"{consumer.id}: "
+                        f"{consumer_input}"
+                    )
+                
             return
-
+        
         # Dependency contract validation
         missing_inputs = [
             key

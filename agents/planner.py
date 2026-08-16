@@ -7,6 +7,7 @@ from domain.capability_selector import CapabilitySelector
 from domain.plans import ExecutionPlan, PlanStep
 from domain.type_contracts import TYPE_CONTRACTS
 from domain.intent_resolver import IntentResolver
+from domain.exceptions import CapabilityDependencyContractError
 
 from .requirement import ValidationRequirement
 
@@ -177,10 +178,15 @@ class PlannerAgent:
                 )
             )
 
-        specs = self._resolver.resolve(
-            requested=requested_capabilities,
-            capabilities=catalog,
-        )
+        try:
+            specs = self._resolver.resolve(
+                requested=requested_capabilities,
+                capabilities=catalog,
+            )
+        except CapabilityDependencyContractError as exc:
+            raise ValueError(
+                f"Unknown input mapping source: {exc}"
+            ) from exc
 
         for spec in specs:
             self._validate_type_contract(spec)
