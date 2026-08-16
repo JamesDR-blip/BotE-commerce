@@ -1,12 +1,36 @@
 """Composition root: dependency injection without mutable module globals."""
 from __future__ import annotations
+from database.models import make_session_factory
+from extractors.deterministic import DeterministicProductExtractor
+from plugins.registry import ValidatorRegistry
+from reports.generator import ReportAgent
+
 from configs import settings
 from configs.settings import Settings
-from database.models import make_session_factory
 
 from repositories.executions import ExecutionRepository
 from repositories.users import UserRepository
 from repositories.rules import RuleRepository
+
+from domain.capability_selector import CapabilitySelector
+from domain.capability_registry import CapabilityRegistry
+from domain.dependency_resolver import DependencyResolver
+from domain.intent_resolver import IntentResolver
+
+from capabilities.validation import ValidationCapability
+from capabilities.cleaning import CleaningCapability
+from capabilities.extraction import ExtractionCapability
+from capabilities.normalization import NormalizationCapability
+from capabilities.qa import QACapability
+
+from agents.workflow import Agents, AutoFixAgent, ClassifierAgent, QAAgent, RuleRetrieverAgent, ValidatorAgent
+from agents.requirement import RequirementAgent
+from agents.reporter import ReporterAgent
+from agents.extraction import ExtractionAgent
+from agents.parameter_resolver import ParameterResolver
+from agents.planner import PlannerAgent
+from agents.llm import LLMAssistantAgent
+from agents.intent_classifier import IntentClassifier
 
 from services.cache import TTLCache
 from services.upload_reader import TabularUploadReader
@@ -22,29 +46,6 @@ from services.deterministic_validation_workflow import (
     DeterministicValidationWorkflow,
 )
 
-from plugins.registry import ValidatorRegistry
-
-from agents.workflow import Agents, AutoFixAgent, ClassifierAgent, QAAgent, RuleRetrieverAgent, ValidatorAgent
-from agents.requirement import RequirementAgent
-from agents.reporter import ReporterAgent
-from agents.extraction import ExtractionAgent
-from domain.intent_resolver import IntentResolver
-from agents.planner import PlannerAgent
-from extractors.deterministic import DeterministicProductExtractor
-from agents.llm import LLMAssistantAgent
-from agents.intent_classifier import IntentClassifier
-
-from reports.generator import ReportAgent
-
-from domain.capability_selector import CapabilitySelector
-from domain.capability_registry import CapabilityRegistry
-from domain.dependency_resolver import DependencyResolver
-
-from capabilities.validation import ValidationCapability
-from capabilities.cleaning import CleaningCapability
-from capabilities.extraction import ExtractionCapability
-from capabilities.normalization import NormalizationCapability
-from capabilities.qa import QACapability
 
 class Container:
     def __init__(self, settings: Settings) -> None:
@@ -103,9 +104,17 @@ class Container:
         intent_classifier = IntentClassifier.from_registry(
             self.capabilities
         )
+        intent_resolver = IntentResolver.from_registry(
+            self.capabilities
+        )
+
+        parameter_resolver = ParameterResolver()
 
         self.agents.requirements = RequirementAgent(
-            classifier=intent_classifier
+            classifier=intent_classifier,
+            intent_resolver=intent_resolver,
+            parameter_resolver=parameter_resolver,
+            catalog=self.capabilities.catalog(),
         )
 
         self.workflow = DeterministicValidationWorkflow(
