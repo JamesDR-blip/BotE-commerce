@@ -1,5 +1,5 @@
 from domain.capabilities import CapabilitySpec
-from domain.dependencies import CapabilityDependency
+from domain.capability_dependency import CapabilityDependency
 from domain.dependency_resolver import DependencyResolver
 from domain.exceptions import (
     CapabilityDependencyVersionError,

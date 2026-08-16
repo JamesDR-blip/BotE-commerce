@@ -6,7 +6,7 @@ from typing import Mapping, Sequence
 
 from domain.capabilities import CapabilitySpec
 from domain.dependencies import CapabilityDependencyResolver
-from domain.dependencies import CapabilityDependency
+from domain.capability_dependency import CapabilityDependency
 from domain.versioning import satisfies
 from domain.exceptions import (
     CapabilityDependencyCycleError,

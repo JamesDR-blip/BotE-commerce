@@ -74,3 +74,61 @@ def test_plan_validator_rejects_version_mismatch():
             plan,
             registry,
         )
+
+
+def test_plan_validator_rejects_unknown_parameter():
+    registry = CapabilityRegistry()
+
+    registry.register(
+        TypedEchoCapability()
+    )
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.typed_echo",
+                capability_version="1.0",
+                parameters={
+                    "unknown": "value",
+                },
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)unknown parameter",
+    ):
+        PlanValidator().validate(
+            plan,
+            registry,
+        )
+
+
+def test_plan_validator_rejects_unknown_input_mapping():
+    registry = CapabilityRegistry()
+
+    registry.register(
+        TypedEchoCapability()
+    )
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.typed_echo",
+                capability_version="1.0",
+                input_mapping={
+                    "unknown": "value",
+                },
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)unknown input mapping",
+    ):
+        PlanValidator().validate(
+            plan,
+            registry,
+        )
