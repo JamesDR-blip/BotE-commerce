@@ -108,6 +108,10 @@ class DependencyResolver:
         dependencies: Sequence[CapabilitySpec],
         consumer: CapabilitySpec,
     ) -> None:
+        """Validate explicit dependency data-flow contracts."""
+
+        if not dependencies:
+            return
 
         dependency_outputs = {
             output
@@ -115,51 +119,14 @@ class DependencyResolver:
             for output in dependency.output_keys
         }
 
-        # Explicit input mappings:
-        # - If there are no dependencies, mappings may reference
-        #   external execution inputs.
-        # - If dependencies exist, a mapped source must be produced
-        #   by at least one dependency.
-        if consumer.input_mappings:
-
-            if not dependencies:
-               return
-
-            for consumer_input, dependency_output in consumer.input_mappings:
-                if (
-                    consumer_input in consumer.input_keys
-                    and dependency_output not in dependency_outputs
-                ):
-                    raise CapabilityDependencyContractError(
-                        f"Dependencies do not provide "
-                        f"required output "
-                        f"{dependency_output} for "
-                        f"{consumer.id}: "
-                        f"{consumer_input}"
-                    )
-
-            return
-
-        # No dependencies means the capability's inputs are
-        if not dependencies:
-            return
-
-        missing_inputs = [
-            key
-            for key in consumer.input_keys
-            if (
-                key.endswith("_frame")
-                or key.endswith("_result")
-                or key.endswith("_data")
-            )
-            and key not in dependency_outputs
-        ]
-
-        if missing_inputs:
-            raise CapabilityDependencyContractError(
-                f"Dependencies do not provide "
-                f"required inputs for {consumer.id}: "
-                + ", ".join(missing_inputs)
-            )
+        for consumer_input, dependency_output in consumer.input_mappings:
+            if dependency_output not in dependency_outputs:
+                raise CapabilityDependencyContractError(
+                    f"Dependencies do not provide "
+                    f"required output "
+                    f"{dependency_output} for "
+                    f"{consumer.id}: "
+                    f"{consumer_input}"
+                )
         
 __all__ = ["DependencyResolver"]

@@ -26,6 +26,9 @@ def test_dependency_contract_accepts_matching_outputs():
             required_capabilities=(
                 "data.clean",
             ),
+            input_mappings=(
+                ("cleaned_frame", "cleaned_frame"),
+            ),
         ),
     }
 
@@ -61,6 +64,9 @@ def test_dependency_contract_rejects_missing_outputs():
             output_keys=("result",),
             required_capabilities=(
                 "data.clean",
+            ),
+            input_mappings=(
+                ("cleaned_frame", "cleaned_frame"),
             ),
         ),
     }
@@ -239,3 +245,38 @@ def test_dependency_contract_rejects_mapping_source_not_provided_by_any_dependen
             requested=("data.validate",),
             capabilities=capabilities,
         )
+
+
+def test_dependency_resolver_does_not_infer_dependency_from_input_name():
+    capabilities = {
+        "test.producer": CapabilitySpec(
+            id="test.producer",
+            version="1.0",
+            description="producer",
+            input_keys=("frame",),
+            output_keys=("payload",),
+        ),
+        "test.consumer": CapabilitySpec(
+            id="test.consumer",
+            version="1.0",
+            description="consumer",
+            input_keys=("cleaned_frame",),
+            output_keys=("result",),
+            required_capabilities=(
+                "test.producer",
+            ),
+        ),
+    }
+
+    result = DependencyResolver().resolve(
+        requested=("test.consumer",),
+        capabilities=capabilities,
+    )
+
+    assert tuple(
+        spec.id
+        for spec in result
+    ) == (
+        "test.producer",
+        "test.consumer",
+    )

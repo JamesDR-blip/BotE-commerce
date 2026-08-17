@@ -29,6 +29,12 @@ QA_CAPABILITY_SPEC = CapabilitySpec(
     required_capabilities=(
         "data.validate",
     ),
+    input_mappings=(
+        ("frame", "frame"),
+        ("category", "category"),
+        ("issues", "issues"),
+        ("rule_version", "rule_version"),
+    ),
     intents=(
         "generate_quality_report",
         "assess_data_quality",
