@@ -92,12 +92,12 @@ class QualityService:
                 planner_version=None,
             )
 
-            result = outputs["validation_result"]
-
             self._executions.save_trace(
                 execution_id,
                 trace,
             )
+
+            result = outputs["validation_result"]
 
             self._executions.update_status(
                 execution_id,

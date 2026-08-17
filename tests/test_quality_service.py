@@ -178,6 +178,13 @@ def test_quality_service_marks_execution_completed():
     assert context["plan_json"]
     assert context["planner_version"] is None
 
+    assert len(container.executions.saved_traces) == 1
+
+    saved_trace = container.executions.saved_traces[0]
+
+    assert saved_trace["execution_id"] == execution_id
+    assert saved_trace["trace"].execution_id == execution_id
+
 def test_quality_service_marks_execution_failed_and_reraises():
     frame = pd.DataFrame(
         {
