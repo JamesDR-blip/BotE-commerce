@@ -55,6 +55,7 @@ class CapabilityExecutionService:
         )
 
         result["_execution_trace"] = collector.trace()
+        result["_execution_plan"] = plan
 
         return result
 

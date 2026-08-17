@@ -1,20 +1,24 @@
 """Repository for execution audit records."""
 from __future__ import annotations
+
 import json
-from typing import Callable
+from typing import Any, Callable
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
 from database.models import (
+    CapabilityExecutionTraceRecord,
     ExecutionRecord,
     ReportRecord,
     ValidationLogRecord,
-    CapabilityExecutionTraceRecord,
 )
 from domain.models import ValidationIssue
 
 
 class ExecutionRepository:
-    def __init__(self, sessions: Callable[[], Session]) -> None: self._sessions = sessions
+    def __init__(self, sessions: Callable[[], Session]) -> None:
+        self._sessions = sessions
 
     def create(self, record: ExecutionRecord) -> None:
         with self._sessions() as session:
@@ -58,13 +62,13 @@ class ExecutionRepository:
             session.add_all(
                 ValidationLogRecord(
                     execution_id=execution_id,
-                    row_number=x.row,
-                    field=x.field,
-                    code=x.code,
-                    message=x.message,
-                    severity=x.severity,
+                    row_number=issue.row,
+                    field=issue.field,
+                    code=issue.code,
+                    message=issue.message,
+                    severity=issue.severity,
                 )
-                for x in issues
+                for issue in issues
             )
 
             session.add_all(
@@ -80,15 +84,30 @@ class ExecutionRepository:
 
     def history(self, limit: int = 50) -> list[ExecutionRecord]:
         with self._sessions() as session:
-            return list(session.scalars(select(ExecutionRecord).order_by(ExecutionRecord.created_at.desc()).limit(limit)))
+            return list(
+                session.scalars(
+                    select(ExecutionRecord)
+                    .order_by(ExecutionRecord.created_at.desc())
+                    .limit(limit)
+                )
+            )
 
     def get(self, execution_id: str) -> ExecutionRecord | None:
         with self._sessions() as session:
             return session.get(ExecutionRecord, execution_id)
 
-    def report_path(self, execution_id: str, report_format: str) -> str | None:
+    def report_path(
+        self,
+        execution_id: str,
+        report_format: str,
+    ) -> str | None:
         with self._sessions() as session:
-            return session.scalar(select(ReportRecord.path).where(ReportRecord.execution_id == execution_id, ReportRecord.format == report_format))
+            return session.scalar(
+                select(ReportRecord.path).where(
+                    ReportRecord.execution_id == execution_id,
+                    ReportRecord.format == report_format,
+                )
+            )
 
     def save_trace(
         self,
@@ -96,12 +115,9 @@ class ExecutionRepository:
         trace,
     ) -> None:
         with self._sessions() as session:
-            record = session.get(
-                ExecutionRecord,
-                execution_id,
-            )
+            execution = session.get(ExecutionRecord, execution_id)
 
-            if record is None:
+            if execution is None:
                 raise ValueError(
                     f"Execution {execution_id} does not exist"
                 )
@@ -109,43 +125,13 @@ class ExecutionRepository:
             session.add_all(
                 CapabilityExecutionTraceRecord(
                     execution_id=execution_id,
-                    capability_id=item.capability_id,
-                    capability_version=item.capability_version,
-                    status=item.status.value
-                    if hasattr(item.status, "value")
-                    else str(item.status),
-                    started_at=item.started_at,
-                    finished_at=item.finished_at,
-                    duration_ms=item.duration_ms,
-                    error=item.error,
-                    outputs_json=item.outputs or {},
-                )
-                for item in trace.records
-            )
-
-            session.commit()
-
-    def save_trace(
-        self,
-        execution_id: str,
-        trace,
-    ) -> None:
-        pass
-
-    def save_trace(
-        self,
-        execution_id: str,
-        trace,
-    ) -> None:
-
-        with self._sessions() as session:
-
-            session.add_all(
-                CapabilityExecutionTraceRecord(
-                    execution_id=execution_id,
                     capability_id=record.capability_id,
                     capability_version=record.capability_version,
-                    status=record.status.value,
+                    status=(
+                        record.status.value
+                        if hasattr(record.status, "value")
+                        else str(record.status)
+                    ),
                     started_at=record.started_at,
                     finished_at=record.finished_at,
                     duration_ms=record.duration_ms,
@@ -158,20 +144,38 @@ class ExecutionRepository:
 
             session.commit()
 
-def _serialize_json(value):
+    def save_execution_context(
+        self,
+        execution_id: str,
+        *,
+        requirement_json: str,
+        plan_json: str,
+        planner_version: str | None,
+    ) -> None:
+        with self._sessions() as session:
+            record = session.get(
+                ExecutionRecord,
+                execution_id,
+            )
+
+            if record is None:
+                raise ValueError(
+                    f"Execution {execution_id} does not exist"
+                )
+
+            record.requirement_json = requirement_json
+            record.plan_json = plan_json
+            record.planner_version = planner_version
+
+            session.commit()
+
+
+def _serialize_json(value: Any) -> Any:
+    """Serialize trace payloads into database-safe JSON values."""
     if value is None:
         return None
 
     if isinstance(value, (str, int, float, bool)):
         return value
 
-    if isinstance(value, dict):
-        return json.dumps(
-            {
-                key: _serialize_json(item)
-                for key, item in value.items()
-            },
-            default=str,
-        )
-
-    return json.dumps(str(value))
+    return json.dumps(value, default=str)

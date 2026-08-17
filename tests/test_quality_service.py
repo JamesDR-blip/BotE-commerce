@@ -2,8 +2,11 @@ import pandas as pd
 import pytest
 
 from domain.models import ExecutionSummary, ValidationResult
+from domain.plans import ExecutionPlan, PlanStep
+
 from services.quality_service import QualityService
 from agents.requirement import ValidationRequirement
+
 
 class FakeReporter:
     def generate(self, execution_id, result):
@@ -13,6 +16,33 @@ class FakeExecutions:
     def __init__(self):
         self.created = []
         self.status_updates = []
+        self.saved_context = []
+        self.saved_traces = []
+
+    def save_execution_context(
+        self,
+        execution_id,
+        *,
+        requirement_json,
+        plan_json,
+        planner_version,
+    ):
+        self.saved_context.append(
+            {
+                "execution_id": execution_id,
+                "requirement_json": requirement_json,
+                "plan_json": plan_json,
+                "planner_version": planner_version,
+            }
+        )
+
+    def save_trace(self, execution_id, trace):
+        self.saved_traces.append(
+            {
+                "execution_id": execution_id,
+                "trace": trace,
+            }
+        )
 
     def create(self, record):
         self.created.append(record)
@@ -77,8 +107,18 @@ class FakeCapabilityExecution:
         if self.error is not None:
             raise self.error
 
+        plan = ExecutionPlan(
+            steps=(
+                PlanStep(
+                    capability_id="data.qa",
+                    capability_version="1.0",
+                ),
+            ),
+        )
+
         return {
             "validation_result": self.result,
+            "_execution_plan": plan,
         }
 
 def test_quality_service_marks_execution_completed():
@@ -122,7 +162,14 @@ def test_quality_service_marks_execution_completed():
     assert container.executions.status_updates == [
         (execution_id, "COMPLETED")
     ]
+    assert len(container.executions.saved_context) == 1
 
+    context = container.executions.saved_context[0]
+
+    assert context["execution_id"] == execution_id
+    assert context["requirement_json"]
+    assert context["plan_json"]
+    assert context["planner_version"] is None
 
 def test_quality_service_marks_execution_failed_and_reraises():
     frame = pd.DataFrame(

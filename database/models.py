@@ -50,8 +50,29 @@ class ExecutionRecord(Base):
         default="COMPLETED", 
         nullable=False,
         )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
-    user: Mapped[UserRecord | None] = relationship(back_populates="executions")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), 
+        default=lambda: datetime.now(timezone.utc), 
+        index=True,
+    )
+
+    requirement_json: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    plan_json: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    planner_version: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+    user: Mapped[UserRecord | None] = relationship(
+        back_populates="executions"
+        )
     reports: Mapped[list["ReportRecord"]] = relationship(
         back_populates="execution",
         cascade="all, delete-orphan"

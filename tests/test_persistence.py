@@ -107,3 +107,59 @@ def test_execution_repository_updates_status_to_failed() -> None:
 
     assert stored is not None
     assert stored.status == "FAILED"
+
+def test_execution_repository_persists_execution_context() -> None:
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    sessions = sessionmaker(bind=engine, expire_on_commit=False)
+    repository = ExecutionRepository(sessions)
+
+    record = ExecutionRecord(
+        id="context-execution",
+        category="Fashion",
+        source_hash="c" * 64,
+        rule_version="1",
+        health_score=0.0,
+        status="RUNNING",
+    )
+
+    repository.create(record)
+
+    repository.save_execution_context(
+        "context-execution",
+        requirement_json='{"requested_category":"Fashion"}',
+        plan_json='{"version":"1.0","steps":[]}',
+        planner_version="1.0",
+    )
+
+    stored = repository.get("context-execution")
+
+    assert stored is not None
+    assert stored.requirement_json == (
+        '{"requested_category":"Fashion"}'
+    )
+    assert stored.plan_json == (
+        '{"version":"1.0","steps":[]}'
+    )
+    assert stored.planner_version == "1.0"
+
+
+def test_execution_repository_rejects_missing_execution_context() -> None:
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    sessions = sessionmaker(bind=engine, expire_on_commit=False)
+    repository = ExecutionRepository(sessions)
+
+    try:
+        repository.save_execution_context(
+            "missing-execution",
+            requirement_json="{}",
+            plan_json="{}",
+            planner_version="1.0",
+        )
+    except ValueError as exc:
+        assert "missing-execution" in str(exc)
+    else:
+        raise AssertionError(
+            "Expected ValueError for missing execution"
+        )

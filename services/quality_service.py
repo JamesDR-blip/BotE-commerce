@@ -6,13 +6,17 @@ from hashlib import sha256
 from uuid import uuid4
 
 import pandas as pd
+import json
 
-from agents.requirement import RequirementAgent
-from database.models import ExecutionRecord
-from domain.models import ExecutionSummary
+from services.execution_plan_serializer import ExecutionPlanSerializer
+from services.requirement_serializer import RequirementSerializer
 from services.cache import TTLCache
 from services.capability_execution_service import CapabilityExecutionService
+
+from agents.requirement import RequirementAgent
 from agents.reporter import ReporterAgent
+from database.models import ExecutionRecord
+from domain.models import ExecutionSummary
 
 class QualityService:
     """Application service coordinating validation execution and persistence."""
@@ -69,6 +73,25 @@ class QualityService:
                     "requested_category": requested_category,
                 },
                 execution_id=execution_id,
+            )
+            plan = outputs.get("_execution_plan")
+
+            if plan is None:
+                raise RuntimeError(
+                    "Capability execution did not return an execution plan"
+                )
+
+            self._executions.save_execution_context(
+                execution_id=execution_id,
+                requirement_json=json.dumps(
+                    RequirementSerializer.to_dict(requirement),
+                    default=str,
+                ),
+                plan_json=json.dumps(
+                    ExecutionPlanSerializer.to_dict(plan),
+                    default=str,
+                ),
+                planner_version=None,
             )
 
             result = outputs["validation_result"]
