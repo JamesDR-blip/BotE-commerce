@@ -91,6 +91,31 @@ def test_executor_executes_capability():
 
     assert result["echo"] == "hello"
 
+def test_executor_rejects_capability_version_mismatch():
+    registry = CapabilityRegistry()
+    registry.register(EchoCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.echo",
+                capability_version="2.0",
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)version mismatch",
+    ):
+        executor.execute(
+            plan,
+            inputs={"value": "hello"},
+            execution_id="version-mismatch-test",
+        )
+
 
 @dataclass
 class UpperCapability:

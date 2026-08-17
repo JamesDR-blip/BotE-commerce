@@ -31,6 +31,14 @@ class CapabilityExecutor:
         for step in plan.steps:
             capability = self._registry.get(step.capability_id)
 
+            if step.capability_version != capability.spec.version:
+                raise ValueError(
+                    f"Capability version mismatch for "
+                    f"{step.capability_id}: "
+                    f"plan requires {step.capability_version}, "
+                    f"but registry provides {capability.spec.version}"
+                )
+
             unknown_mappings = [
                 key
                 for key in step.input_mapping
