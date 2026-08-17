@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Collection
 
+from domain.type_contracts import TYPE_CONTRACTS
 from domain.capability_registry import CapabilityRegistry
 from domain.plans import ExecutionPlan
 
@@ -23,7 +24,11 @@ class PlanValidator:
         output_owners: dict[str, str] = {}
         output_types: dict[str, type] = {}
 
-        available_output_types = {}
+        available_output_types = {
+            key: TYPE_CONTRACTS[key]
+            for key in external_inputs
+            if key in TYPE_CONTRACTS
+        }
 
         for step in plan.steps:
             capability = registry.get(step.capability_id)
@@ -127,6 +132,29 @@ class PlanValidator:
                     f"{step.capability_id}: "
                     f"{', '.join(unknown_sources)}"
                 )
+            
+            for input_key in spec.input_keys:
+                if input_key in mapped_input_keys:
+                    continue
+
+                if input_key not in TYPE_CONTRACTS:
+                    continue
+
+                if input_key not in spec.input_types:
+                    continue
+
+                provided_type = TYPE_CONTRACTS[input_key]
+                expected_type = spec.input_types[input_key]
+
+                if not issubclass(provided_type, expected_type):
+                    raise TypeError(
+                        f"Incompatible input type for "
+                        f"{step.capability_id}: "
+                        f"{input_key} expects "
+                        f"{expected_type.__name__}, "
+                        f"but system provides "
+                        f"{provided_type.__name__}"
+                    )
             
             for input_key, source_key in step.input_mapping.items():
                 self._validate_mapping_types(

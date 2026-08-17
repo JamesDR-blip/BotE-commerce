@@ -60,13 +60,13 @@ def test_dependency_contract_rejects_missing_outputs():
             id="data.validate",
             version="1.0",
             description="validate",
-            input_keys=("cleaned_frame",),
+            input_keys=("frame",),
             output_keys=("result",),
             required_capabilities=(
                 "data.clean",
             ),
             input_mappings=(
-                ("cleaned_frame", "cleaned_frame"),
+                ("frame", "cleaned_frame"),
             ),
         ),
     }

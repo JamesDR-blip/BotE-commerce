@@ -588,3 +588,53 @@ def test_plan_validator_rejects_output_type_collision():
             registry,
             external_inputs={"value"},
         )
+
+
+def test_plan_validator_rejects_incompatible_external_input_type():
+    registry = CapabilityRegistry()
+
+    class DataFrameConsumerCapability:
+        @property
+        def spec(self):
+            from domain.capabilities import CapabilitySpec
+
+            return CapabilitySpec(
+                id="test.dataframe-consumer",
+                version="1.0",
+                description="DataFrame consumer",
+                input_keys=("category",),
+                output_keys=("result",),
+                input_types={
+                    "category": pd.DataFrame,
+                },
+            )
+
+        def execute(self, context):
+            from domain.capabilities import CapabilityResult
+
+            return CapabilityResult(
+                outputs={
+                    "result": context.inputs["category"],
+                }
+            )
+
+    registry.register(DataFrameConsumerCapability())
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.dataframe-consumer",
+                capability_version="1.0",
+            ),
+        )
+    )
+
+    with pytest.raises(
+        TypeError,
+        match=r"(?i)incompatible input type",
+    ):
+        PlanValidator().validate(
+            plan,
+            registry,
+            external_inputs={"category"},
+        )
