@@ -28,6 +28,7 @@ class ExecutionTraceCollector:
         self,
         capability_id: str,
         capability_version: str,
+        inputs: Mapping[str, Any] | None = None,
     ) -> int:
         """Start tracking a capability execution."""
 
@@ -36,6 +37,7 @@ class ExecutionTraceCollector:
             capability_version=capability_version,
             status=ExecutionStatus.RUNNING,
             started_at=datetime.now(UTC),
+            inputs=dict(inputs or {}),
         )
 
         self._records.append(record)
@@ -65,6 +67,7 @@ class ExecutionTraceCollector:
             started_at=current.started_at,
             finished_at=finished,
             duration_ms=duration,
+            inputs=current.inputs,
             outputs=outputs,
         )
 
@@ -91,6 +94,8 @@ class ExecutionTraceCollector:
             started_at=current.started_at,
             finished_at=finished,
             duration_ms=duration,
+            inputs=current.inputs,
+            outputs=current.outputs,
             error=str(error),
         )
 

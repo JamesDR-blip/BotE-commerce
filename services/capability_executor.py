@@ -84,6 +84,7 @@ class CapabilityExecutor:
                 trace_index = trace_collector.start(
                     capability.spec.id,
                     capability.spec.version,
+                    inputs=mapped_inputs,
                 )
 
             try:

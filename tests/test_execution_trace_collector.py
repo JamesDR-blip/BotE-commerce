@@ -42,6 +42,9 @@ def test_collector_tracks_failed_execution():
     index = collector.start(
         "data.validate",
         "1.0",
+        inputs={
+            "frame": "original",
+        },
     )
 
     collector.fail(
@@ -53,3 +56,6 @@ def test_collector_tracks_failed_execution():
 
     assert record.status == ExecutionStatus.FAILED
     assert "invalid data" in record.error
+    assert record.inputs == {
+        "frame": "original",
+    }

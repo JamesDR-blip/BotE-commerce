@@ -10,7 +10,11 @@ from domain.capabilities import (
 from domain.capability_registry import CapabilityRegistry
 from domain.plans import ExecutionPlan, PlanStep
 from domain.exceptions import CapabilityNotFoundError
+
 from services.capability_executor import CapabilityExecutor
+from services.execution_trace_collector import (
+    ExecutionTraceCollector,
+)
 
 @dataclass
 class EchoCapability:
@@ -888,3 +892,53 @@ def test_executor_rejects_missing_declared_output():
             inputs={"value": "hello"},
             execution_id="test-execution",
         )
+
+
+def test_executor_records_actual_mapped_inputs_in_trace():
+    registry = CapabilityRegistry()
+
+    registry.register(RenamedCleanCapability())
+    registry.register(FrameConsumerCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    collector = ExecutionTraceCollector(
+        execution_id="trace-mapping-test"
+    )
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.renamed-clean",
+                capability_version="1.0",
+            ),
+            PlanStep(
+                capability_id="test.frame-consumer",
+                capability_version="1.0",
+                input_mapping={
+                    "frame": "cleaned_frame",
+                },
+            ),
+        )
+    )
+
+    executor.execute(
+        plan,
+        inputs={
+            "frame": "original",
+        },
+        execution_id="trace-mapping-test",
+        trace_collector=collector,
+    )
+
+    trace = collector.trace()
+
+    assert len(trace.records) == 2
+
+    assert trace.records[0].inputs == {
+        "frame": "original",
+    }
+
+    assert trace.records[1].inputs == {
+        "frame": "original-cleaned",
+    }
