@@ -15,8 +15,6 @@ from domain.exceptions import (
     CapabilityDependencyContractError,
 )
 
-from packaging.version import Version
-
 
 class DependencyResolver:
     """Resolve capability dependencies using deterministic depth-first traversal."""
@@ -99,19 +97,11 @@ class DependencyResolver:
         spec: CapabilitySpec,
         constraint: str,
     ) -> None:
-
-        current = Version(spec.version)
-
-        if constraint.startswith(">="):
-            required = Version(
-                constraint.replace(">=", "").strip()
+        if not satisfies(spec.version, constraint):
+            raise CapabilityDependencyVersionError(
+                f"{spec.id} version {spec.version} "
+                f"does not satisfy {constraint}"
             )
-
-            if current < required:
-                raise CapabilityDependencyVersionError(
-                    f"{spec.id} version {spec.version} "
-                    f"does not satisfy {constraint}"
-                )
 
     def _validate_dependency_contract(
         self,

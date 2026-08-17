@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from packaging.specifiers import SpecifierSet
+from packaging.version import Version
+
 
 def satisfies(
     version: str,
@@ -15,12 +18,4 @@ def satisfies(
     if not constraint:
         return True
 
-    if constraint.startswith(">="):
-        required = constraint[2:]
-        return version >= required
-
-    if constraint.startswith("=="):
-        required = constraint[2:]
-        return version == required
-
-    return version == constraint
+    return Version(version) in SpecifierSet(constraint)

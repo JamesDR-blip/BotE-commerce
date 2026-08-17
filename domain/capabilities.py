@@ -68,6 +68,29 @@ class CapabilitySpec:
                 f"Duplicate output key in capability: {self.id}"
             )
 
+        mapping_targets = [
+            target
+            for target, _ in self.input_mappings
+        ]
+
+        unknown_mapping_targets = (
+            set(mapping_targets)
+            - set(self.input_keys)
+        )
+
+        if unknown_mapping_targets:
+            raise ValueError(
+                f"Input mapping references unknown input "
+                f"keys for {self.id}: "
+                f"{sorted(unknown_mapping_targets)}"
+            )
+
+        if len(mapping_targets) != len(set(mapping_targets)):
+            raise ValueError(
+                f"Duplicate input mapping target "
+                f"for {self.id}"
+            )
+
         unknown_input_types = (
             set(self.input_types)
             - set(self.input_keys)
@@ -117,7 +140,30 @@ class CapabilitySpec:
                 f"for {self.id}: "
                 f"{sorted(unknown_parameter_keywords)}"
             )
-        
+
+        input_mapping_inputs = [
+            input_key
+            for input_key, _ in self.input_mappings
+        ]
+
+        unknown_mapping_inputs = (
+            set(input_mapping_inputs)
+            - set(self.input_keys)
+        )
+
+        if unknown_mapping_inputs:
+            raise ValueError(
+                f"Input mapping references unknown input "
+                f"keys for {self.id}: "
+                f"{sorted(unknown_mapping_inputs)}"
+            )
+
+        if len(input_mapping_inputs) != len(
+            set(input_mapping_inputs)
+        ):
+            raise ValueError(
+                f"Duplicate input mapping for {self.id}"
+            )
 @dataclass(frozen=True)
 class CapabilityContext:
     """Runtime context supplied to a capability."""
