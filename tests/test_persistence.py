@@ -163,3 +163,45 @@ def test_execution_repository_rejects_missing_execution_context() -> None:
         raise AssertionError(
             "Expected ValueError for missing execution"
         )
+
+def test_execution_repository_persists_and_reads_execution_context() -> None:
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+
+    sessions = sessionmaker(
+        bind=engine,
+        expire_on_commit=False,
+    )
+
+    repository = ExecutionRepository(sessions)
+
+    repository.create(
+        ExecutionRecord(
+            id="context-execution",
+            category="Fashion",
+            source_hash="a" * 64,
+            rule_version="1",
+            health_score=0.0,
+            status="RUNNING",
+        )
+    )
+
+    repository.save_execution_context(
+        "context-execution",
+        requirement_json='{"requested_category":"Fashion"}',
+        plan_json='{"version":"1.0","steps":[],"metadata":{}}',
+        planner_version="planner-1",
+    )
+
+    context = repository.execution_context(
+        "context-execution"
+    )
+
+    assert context is not None
+    assert context["requirement_json"] == (
+        '{"requested_category":"Fashion"}'
+    )
+    assert context["plan_json"] == (
+        '{"version":"1.0","steps":[],"metadata":{}}'
+    )
+    assert context["planner_version"] == "planner-1"

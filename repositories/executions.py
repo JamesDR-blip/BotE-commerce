@@ -169,6 +169,25 @@ class ExecutionRepository:
 
             session.commit()
 
+    def execution_context(
+        self,
+        execution_id: str,
+    ) -> dict[str, str | None] | None:
+        with self._sessions() as session:
+            record = session.get(
+                ExecutionRecord,
+                execution_id,
+            )
+
+            if record is None:
+                return None
+
+            return {
+                "requirement_json": record.requirement_json,
+                "plan_json": record.plan_json,
+                "planner_version": record.planner_version,
+            }
+
 
 def _serialize_json(value: Any) -> Any:
     """Serialize trace payloads into database-safe JSON values."""
