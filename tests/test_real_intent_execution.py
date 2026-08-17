@@ -42,7 +42,7 @@ def test_real_intent_executes_quality_pipeline():
         execution_id="test-intent-execution",
     )
 
-    assert "validation_result" in result
+    assert "validation_result" in result.outputs
 
 
 def test_real_intent_executes_capabilities_in_dependency_order():

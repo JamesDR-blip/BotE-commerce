@@ -35,7 +35,7 @@ def test_validation_capability_executes_real_workflow():
         execution_id="integration-test",
     )
 
-    validation_result = outputs["validation_result"]
+    validation_result = outputs.outputs["validation_result"]
 
     assert isinstance(validation_result, ValidationResult)
     assert validation_result.category

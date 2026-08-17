@@ -34,7 +34,7 @@ def test_real_validation_capability_chain():
         execution_id="real-capability-chain-test",
     )
 
-    result = outputs["validation_result"]
+    result = outputs.outputs["validation_result"]
 
     assert isinstance(result, ValidationResult)
     assert result.category == "Fashion"
@@ -78,15 +78,15 @@ def test_real_capability_chain_clean_then_validate():
         execution_id="real-chain-test",
     )
 
-    assert "frame" in outputs
-    assert "category" in outputs
-    assert "issues" in outputs
-    assert "rule_version" in outputs
+    assert "frame" in outputs.outputs
+    assert "category" in outputs.outputs
+    assert "issues" in outputs.outputs
+    assert "rule_version" in outputs.outputs
 
-    assert isinstance(outputs["frame"], pd.DataFrame)
-    assert isinstance(outputs["category"], str)
-    assert isinstance(outputs["issues"], list)
-    assert isinstance(outputs["rule_version"], str)
+    assert isinstance(outputs.outputs["frame"], pd.DataFrame)
+    assert isinstance(outputs.outputs["category"], str)
+    assert isinstance(outputs.outputs["issues"], list)
+    assert isinstance(outputs.outputs["rule_version"], str)
 
 
 def test_real_capability_chain_passes_cleaned_frame_to_validation():
@@ -153,13 +153,13 @@ def test_real_capability_chain_passes_cleaned_frame_to_validation():
         cleaned_frame.columns
     )
 
-    assert outputs["frame"].equals(
+    assert outputs.outputs["frame"].equals(
         captured_validation["frame"]
     )
-    assert outputs["category"] == "Fashion"
-    assert isinstance(outputs["issues"], list)
-    assert len(outputs["issues"]) >= 0
-    assert isinstance(outputs["rule_version"], str)
+    assert outputs.outputs["category"] == "Fashion"
+    assert isinstance(outputs.outputs["issues"], list)
+    assert len(outputs.outputs["issues"]) >= 0
+    assert isinstance(outputs.outputs["rule_version"], str)
 
 def test_real_capability_chain_passes_extraction_parameters():
     container = Container(Settings())
@@ -189,7 +189,7 @@ def test_real_capability_chain_passes_extraction_parameters():
         execution_id="real-extraction-parameters-test",
     )
 
-    extractions = outputs["extractions"]
+    extractions = outputs.outputs["extractions"]
 
     assert len(extractions) == 1
 

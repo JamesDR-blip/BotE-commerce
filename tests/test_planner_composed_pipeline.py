@@ -147,18 +147,18 @@ def test_real_composed_pipeline_executes_clean_normalize_extract():
         execution_id="real-composed-pipeline-001",
     )
 
-    assert outputs["frame"]["product_title"].tolist() == [
+    assert outputs.outputs["frame"]["product_title"].tolist() == [
         "Nike Air Max Black XL"
     ]
 
-    assert outputs["frame"]["color"].tolist() == [
+    assert outputs.outputs["frame"]["color"].tolist() == [
         "Black"
     ]
 
-    assert "extractions" in outputs
-    assert len(outputs["extractions"]) == 1
+    assert "extractions" in outputs.outputs
+    assert len(outputs.outputs["extractions"]) == 1
 
-    extraction = outputs["extractions"][0]
+    extraction = outputs.outputs["extractions"][0]
 
     assert extraction.brand == "Nike"
     assert extraction.color == "Black"

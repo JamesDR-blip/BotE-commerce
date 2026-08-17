@@ -6,9 +6,12 @@ from typing import Any, Mapping
 
 from agents.planner import PlannerAgent
 from agents.requirement import ValidationRequirement
+
 from services.capability_executor import CapabilityExecutor
 from services.execution_trace_collector import ExecutionTraceCollector
 from services.plan_validator import PlanValidator
+
+from domain.capability_execution import CapabilityExecutionResult
 
 
 class CapabilityExecutionService:
@@ -30,7 +33,7 @@ class CapabilityExecutionService:
         inputs: Mapping[str, Any],
         execution_id: str,
         trace_collector=None,
-    ) -> dict[str, Any]:
+    ) -> CapabilityExecutionResult:
 
         plan = self._planner.plan(requirement)
 
@@ -47,17 +50,18 @@ class CapabilityExecutionService:
             )
         )
 
-        result = self._executor.execute(
+        outputs = self._executor.execute(
             plan=plan,
             inputs=inputs,
             execution_id=execution_id,
             trace_collector=collector,
         )
 
-        result["_execution_trace"] = collector.trace()
-        result["_execution_plan"] = plan
-
-        return result
+        return CapabilityExecutionResult(
+            outputs=outputs,
+            plan=plan,
+            trace=collector.trace(),
+        )
 
 
     def execute_with_trace(
@@ -72,11 +76,7 @@ class CapabilityExecutionService:
             execution_id=execution_id,
         )
 
-        trace = result.pop(
-            "_execution_trace"
-        )
-
-        return result, trace
+        return result.outputs, result.trace
 
 __all__ = [
     "CapabilityExecutionService",

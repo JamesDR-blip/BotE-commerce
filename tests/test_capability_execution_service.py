@@ -59,7 +59,7 @@ def test_execution_service_plans_then_executes():
         execution_id="execution-123",
     )
 
-    assert result["echo"] == "hello"
+    assert result.outputs["echo"] == "hello"
 
 
 @dataclass
@@ -134,8 +134,8 @@ def test_execution_service_executes_multiple_capabilities_in_plan():
         execution_id="execution-123",
     )
 
-    assert result["value"] == "hello"
-    assert result["valid"] is True
+    assert result.outputs["value"] == "hello"
+    assert result.outputs["valid"] is True
 
 
 def test_execution_service_resolves_capability_dependencies():
@@ -169,8 +169,8 @@ def test_execution_service_resolves_capability_dependencies():
         execution_id="execution-123",
     )
 
-    assert result["value"] == "hello"
-    assert result["valid"] is True
+    assert result.outputs["value"] == "hello"
+    assert result.outputs["valid"] is True
 
 
 def test_execution_service_executes_dependencies_before_requested_capability():
@@ -207,8 +207,8 @@ def test_execution_service_executes_dependencies_before_requested_capability():
         execution_id="execution-123",
     )
 
-    assert result["value"] == "hello"
-    assert result["valid"] is True
+    assert result.outputs["value"] == "hello"
+    assert result.outputs["valid"] is True
 
 
 @dataclass
@@ -299,8 +299,8 @@ def test_execution_service_uses_explicit_mapping_between_renamed_outputs_and_inp
         execution_id="explicit-mapping-test",
     )
 
-    assert result["cleaned_value"] == "hello"
-    assert result["valid"] is True
+    assert result.outputs["cleaned_value"] == "hello"
+    assert result.outputs["valid"] is True
 
 
 
@@ -370,4 +370,4 @@ def test_new_capability_is_plannable_and_executable_without_core_changes():
         execution_id="extensibility-test",
     )
 
-    assert result["formatted"] == "SKU-12345"
+    assert result.outputs["formatted"] == "SKU-12345"

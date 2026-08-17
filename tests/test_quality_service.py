@@ -3,6 +3,8 @@ import pytest
 
 from domain.models import ExecutionSummary, ValidationResult
 from domain.plans import ExecutionPlan, PlanStep
+from domain.capability_execution import CapabilityExecutionResult
+from domain.execution_trace import ExecutionTrace
 
 from services.quality_service import QualityService
 from agents.requirement import ValidationRequirement
@@ -18,6 +20,15 @@ class FakeExecutions:
         self.status_updates = []
         self.saved_context = []
         self.saved_traces = []
+
+    def create(self, record):
+        self.created.append(record)
+
+    def update_status(self, execution_id, status):
+        self.status_updates.append((execution_id, status))
+
+    def save_result(self, **kwargs):
+        pass
 
     def save_execution_context(
         self,
@@ -43,15 +54,6 @@ class FakeExecutions:
                 "trace": trace,
             }
         )
-
-    def create(self, record):
-        self.created.append(record)
-
-    def update_status(self, execution_id, status):
-        self.status_updates.append((execution_id, status))
-
-    def save_result(self, **kwargs):
-        pass
 
 class FakeRequirements:
     def interpret(
@@ -108,18 +110,23 @@ class FakeCapabilityExecution:
             raise self.error
 
         plan = ExecutionPlan(
-            steps=(
-                PlanStep(
-                    capability_id="data.qa",
-                    capability_version="1.0",
-                ),
-            ),
+            steps=(),
+            version="1.0",
+            metadata={},
         )
 
-        return {
-            "validation_result": self.result,
-            "_execution_plan": plan,
-        }
+        trace = ExecutionTrace(
+            execution_id=execution_id,
+            records=(),
+        )
+
+        return CapabilityExecutionResult(
+            outputs={
+                "validation_result": self.result,
+            },
+            plan=plan,
+            trace=trace,
+        )
 
 def test_quality_service_marks_execution_completed():
     frame = pd.DataFrame(

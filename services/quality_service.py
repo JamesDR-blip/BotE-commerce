@@ -66,7 +66,7 @@ class QualityService:
                 requested_capabilities=("data.qa",),
             )
 
-            outputs = self._capability_execution.execute(
+            execution_result = self._capability_execution.execute(
                 requirement=requirement,
                 inputs={
                     "frame": frame,
@@ -74,12 +74,10 @@ class QualityService:
                 },
                 execution_id=execution_id,
             )
-            plan = outputs.get("_execution_plan")
 
-            if plan is None:
-                raise RuntimeError(
-                    "Capability execution did not return an execution plan"
-                )
+            outputs = execution_result.outputs
+            plan = execution_result.plan
+            trace = execution_result.trace
 
             self._executions.save_execution_context(
                 execution_id=execution_id,
@@ -96,15 +94,10 @@ class QualityService:
 
             result = outputs["validation_result"]
 
-            trace = outputs.get(
-                "_execution_trace"
+            self._executions.save_trace(
+                execution_id,
+                trace,
             )
-
-            if trace is not None:
-                self._executions.save_trace(
-                    execution_id,
-                    trace,
-                )
 
             self._executions.update_status(
                 execution_id,
