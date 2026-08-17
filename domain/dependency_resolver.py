@@ -135,9 +135,7 @@ class DependencyResolver:
             if not dependencies:
                return
 
-            for consumer_input, dependency_output in (
-                consumer.input_mappings
-            ):
+            for consumer_input, dependency_output in consumer.input_mappings:
                 if (
                     consumer_input in consumer.input_keys
                     and dependency_output not in dependency_outputs

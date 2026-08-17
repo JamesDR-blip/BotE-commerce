@@ -13,6 +13,9 @@ def test_collector_tracks_completed_execution():
     index = collector.start(
         "data.clean",
         "1.0",
+        inputs={
+            "frame": "original",
+        },
     )
 
     collector.complete(
@@ -31,6 +34,9 @@ def test_collector_tracks_completed_execution():
     assert record.capability_id == "data.clean"
     assert record.status == ExecutionStatus.COMPLETED
     assert record.outputs["cleaned"] is True
+    assert record.inputs == {
+        "frame": "original",
+    }
 
 
 def test_collector_tracks_failed_execution():

@@ -43,7 +43,7 @@ class CapabilityExecutor:
                     f"{step.capability_id}: "
                     f"{', '.join(unknown_mappings)}"
                 )
-            
+
             unknown_parameters = [
                 key
                 for key in step.parameters
@@ -60,7 +60,10 @@ class CapabilityExecutor:
             mapped_inputs = {}
 
             for input_key in capability.spec.input_keys:
-                source_key = step.input_mapping.get(input_key, input_key)
+                source_key = step.input_mapping.get(
+                    input_key,
+                    input_key,
+                )
 
                 if source_key not in context:
                     raise ValueError(
@@ -72,11 +75,11 @@ class CapabilityExecutor:
 
                 mapped_inputs[input_key] = context[source_key]
 
-                self._validate_input_types(
-                    capability.spec.input_types,
-                    mapped_inputs,
-                    step.capability_id,
-                )
+            self._validate_input_types(
+                capability.spec.input_types,
+                mapped_inputs,
+                step.capability_id,
+            )
 
             trace_index = None
 

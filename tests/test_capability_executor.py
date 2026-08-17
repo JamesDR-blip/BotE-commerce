@@ -942,3 +942,64 @@ def test_executor_records_actual_mapped_inputs_in_trace():
     assert trace.records[1].inputs == {
         "frame": "original-cleaned",
     }
+
+
+def test_executor_trace_captures_mapped_inputs():
+    registry = CapabilityRegistry()
+
+    registry.register(RenamedCleanCapability())
+    registry.register(FrameConsumerCapability())
+
+    executor = CapabilityExecutor(registry)
+
+    collector = ExecutionTraceCollector(
+        execution_id="trace-mapping-test",
+    )
+
+    plan = ExecutionPlan(
+        steps=(
+            PlanStep(
+                capability_id="test.renamed-clean",
+                capability_version="1.0",
+            ),
+            PlanStep(
+                capability_id="test.frame-consumer",
+                capability_version="1.0",
+                input_mapping={
+                    "frame": "cleaned_frame",
+                },
+            ),
+        )
+    )
+
+    result = executor.execute(
+        plan,
+        inputs={"frame": "original"},
+        execution_id="trace-mapping-test",
+        trace_collector=collector,
+    )
+
+    trace = collector.trace()
+
+    assert len(trace.records) == 2
+
+    clean_record = trace.records[0]
+    consumer_record = trace.records[1]
+
+    assert clean_record.inputs == {
+        "frame": "original",
+    }
+
+    assert clean_record.outputs == {
+        "cleaned_frame": "original-cleaned",
+    }
+
+    assert consumer_record.inputs == {
+        "frame": "original-cleaned",
+    }
+
+    assert consumer_record.outputs == {
+        "result": "original-cleaned",
+    }
+
+    assert result["result"] == "original-cleaned"
