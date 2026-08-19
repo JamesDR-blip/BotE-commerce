@@ -193,6 +193,7 @@ class PlannerAgent:
         steps_list: list[PlanStep] = []
         available_outputs: set[str] = set()
         available_output_types: dict[str, type] = {}
+        output_owners: dict[str, str] = {}
 
         for spec in specs:
             has_requirement_mapping = spec.id in requirement_mappings
@@ -231,6 +232,27 @@ class PlannerAgent:
                     f"{spec.id}: "
                     f"{', '.join(unknown_input_keys)}"
                 )
+
+            for output in spec.output_keys:
+                if output not in available_outputs:
+                    continue
+
+                # A capability may consume an existing value
+                # and intentionally replace it under the same key.
+                if (
+                    output in spec.input_keys
+                    and output in spec.input_types
+                ):
+                    continue
+
+                previous_owner = output_owners.get(output)
+
+                if previous_owner is not None:
+                    raise ValueError(
+                        f"Output collision for "
+                        f"{spec.id}: "
+                        f"{output}"
+                    )
                 
             step = PlanStep(
                 capability_id=spec.id,
@@ -243,7 +265,10 @@ class PlannerAgent:
 
             steps_list.append(step)
 
-            available_outputs.update(spec.output_keys)
+            for output in spec.output_keys:
+                available_outputs.add(output)
+                output_owners[output] = spec.id
+
             available_output_types.update(
                 spec.output_types
             )
@@ -323,6 +348,28 @@ class PlannerAgent:
                         )
 
                     continue
+
+            elif key in available_output_types:
+                # An unmapped input resolves by key name.
+                # If a previous capability already produced that key,
+                # its output type is the actual contract.
+                provided_type = available_output_types[key]
+
+                if not issubclass(
+                    provided_type,
+                    expected_type,
+                ):
+                    raise TypeError(
+                        f"Incompatible input type for "
+                        f"{spec.id}: "
+                        f"{key} expects "
+                        f"{expected_type.__name__}, "
+                        f"but previous output "
+                        f"{key} provides "
+                        f"{provided_type.__name__}"
+                    )
+
+                continue
 
             elif key in TYPE_CONTRACTS:
                 provided_type = TYPE_CONTRACTS[key]

@@ -924,3 +924,246 @@ def test_planner_rejects_incompatible_dependency_mapping_types():
         match=r"(?i)incompatible input type",
     ):
         planner.plan(requirement)
+
+
+def test_planner_uses_previous_output_type_over_external_contract():
+    planner = PlannerAgent(
+        registry=make_registry(
+            {
+                "test.int_producer": CapabilitySpec(
+                    id="test.int_producer",
+                    version="1.0",
+                    description="Produces int under value",
+                    input_keys=("value",),
+                    output_keys=("value",),
+                    input_types={
+                        "value": str,
+                    },
+                    output_types={
+                        "value": int,
+                    },
+                ),
+                "test.int_consumer": CapabilitySpec(
+                    id="test.int_consumer",
+                    version="1.0",
+                    description="Consumes int",
+                    input_keys=("value",),
+                    output_keys=("result",),
+                    input_types={
+                        "value": int,
+                    },
+                    output_types={
+                        "result": int,
+                    },
+                    required_capabilities=(
+                        "test.int_producer",
+                    ),
+                ),
+            }
+        ),
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=(
+            "test.int_consumer",
+        ),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert tuple(
+        step.capability_id
+        for step in plan.steps
+    ) == (
+        "test.int_producer",
+        "test.int_consumer",
+    )
+
+
+def test_planner_rejects_previous_output_type_against_unmapped_consumer():
+    planner = PlannerAgent(
+        registry=make_registry(
+            {
+                "test.int_producer": CapabilitySpec(
+                    id="test.int_producer",
+                    version="1.0",
+                    description="Produces int under value",
+                    input_keys=("value",),
+                    output_keys=("value",),
+                    input_types={
+                        "value": str,
+                    },
+                    output_types={
+                        "value": int,
+                    },
+                ),
+                "test.string_consumer": CapabilitySpec(
+                    id="test.string_consumer",
+                    version="1.0",
+                    description="Consumes str",
+                    input_keys=("value",),
+                    output_keys=("result",),
+                    input_types={
+                        "value": str,
+                    },
+                    output_types={
+                        "result": str,
+                    },
+                    required_capabilities=(
+                        "test.int_producer",
+                    ),
+                ),
+            }
+        ),
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=(
+            "test.string_consumer",
+        ),
+    )
+
+    with pytest.raises(
+        TypeError,
+        match=r"(?i)incompatible input type",
+    ):
+        planner.plan(requirement)
+
+
+def test_planner_rejects_output_collision():
+    planner = PlannerAgent(
+        catalog={
+            "test.string_producer": CapabilitySpec(
+                id="test.string_producer",
+                version="1.0",
+                description="Produces string",
+                input_keys=(),
+                output_keys=("value",),
+                output_types={
+                    "value": str,
+                },
+            ),
+            "test.int_producer": CapabilitySpec(
+                id="test.int_producer",
+                version="1.0",
+                description="Produces int",
+                input_keys=(),
+                output_keys=("value",),
+                output_types={
+                    "value": int,
+                },
+            ),
+        },
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=(
+            "test.string_producer",
+            "test.int_producer",
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"(?i)output collision",
+    ):
+        planner.plan(requirement)
+
+
+def test_planner_allows_typed_replacement():
+    planner = PlannerAgent(
+        catalog={
+            "test.int_producer": CapabilitySpec(
+                id="test.int_producer",
+                version="1.0",
+                description="Produces int",
+                input_keys=(),
+                output_keys=("value",),
+                output_types={
+                    "value": int,
+                },
+            ),
+            "test.string_transformer": CapabilitySpec(
+                id="test.string_transformer",
+                version="1.0",
+                description="Consumes int and produces string",
+                input_keys=("value",),
+                output_keys=("value",),
+                input_types={
+                    "value": int,
+                },
+                output_types={
+                    "value": str,
+                },
+                required_capabilities=(
+                    "test.int_producer",
+                ),
+            ),
+        },
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=(
+            "test.string_transformer",
+        ),
+    )
+
+    plan = planner.plan(requirement)
+
+    assert tuple(
+        step.capability_id
+        for step in plan.steps
+    ) == (
+        "test.int_producer",
+        "test.string_transformer",
+    )
+
+
+def test_planner_rejects_incompatible_replacement():
+    planner = PlannerAgent(
+        catalog={
+            "test.int_producer": CapabilitySpec(
+                id="test.int_producer",
+                version="1.0",
+                description="Produces int",
+                input_keys=(),
+                output_keys=("value",),
+                output_types={
+                    "value": int,
+                },
+            ),
+            "test.string_transformer": CapabilitySpec(
+                id="test.string_transformer",
+                version="1.0",
+                description="Consumes string but receives previous int",
+                input_keys=("value",),
+                output_keys=("value",),
+                input_types={
+                    "value": str,
+                },
+                output_types={
+                    "value": str,
+                },
+                required_capabilities=(
+                    "test.int_producer",
+                ),
+            ),
+        },
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=(
+            "test.string_transformer",
+        ),
+    )
+
+    with pytest.raises(
+        TypeError,
+        match=r"(?i)incompatible input type",
+    ):
+        planner.plan(requirement)

@@ -19,9 +19,13 @@ class PlanValidator:
         external_inputs: Collection[str] = (),
     ) -> None:
         available_outputs = set(external_inputs)
-        produced_outputs: set[str] = set()
+        produced_outputs: set[str] = set(external_inputs)
 
-        output_owners: dict[str, str] = {}
+        output_owners: dict[str, str] = {
+            key: "<external>"
+            for key in external_inputs
+        }
+
         output_types: dict[str, type] = {}
 
         available_output_types = {
@@ -36,23 +40,33 @@ class PlanValidator:
             spec = capability.spec
 
             for output in spec.output_keys:
-                if output in produced_outputs:
-                    previous_owner = output_owners[output]
+                if output not in produced_outputs:
+                    continue
 
-                    previous_type = output_types.get(output)
-                    current_type = spec.output_types.get(output)
+                # A capability is allowed to consume an existing value
+                # and replace it under the same key.
+                if (
+                    output in spec.input_keys
+                    and output in spec.input_types
+                ):
+                    continue
 
-                    if (
-                        previous_owner != step.capability_id
-                        and previous_type is not None
-                        and current_type is not None
-                        and previous_type != current_type
-                    ):
-                        raise ValueError(
-                            f"Output collision for "
-                            f"{step.capability_id}: "
-                            f"{output}"
-                        )
+                previous_owner = output_owners[output]
+
+                previous_type = output_types.get(output)
+                current_type = spec.output_types.get(output)
+
+                if (
+                    previous_owner != step.capability_id
+                    and previous_type is not None
+                    and current_type is not None
+                    and previous_type != current_type
+                ):
+                    raise ValueError(
+                        f"Output collision for "
+                        f"{step.capability_id}: "
+                        f"{output}"
+                    )
 
             output_collisions = [
                 output
@@ -137,13 +151,13 @@ class PlanValidator:
                 if input_key in mapped_input_keys:
                     continue
 
-                if input_key not in TYPE_CONTRACTS:
+                if input_key not in available_output_types:
                     continue
 
                 if input_key not in spec.input_types:
                     continue
 
-                provided_type = TYPE_CONTRACTS[input_key]
+                provided_type = available_output_types[input_key]
                 expected_type = spec.input_types[input_key]
 
                 if not issubclass(provided_type, expected_type):
