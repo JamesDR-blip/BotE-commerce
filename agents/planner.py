@@ -75,38 +75,6 @@ class PlannerAgent:
                 + ", ".join(unknown_sources)
             )
 
-    def _validate_input_mapping(
-        self,
-        spec: CapabilitySpec,
-        input_mapping: dict[str, str],
-        previous_outputs: set[str],
-    ) -> None:
-        unknown_input_keys = [
-            key
-            for key in input_mapping
-            if key not in spec.input_keys
-        ]
-
-        if unknown_input_keys:
-            raise ValueError(
-                f"Unknown input mapping key for "
-                f"{spec.id}: "
-                f"{', '.join(unknown_input_keys)}"
-            )
-
-        unknown_sources = [
-            source
-            for source in input_mapping.values()
-            if source not in previous_outputs
-        ]
-
-        if unknown_sources:
-            raise ValueError(
-                f"Unknown input mapping source for "
-                f"{spec.id}: "
-                f"{', '.join(unknown_sources)}"
-            )
-
     def _validate_type_contract(
         self,
         spec: CapabilitySpec,
@@ -182,18 +150,14 @@ class PlannerAgent:
             raise ValueError(
                 f"Unknown input mapping source: {exc}"
             ) from exc
-
-        for spec in specs:
-            self._validate_type_contract(spec)
-            self._validate_input_contract(spec)
+        
+        requirement_mappings = requirement.input_mappings or {}
+        requirement_parameters = requirement.parameters or {}
 
         planned_capability_ids = {
             spec.id
             for spec in specs
         }
-
-        requirement_mappings = requirement.input_mappings or {}
-        requirement_parameters = requirement.parameters or {}
 
         for capability_id in requirement_mappings:
             if capability_id not in planned_capability_ids:
@@ -228,6 +192,7 @@ class PlannerAgent:
 
         steps_list: list[PlanStep] = []
         available_outputs: set[str] = set()
+        available_output_types: dict[str, type] = {}
 
         for spec in specs:
             has_requirement_mapping = spec.id in requirement_mappings
@@ -238,6 +203,14 @@ class PlannerAgent:
                 )
             else:
                 input_mapping = dict(spec.input_mappings)
+
+            self._validate_type_contract(spec)
+
+            self._validate_input_contract(
+                spec,
+                input_mapping=input_mapping,
+                available_output_types=available_output_types,
+            )
 
             self._validate_dependency_mapping(
                 spec,
@@ -258,23 +231,6 @@ class PlannerAgent:
                     f"{spec.id}: "
                     f"{', '.join(unknown_input_keys)}"
                 )
-
-            if not has_requirement_mapping:
-                unknown_sources = [
-                    source
-                    for source in input_mapping.values()
-                    if (
-                        source not in available_outputs
-                        and source not in spec.input_keys
-                    )
-                ]
-
-                if unknown_sources:
-                    raise ValueError(
-                        f"Unknown input mapping source for "
-                        f"{spec.id}: "
-                        f"{', '.join(unknown_sources)}"
-                    )
                 
             step = PlanStep(
                 capability_id=spec.id,
@@ -286,7 +242,11 @@ class PlannerAgent:
             )
 
             steps_list.append(step)
+
             available_outputs.update(spec.output_keys)
+            available_output_types.update(
+                spec.output_types
+            )
 
         steps = tuple(steps_list)
 
@@ -298,24 +258,97 @@ class PlannerAgent:
     def _validate_input_contract(
         self,
         spec: CapabilitySpec,
-    ):
+        input_mapping: dict[str, str] | None = None,
+        available_output_types: dict[str, type] | None = None,
+    ) -> None:
+        input_mapping = input_mapping or {}
+        available_output_types = (
+            available_output_types
+            if available_output_types is not None
+            else {}
+        )
 
         for key, expected_type in spec.input_types.items():
-
-            if key not in TYPE_CONTRACTS:
-                continue
-
-            provided_type = TYPE_CONTRACTS[key]
-
-            if not issubclass(
-                provided_type,
-                expected_type,
-            ):
+            if key not in spec.input_keys:
                 raise TypeError(
-                    f"Incompatible input type for "
-                    f"{spec.id}: "
-                    f"{key} expects "
-                    f"{expected_type.__name__}, "
-                    f"but system provides "
-                    f"{provided_type.__name__}"
+                    f"Input type declared for unknown input "
+                    f"{spec.id}: {key}"
+                )
+
+            if not isinstance(expected_type, type):
+                raise TypeError(
+                    f"Invalid input type declaration for "
+                    f"{spec.id}: {key}"
+                )
+
+            source_key = input_mapping.get(key)
+
+            if source_key is not None:
+                if source_key in available_output_types:
+                    provided_type = available_output_types[source_key]
+
+                    if not issubclass(
+                        provided_type,
+                        expected_type,
+                    ):
+                        raise TypeError(
+                            f"Incompatible input type for "
+                            f"{spec.id}: "
+                            f"{key} expects "
+                            f"{expected_type.__name__}, "
+                            f"but mapped source "
+                            f"{source_key} provides "
+                            f"{provided_type.__name__}"
+                        )
+
+                    continue
+
+                # Requirement mappings may refer to
+                # external inputs. Those are validated
+                # through TYPE_CONTRACTS when known.
+                if source_key in TYPE_CONTRACTS:
+                    provided_type = TYPE_CONTRACTS[source_key]
+
+                    if not issubclass(
+                        provided_type,
+                        expected_type,
+                    ):
+                        raise TypeError(
+                            f"Incompatible input type for "
+                            f"{spec.id}: "
+                            f"{key} expects "
+                            f"{expected_type.__name__}, "
+                            f"but system provides "
+                            f"{provided_type.__name__}"
+                        )
+
+                    continue
+
+            elif key in TYPE_CONTRACTS:
+                provided_type = TYPE_CONTRACTS[key]
+
+                if not issubclass(
+                    provided_type,
+                    expected_type,
+                ):
+                    raise TypeError(
+                        f"Incompatible input type for "
+                        f"{spec.id}: "
+                        f"{key} expects "
+                        f"{expected_type.__name__}, "
+                        f"but system provides "
+                        f"{provided_type.__name__}"
+                    )
+
+        for key, declared_type in spec.output_types.items():
+            if key not in spec.output_keys:
+                raise TypeError(
+                    f"Output type declared for unknown output "
+                    f"{spec.id}: {key}"
+                )
+
+            if not isinstance(declared_type, type):
+                raise TypeError(
+                    f"Invalid output type declaration for "
+                    f"{spec.id}: {key}"
                 )

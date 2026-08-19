@@ -1,4 +1,5 @@
 import pytest
+import pandas as pd
 
 from agents.planner import PlannerAgent
 from agents.requirement import ValidationRequirement
@@ -878,5 +879,48 @@ def test_planner_rejects_invalid_capability_type_contract():
     with pytest.raises(
         TypeError,
         match="input type",
+    ):
+        planner.plan(requirement)
+
+def test_planner_rejects_incompatible_dependency_mapping_types():
+    planner = PlannerAgent(
+        registry=make_registry({
+            "data.clean": CapabilitySpec(
+                id="data.clean",
+                version="1.0",
+                description="Clean data",
+                input_keys=("frame",),
+                output_keys=("cleaned_frame",),
+                output_types={
+                    "cleaned_frame": str,
+                },
+            ),
+            "data.validate": CapabilitySpec(
+                id="data.validate",
+                version="1.0",
+                description="Validate data",
+                input_keys=("frame",),
+                output_keys=("result",),
+                input_types={
+                    "frame": pd.DataFrame,
+                },
+                required_capabilities=("data.clean",),
+                input_mappings=(
+                    ("frame", "cleaned_frame"),
+                ),
+            ),
+        }),
+        resolver=DependencyResolver(),
+    )
+
+    requirement = ValidationRequirement(
+        requested_capabilities=(
+            "data.validate",
+        ),
+    )
+
+    with pytest.raises(
+        TypeError,
+        match=r"(?i)incompatible input type",
     ):
         planner.plan(requirement)
