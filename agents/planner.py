@@ -239,10 +239,7 @@ class PlannerAgent:
 
                 # A capability may consume an existing value
                 # and intentionally replace it under the same key.
-                if (
-                    output in spec.input_keys
-                    and output in spec.input_types
-                ):
+                if output in spec.input_keys:
                     continue
 
                 previous_owner = output_owners.get(output)

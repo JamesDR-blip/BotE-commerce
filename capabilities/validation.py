@@ -23,6 +23,10 @@ VALIDATION_CAPABILITY_SPEC = CapabilitySpec(
         "frame",
         "category",
     ),
+    input_types={
+        "frame": pd.DataFrame,
+        "category": str,
+    },
     output_keys=(
         "frame",
         "category",

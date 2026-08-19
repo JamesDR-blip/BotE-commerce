@@ -41,12 +41,18 @@ def make_spec(
     capability_id: str,
     required_capabilities: tuple[str, ...] = (),
 ) -> CapabilitySpec:
+    output_keys = {
+        "data.clean": ("frame",),
+        "data.extract": ("extractions",),
+        "data.validate": ("validation_result",),
+    }.get(capability_id, ("result",))
+
     return CapabilitySpec(
         id=capability_id,
         version="1.0",
         description=f"{capability_id} capability",
         input_keys=("frame",),
-        output_keys=("result",),
+        output_keys=output_keys,
         required_capabilities=required_capabilities,
     )
 

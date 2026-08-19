@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Collection
+from typing import Collection, Mapping
 
-from domain.type_contracts import TYPE_CONTRACTS
 from domain.capability_registry import CapabilityRegistry
 from domain.plans import ExecutionPlan
+from domain.type_contracts import TYPE_CONTRACTS
 
 
 class PlanValidator:
@@ -19,80 +19,35 @@ class PlanValidator:
         external_inputs: Collection[str] = (),
     ) -> None:
         available_outputs = set(external_inputs)
-        produced_outputs: set[str] = set(external_inputs)
 
+        available_output_types: dict[str, type] = {
+            key: TYPE_CONTRACTS[key]
+            for key in external_inputs
+            if key in TYPE_CONTRACTS
+        }
         output_owners: dict[str, str] = {
             key: "<external>"
             for key in external_inputs
         }
 
-        output_types: dict[str, type] = {}
-
-        available_output_types = {
-            key: TYPE_CONTRACTS[key]
-            for key in external_inputs
-            if key in TYPE_CONTRACTS
-        }
-
         for step in plan.steps:
             capability = registry.get(step.capability_id)
-
             spec = capability.spec
 
-            for output in spec.output_keys:
-                if output not in produced_outputs:
-                    continue
-
-                # A capability is allowed to consume an existing value
-                # and replace it under the same key.
-                if (
-                    output in spec.input_keys
-                    and output in spec.input_types
-                ):
-                    continue
-
-                previous_owner = output_owners[output]
-
-                previous_type = output_types.get(output)
-                current_type = spec.output_types.get(output)
-
-                if (
-                    previous_owner != step.capability_id
-                    and previous_type is not None
-                    and current_type is not None
-                    and previous_type != current_type
-                ):
-                    raise ValueError(
-                        f"Output collision for "
-                        f"{step.capability_id}: "
-                        f"{output}"
-                    )
-
-            output_collisions = [
-                output
-                for output in spec.output_keys
-                if (
-                    output in produced_outputs
-                    and output not in spec.input_keys
-                )
-            ]
-
-            if output_collisions:
-                raise ValueError(
-                    f"Output collision for "
-                    f"{step.capability_id}: "
-                    f"{', '.join(output_collisions)}"
-                )
-
+            # ---------------------------------------------------------
+            # 1. Capability version
+            # ---------------------------------------------------------
             if spec.version != step.capability_version:
                 raise ValueError(
                     f"Capability version mismatch for "
                     f"{step.capability_id}: "
                     f"plan requires {step.capability_version}, "
-                    f"registered capability is "
-                    f"{spec.version}"
+                    f"registered capability is {spec.version}"
                 )
 
+            # ---------------------------------------------------------
+            # 2. Parameters
+            # ---------------------------------------------------------
             unknown_parameters = [
                 key
                 for key in step.parameters
@@ -106,6 +61,9 @@ class PlanValidator:
                     f"{', '.join(unknown_parameters)}"
                 )
 
+            # ---------------------------------------------------------
+            # 3. Input mappings
+            # ---------------------------------------------------------
             unknown_mappings = [
                 key
                 for key in step.input_mapping
@@ -121,6 +79,9 @@ class PlanValidator:
 
             mapped_input_keys = set(step.input_mapping)
 
+            # ---------------------------------------------------------
+            # 4. Required inputs must exist
+            # ---------------------------------------------------------
             for input_key in spec.input_keys:
                 if input_key in mapped_input_keys:
                     continue
@@ -134,6 +95,9 @@ class PlanValidator:
                     f"{input_key}"
                 )
 
+            # ---------------------------------------------------------
+            # 5. Mapping sources must exist
+            # ---------------------------------------------------------
             unknown_sources = [
                 source
                 for source in step.input_mapping.values()
@@ -146,73 +110,182 @@ class PlanValidator:
                     f"{step.capability_id}: "
                     f"{', '.join(unknown_sources)}"
                 )
-            
-            for input_key in spec.input_keys:
-                if input_key in mapped_input_keys:
-                    continue
 
-                if input_key not in available_output_types:
-                    continue
+            # ---------------------------------------------------------
+            # 6. Validate input types
+            # ---------------------------------------------------------
+            self._validate_unmapped_input_types(
+                spec=spec,
+                available_output_types=available_output_types,
+                mapped_input_keys=mapped_input_keys,
+                capability_id=step.capability_id,
+            )
 
-                if input_key not in spec.input_types:
-                    continue
-
-                provided_type = available_output_types[input_key]
-                expected_type = spec.input_types[input_key]
-
-                if not issubclass(provided_type, expected_type):
-                    raise TypeError(
-                        f"Incompatible input type for "
-                        f"{step.capability_id}: "
-                        f"{input_key} expects "
-                        f"{expected_type.__name__}, "
-                        f"but system provides "
-                        f"{provided_type.__name__}"
-                    )
-            
             for input_key, source_key in step.input_mapping.items():
                 self._validate_mapping_types(
-                    source_key,
-                    input_key,
-                    available_output_types,
-                    spec.input_types,
-                    step.capability_id,
+                    source_key=source_key,
+                    target_key=input_key,
+                    source_types=available_output_types,
+                    target_types=spec.input_types,
+                    capability_id=step.capability_id,
                 )
 
-            produced_outputs.update(spec.output_keys)
+            # ---------------------------------------------------------
+            # 7. Validate outputs / replacements
+            # ---------------------------------------------------------
+            replacement_outputs = {
+                output
+                for output in spec.output_keys
+                if (
+                    output in spec.input_keys
+                    and output in spec.input_types
+                )
+            }
 
             for output in spec.output_keys:
+                if output not in available_outputs:
+                    # First producer of this output.
+                    continue
+
                 previous_owner = output_owners.get(output)
 
-                if (
-                    previous_owner
-                    and previous_owner != step.capability_id
-                    and output not in spec.input_keys
-                ):
+                # -----------------------------------------------------
+                # Case A:
+                # The key is still owned by external input.
+                #
+                # A capability may consume and reproduce an external
+                # input under the same key.
+                # -----------------------------------------------------
+                if previous_owner == "<external>":
+                    if output in spec.input_keys:
+                        # If a typed input contract exists, validate it.
+                        if output in spec.input_types:
+                            expected_input_type = spec.input_types[output]
+                            previous_type = available_output_types.get(output)
+
+                            if (
+                                previous_type is not None
+                                and not issubclass(
+                                    previous_type,
+                                    expected_input_type,
+                                )
+                            ):
+                                raise TypeError(
+                                    f"Incompatible input type for "
+                                    f"{step.capability_id}: "
+                                    f"{output} expects "
+                                    f"{expected_input_type.__name__}, "
+                                    f"but previous output "
+                                    f"{output} provides "
+                                    f"{previous_type.__name__}"
+                                )
+
+                        continue
+
                     raise ValueError(
                         f"Output collision for "
-                        f"{step.capability_id}: {output}"
+                        f"{step.capability_id}: "
+                        f"{output}"
                     )
 
-                output_owners[output] = step.capability_id
-                
-                if output in spec.output_types:
-                    output_types[output] = spec.output_types[output]
+                # -----------------------------------------------------
+                # Case B:
+                # The key was already produced by another capability.
+                #
+                # Reproduction is allowed only when the current
+                # capability explicitly declares a typed input contract.
+                # -----------------------------------------------------
+                if output in replacement_outputs:
+                    expected_input_type = spec.input_types[output]
+                    previous_type = available_output_types.get(output)
 
+                    if (
+                        previous_type is not None
+                        and not issubclass(
+                            previous_type,
+                            expected_input_type,
+                        )
+                    ):
+                        raise TypeError(
+                            f"Incompatible input type for "
+                            f"{step.capability_id}: "
+                            f"{output} expects "
+                            f"{expected_input_type.__name__}, "
+                            f"but previous output "
+                            f"{output} provides "
+                            f"{previous_type.__name__}"
+                        )
+
+                    continue
+
+                # -----------------------------------------------------
+                # Case C:
+                # Existing output without an explicit typed replacement
+                # is a collision.
+                # -----------------------------------------------------
+                raise ValueError(
+                    f"Output collision for "
+                    f"{step.capability_id}: "
+                    f"{output}"
+                )
+
+            # ---------------------------------------------------------
+            # 8. Register outputs produced by this step
+            # ---------------------------------------------------------
             available_outputs.update(spec.output_keys)
 
-            available_output_types.update(
-                spec.output_types
-            )
+            for output in spec.output_keys:
+                output_owners[output] = step.capability_id
+
+                if output in spec.output_types:
+                    available_output_types[output] = spec.output_types[output]
+
+    def _validate_unmapped_input_types(
+        self,
+        spec,
+        available_output_types: Mapping[str, type],
+        mapped_input_keys: set[str],
+        capability_id: str,
+    ) -> None:
+        """Validate inputs resolved by matching key names."""
+
+        for input_key in spec.input_keys:
+            if input_key in mapped_input_keys:
+                continue
+
+            if input_key not in available_output_types:
+                continue
+
+            if input_key not in spec.input_types:
+                continue
+
+            provided_type = available_output_types[input_key]
+            expected_type = spec.input_types[input_key]
+
+            if not issubclass(
+                provided_type,
+                expected_type,
+            ):
+                raise TypeError(
+                    f"Incompatible input type for "
+                    f"{capability_id}: "
+                    f"{input_key} expects "
+                    f"{expected_type.__name__}, "
+                    f"but previous output "
+                    f"{input_key} provides "
+                    f"{provided_type.__name__}"
+                )
 
     def _validate_mapping_types(
         self,
         source_key: str,
         target_key: str,
-        source_types,
-        target_types,
+        source_types: Mapping[str, type],
+        target_types: Mapping[str, type],
         capability_id: str,
     ) -> None:
+        """Validate the type contract of an explicit input mapping."""
+
         if (
             source_key not in source_types
             or target_key not in target_types

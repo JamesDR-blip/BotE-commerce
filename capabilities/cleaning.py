@@ -24,6 +24,13 @@ CLEANING_CAPABILITY_SPEC = CapabilitySpec(
         "frame",
         "category",
     ),
+    input_types={
+        "frame": pd.DataFrame,
+    },
+    output_types={
+        "frame": pd.DataFrame,
+        "category": str,
+    },
     intents=(
         "clean_product_data",
         "clean_product_titles",

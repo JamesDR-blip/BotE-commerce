@@ -22,6 +22,12 @@ NORMALIZATION_CAPABILITY_SPEC = CapabilitySpec(
     output_keys=(
         "frame",
     ),
+    input_types={
+        "frame": pd.DataFrame,
+    },
+    output_types={
+        "frame": pd.DataFrame,
+    },
     parameter_keys=(
         "fields",
     ),
