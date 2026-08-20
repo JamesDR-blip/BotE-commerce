@@ -11,6 +11,10 @@ from configs.settings import Settings
 from repositories.executions import ExecutionRepository
 from repositories.users import UserRepository
 from repositories.rules import RuleRepository
+from repositories.workspaces import WorkspaceRepository
+from repositories.projects import ProjectRepository
+from repositories.datasets import DatasetRepository
+from repositories.workflows import WorkflowRepository
 
 from domain.capability_selector import CapabilitySelector
 from domain.capability_registry import CapabilityRegistry
@@ -45,6 +49,7 @@ from services.normalization_service import NormalizationService
 from services.deterministic_validation_workflow import (
     DeterministicValidationWorkflow,
 )
+from services.studio_service import StudioService
 
 
 class Container:
@@ -156,6 +161,10 @@ class Container:
         self.reporter = ReporterAgent(self.reports)
         self.executions = ExecutionRepository(sessions)
         self.users = UserRepository(sessions)
+        self.workspaces = WorkspaceRepository(sessions)
+        self.projects = ProjectRepository(sessions)
+        self.datasets = DatasetRepository(sessions)
+        self.workflows = WorkflowRepository(sessions)
         self.cache = TTLCache(settings.cache_ttl_seconds)
         self.uploads = TabularUploadReader(settings.max_upload_bytes)
         self.mapping = MappingService()
@@ -167,4 +176,10 @@ class Container:
             cache=self.cache,
             reporter=self.reporter,
             enable_llm=settings.enable_llm,
+        )
+        self.studio = StudioService(
+            workspaces=self.workspaces,
+            projects=self.projects,
+            datasets=self.datasets,
+            workflows=self.workflows,
         )

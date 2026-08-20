@@ -36,6 +36,199 @@ class UserRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
     executions: Mapped[list["ExecutionRecord"]] = relationship(back_populates="user")
 
+class WorkspaceRecord(Base):
+    __tablename__ = "workspaces"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+
+    projects: Mapped[list["ProjectRecord"]] = relationship(
+        back_populates="workspace",
+        cascade="all, delete-orphan",
+    )
+
+class ProjectRecord(Base):
+    __tablename__ = "projects"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id"),
+        nullable=False,
+        index=True,
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    description: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+
+    workspace: Mapped[WorkspaceRecord] = relationship(
+        back_populates="projects"
+    )
+
+    datasets: Mapped[list["DatasetRecord"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+
+    workflows: Mapped[list["WorkflowRecord"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+
+class DatasetRecord(Base):
+
+    __tablename__ = "datasets"
+
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+
+
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id"),
+        nullable=False,
+        index=True,
+    )
+
+
+    name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+
+    source_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+
+    metadata_json: Mapped[dict] = mapped_column(
+        JSON,
+        default=dict,
+    )
+
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+
+    project: Mapped[ProjectRecord] = relationship(
+        back_populates="datasets"
+    )
+
+class WorkflowRecord(Base):
+
+    __tablename__ = "workflows"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id"),
+        nullable=False,
+        index=True,
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    active_version: Mapped[str] = mapped_column(
+        String(50),
+        default="1.0",
+        nullable=False,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="DRAFT",
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    project: Mapped["ProjectRecord"] = relationship(
+        back_populates="workflows"
+    )
+
+    versions: Mapped[list["WorkflowVersionRecord"]] = relationship(
+        back_populates="workflow",
+        cascade="all, delete-orphan",
+    )
+
+class WorkflowVersionRecord(Base):
+
+    __tablename__ = "workflow_versions"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+
+    workflow_id: Mapped[str] = mapped_column(
+        ForeignKey("workflows.id"),
+        nullable=False,
+        index=True,
+    )
+
+    version: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    plan_json: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    workflow: Mapped["WorkflowRecord"] = relationship(
+        back_populates="versions"
+    )
 
 class ExecutionRecord(Base):
     __tablename__ = "executions"
