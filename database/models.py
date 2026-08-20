@@ -195,6 +195,10 @@ class WorkflowRecord(Base):
         back_populates="workflow",
         cascade="all, delete-orphan",
     )
+    executions: Mapped[list["WorkflowExecutionRecord"]] = relationship(
+        back_populates="workflow",
+        cascade="all, delete-orphan",
+    )
 
 class WorkflowVersionRecord(Base):
 
@@ -228,6 +232,65 @@ class WorkflowVersionRecord(Base):
 
     workflow: Mapped["WorkflowRecord"] = relationship(
         back_populates="versions"
+    )
+
+class WorkflowExecutionRecord(Base):
+    __tablename__ = "workflow_executions"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+
+    workflow_id: Mapped[str] = mapped_column(
+        ForeignKey("workflows.id"),
+        nullable=False,
+        index=True,
+    )
+
+    workflow_version: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+    )
+
+    inputs_json: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    outputs_json: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    error: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+
+    workflow: Mapped["WorkflowRecord"] = relationship(
+        back_populates="executions"
     )
 
 class ExecutionRecord(Base):

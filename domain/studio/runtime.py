@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from typing import Any
 
 from domain.plans import ExecutionPlan
-
+from domain.workflow_execution_status import (
+    WorkflowExecutionStatus,
+)
 
 @dataclass(frozen=True)
 class WorkflowExecution:
@@ -34,6 +36,10 @@ class WorkflowExecution:
 
     finished_at: datetime | None = None
 
+    status: WorkflowExecutionStatus = (
+        WorkflowExecutionStatus.CREATED
+    )
+
     success: bool = False
 
     outputs: dict[str, Any] = field(
@@ -41,3 +47,31 @@ class WorkflowExecution:
     )
 
     error: str | None = None
+
+    def start(self) -> "WorkflowExecution":
+        return replace(
+            self,
+            status=WorkflowExecutionStatus.RUNNING,
+        )
+
+    def complete(
+        self,
+        outputs: dict[str, Any],
+    ):
+        return replace(
+            self,
+            status=WorkflowExecutionStatus.COMPLETED,
+            outputs=outputs,
+            finished_at=datetime.now(timezone.utc),
+        )
+
+    def fail(
+        self,
+        error: str,
+    ):
+        return replace(
+            self,
+            status=WorkflowExecutionStatus.FAILED,
+            error=error,
+            finished_at=datetime.now(timezone.utc),
+        )

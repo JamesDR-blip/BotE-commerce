@@ -13,6 +13,8 @@ from repositories.workspaces import WorkspaceRepository
 from repositories.projects import ProjectRepository
 from repositories.datasets import DatasetRepository
 from repositories.workflows import WorkflowRepository
+from repositories.workflow_executions import WorkflowExecutionRepository
+
 
 from domain.capability_selector import CapabilitySelector
 from domain.capability_registry import CapabilityRegistry
@@ -49,7 +51,6 @@ from services.deterministic_validation_workflow import (
 )
 from services.studio_service import StudioService
 from services.workflow_engine import WorkflowEngine
-
 
 class Container:
     def __init__(self, settings: Settings) -> None:
@@ -159,6 +160,8 @@ class Container:
         self.reports = ReportAgent(settings.reports_path)
         self.reporter = ReporterAgent(self.reports)
         self.executions = ExecutionRepository(sessions)
+        self.workflow_executions = WorkflowExecutionRepository(sessions)
+
         self.users = UserRepository(sessions)
         self.workflows = WorkflowRepository(sessions)
         self.workspaces = WorkspaceRepository(sessions)
@@ -185,6 +188,7 @@ class Container:
         self.workflow_engine = WorkflowEngine(
             workflows=self.workflows,
             capability_execution=self.capability_execution,
+            executions=self.workflow_executions,
         )
 
 def build_container(

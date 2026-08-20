@@ -12,7 +12,7 @@ from services.execution_trace_collector import ExecutionTraceCollector
 from services.plan_validator import PlanValidator
 
 from domain.capability_execution import CapabilityExecutionResult
-
+from domain.plans import ExecutionPlan
 
 class CapabilityExecutionService:
     """Plan and execute capability workflows."""
@@ -63,6 +63,40 @@ class CapabilityExecutionService:
             trace=collector.trace(),
         )
 
+    def execute_plan(
+        self,
+        *,
+        plan: ExecutionPlan,
+        inputs: Mapping[str, Any],
+        execution_id: str,
+        trace_collector=None,
+    ) -> CapabilityExecutionResult:
+
+        self._validator.validate(
+            plan,
+            self._executor.registry,
+            external_inputs=inputs.keys(),
+        )
+
+        collector = (
+            trace_collector
+            or ExecutionTraceCollector(
+                execution_id=execution_id
+            )
+        )
+
+        outputs = self._executor.execute(
+            plan=plan,
+            inputs=inputs,
+            execution_id=execution_id,
+            trace_collector=collector,
+        )
+
+        return CapabilityExecutionResult(
+            outputs=outputs,
+            plan=plan,
+            trace=collector.trace(),
+        )
 
     def execute_with_trace(
         self,
