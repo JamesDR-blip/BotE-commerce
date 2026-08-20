@@ -85,6 +85,108 @@ class WorkflowRepository:
                 )
             )
 
+    def list_versions(
+        self,
+        workflow_id: str,
+    ) -> list[WorkflowVersionRecord]:
+
+        with self._sessions() as session:
+            return list(
+                session.scalars(
+                    select(WorkflowVersionRecord)
+                    .where(
+                        WorkflowVersionRecord.workflow_id == workflow_id
+                    )
+                    .order_by(
+                        WorkflowVersionRecord.created_at
+                    )
+                )
+            )
+
+    def create_version(
+        self,
+        *,
+        workflow_id: str,
+        version: str,
+        plan_json: str,
+    ) -> WorkflowVersionRecord:
+
+        with self._sessions() as session:
+
+            record = WorkflowVersionRecord(
+                id=str(uuid.uuid4()),
+                workflow_id=workflow_id,
+                version=version,
+                plan_json=plan_json,
+            )
+
+            session.add(record)
+            session.commit()
+            session.refresh(record)
+
+            return record
+
+    def get_active_version(
+        self,
+        workflow_id: str,
+    ) -> WorkflowVersionRecord | None:
+
+        with self._sessions() as session:
+
+            workflow = session.get(
+                WorkflowRecord,
+                workflow_id,
+            )
+
+            if workflow is None:
+                return None
+
+            return session.scalar(
+                select(WorkflowVersionRecord)
+                .where(
+                    WorkflowVersionRecord.workflow_id == workflow_id,
+                    WorkflowVersionRecord.version == workflow.active_version,
+                )
+            )
+
+    def activate_version(
+        self,
+        workflow_id: str,
+        version: str,
+    ) -> WorkflowRecord:
+
+        with self._sessions() as session:
+
+            workflow = session.get(
+                WorkflowRecord,
+                workflow_id,
+            )
+
+            if workflow is None:
+                raise ValueError(
+                    f"Workflow not found: {workflow_id}"
+                )
+
+            version_record = session.scalar(
+                select(WorkflowVersionRecord)
+                .where(
+                    WorkflowVersionRecord.workflow_id == workflow_id,
+                    WorkflowVersionRecord.version == version,
+                )
+            )
+
+            if version_record is None:
+                raise ValueError(
+                    f"Workflow version not found: {version}"
+                )
+
+            workflow.active_version = version
+
+            session.commit()
+            session.refresh(workflow)
+
+            return workflow
+
     def list_by_project(
         self,
         project_id: str,
