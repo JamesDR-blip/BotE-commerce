@@ -4,8 +4,6 @@ from database.models import make_session_factory
 from extractors.deterministic import DeterministicProductExtractor
 from plugins.registry import ValidatorRegistry
 from reports.generator import ReportAgent
-
-from configs import settings
 from configs.settings import Settings
 
 from repositories.executions import ExecutionRepository
@@ -50,6 +48,7 @@ from services.deterministic_validation_workflow import (
     DeterministicValidationWorkflow,
 )
 from services.studio_service import StudioService
+from services.workflow_engine import WorkflowEngine
 
 
 class Container:
@@ -161,10 +160,10 @@ class Container:
         self.reporter = ReporterAgent(self.reports)
         self.executions = ExecutionRepository(sessions)
         self.users = UserRepository(sessions)
+        self.workflows = WorkflowRepository(sessions)
         self.workspaces = WorkspaceRepository(sessions)
         self.projects = ProjectRepository(sessions)
         self.datasets = DatasetRepository(sessions)
-        self.workflows = WorkflowRepository(sessions)
         self.cache = TTLCache(settings.cache_ttl_seconds)
         self.uploads = TabularUploadReader(settings.max_upload_bytes)
         self.mapping = MappingService()
@@ -183,3 +182,16 @@ class Container:
             datasets=self.datasets,
             workflows=self.workflows,
         )
+        self.workflow_engine = WorkflowEngine(
+            workflows=self.workflows,
+            capability_execution=self.capability_execution,
+        )
+
+def build_container(
+    app_settings: Settings | None = None,
+) -> Container:
+
+    if app_settings is None:
+        app_settings = Settings()
+
+    return Container(app_settings)
