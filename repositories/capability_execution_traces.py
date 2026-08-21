@@ -72,7 +72,8 @@ class CapabilityExecutionTraceRepository:
                 capability_version=capability_version,
                 status=status,
                 inputs_json=json.dumps(
-                    inputs or {}
+                    inputs or {},
+                    default=str,
                 ),
                 started_at=started_at,
             )
@@ -106,7 +107,8 @@ class CapabilityExecutionTraceRepository:
 
             record.status = "COMPLETED"
             record.outputs_json = json.dumps(
-                outputs
+                outputs,
+                default=str,
             )
             record.finished_at = finished_at
 

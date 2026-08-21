@@ -161,3 +161,72 @@ class StudioService:
                         default=str,
                     ),
         )
+    def get_workflow(
+        self,
+        workflow_id: str,
+    ):
+        return self.workflows.get(
+            workflow_id
+        )
+
+
+    def list_workflows(
+        self,
+        project_id: str,
+    ):
+        return self.workflows.list_by_project(
+            project_id
+        )
+    
+    def create_workflow_version(
+        self,
+        *,
+        workflow_id: str,
+        version: str,
+        plan: ExecutionPlan,
+    ):
+        plan_json = (
+            ExecutionPlanSerializer
+            .to_dict(plan)
+        )
+
+        return self.workflows.create_version(
+            workflow_id=workflow_id,
+            version=version,
+            plan_json=json.dumps(
+                plan_json,
+                default=str,
+            ),
+        )
+
+
+    def get_workflow_version(
+        self,
+        *,
+        workflow_id: str,
+        version: str,
+    ):
+        return self.workflows.get_version(
+            workflow_id,
+            version,
+        )
+
+
+    def list_workflow_versions(
+        self,
+        workflow_id: str,
+    ):
+        return self.workflows.list_versions(
+            workflow_id
+        )
+
+
+    def activate_workflow_version(
+        self,
+        workflow_id: str,
+        version: str,
+    ):
+        return self.workflows.activate_version(
+            workflow_id,
+            version,
+        )

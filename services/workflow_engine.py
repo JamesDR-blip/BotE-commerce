@@ -81,7 +81,10 @@ class WorkflowEngine:
                 execution_id=execution_id,
                 workflow_id=workflow_id,
                 workflow_version=version.version,
-                inputs_json=json.dumps(inputs),
+                inputs_json=json.dumps(
+                    inputs,
+                    default=str,
+                ),
             )
 
             self.executions.mark_running(
@@ -112,12 +115,14 @@ class WorkflowEngine:
                 execution_id=execution_id,
             )
 
-            if self.trace_persistence is not None:
-                self.trace_persistence.save(
-                    result.trace
-                )
+            trace = getattr(result, "trace", None)
+
+            if self.trace_persistence is not None and trace is not None:
+                self.trace_persistence.save(trace)
 
         except Exception as exc:
+            import traceback
+            traceback.print_exc()
 
             failed = runtime.fail(
                 error=str(exc)
@@ -131,7 +136,6 @@ class WorkflowEngine:
 
             return failed
 
-
         completed = runtime.complete(
             outputs=dict(result.outputs)
         )
@@ -140,7 +144,8 @@ class WorkflowEngine:
             self.executions.complete(
                 execution_id=execution_id,
                 outputs_json=json.dumps(
-                    completed.outputs
+                    completed.outputs,
+                    default=str,
                 ),
             )
 
