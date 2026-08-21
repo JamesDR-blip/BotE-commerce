@@ -85,12 +85,26 @@ class CapabilityExecutionService:
             )
         )
 
-        outputs = self._executor.execute(
-            plan=plan,
-            inputs=inputs,
-            execution_id=execution_id,
-            trace_collector=collector,
-        )
+        try:
+            outputs = self._executor.execute(
+                plan=plan,
+                inputs=inputs,
+                execution_id=execution_id,
+                trace_collector=collector,
+            )
+
+        except Exception as exc:
+            trace = collector.trace()
+
+            if trace.records:
+                # Expose partial trace to the caller
+                setattr(
+                    exc,
+                    "execution_trace",
+                    trace,
+                )
+
+            raise
 
         return CapabilityExecutionResult(
             outputs=outputs,

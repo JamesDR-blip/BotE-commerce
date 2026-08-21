@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from typing import Any
 import json
+import inspect
 
 from domain.studio.runtime import WorkflowExecution
 
 from services.execution_plan_serializer import (
     ExecutionPlanSerializer,
 )
-
+from services.execution_trace_collector import (
+    ExecutionTraceCollector,
+)
 
 class WorkflowEngine:
 
@@ -103,24 +106,59 @@ class WorkflowEngine:
 
         runtime = runtime.start()
 
+        trace_collector = ExecutionTraceCollector(
+            execution_id=execution_id
+        )
 
         if self.capability_execution is None:
             return runtime
 
-
         try:
-            result = self.capability_execution.execute_plan(
-                plan=plan,
-                inputs=inputs,
-                execution_id=execution_id,
+            execute_plan = (
+                self.capability_execution.execute_plan
             )
 
-            trace = getattr(result, "trace", None)
+            parameters = inspect.signature(
+                execute_plan
+            ).parameters
 
-            if self.trace_persistence is not None and trace is not None:
+            if "trace_collector" in parameters:
+                result = execute_plan(
+                    plan=plan,
+                    inputs=inputs,
+                    execution_id=execution_id,
+                    trace_collector=trace_collector,
+                )
+            else:
+                result = execute_plan(
+                    plan=plan,
+                    inputs=inputs,
+                    execution_id=execution_id,
+                )
+
+            trace = getattr(
+                result,
+                "trace",
+                None,
+            )
+
+            if trace is None:
+                trace = trace_collector.trace()
+
+            if (
+                self.trace_persistence is not None
+                and trace is not None
+            ):
                 self.trace_persistence.save(trace)
 
         except Exception as exc:
+            trace = trace_collector.trace()
+
+            if (
+                self.trace_persistence is not None
+                and trace.records
+            ):
+                self.trace_persistence.save(trace)
 
             failed = runtime.fail(
                 error=str(exc)

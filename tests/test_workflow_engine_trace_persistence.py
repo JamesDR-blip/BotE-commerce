@@ -2,7 +2,6 @@ from services.workflow_engine import WorkflowEngine
 
 
 class FakeWorkflow:
-
     def get(self, workflow_id):
         return object()
 
@@ -22,7 +21,6 @@ class FakeWorkflow:
 
 
 class FakeCapabilityExecution:
-
     def execute_plan(
         self,
         *,
@@ -30,40 +28,51 @@ class FakeCapabilityExecution:
         inputs,
         execution_id,
     ):
+        trace = type(
+            "Trace",
+            (),
+            {
+                "execution_id": execution_id,
+                "records": (),
+            },
+        )()
+
         return type(
             "Result",
             (),
             {
                 "outputs": {},
-                "trace": type(
-                    "Trace",
-                    (),
-                    {
-                        "records": ()
-                    }
-                )(),
+                "trace": trace,
             },
         )()
 
 
 class FakeTracePersistence:
+    def __init__(self):
+        self.trace = None
+
     def save(self, trace):
         self.trace = trace
 
+
 def test_workflow_engine_persists_trace():
+    trace_persistence = FakeTracePersistence()
 
     engine = WorkflowEngine(
         workflows=FakeWorkflow(),
         capability_execution=FakeCapabilityExecution(),
-        trace_persistence=FakeTracePersistence(),
+        trace_persistence=trace_persistence,
     )
 
     runtime = engine.execute(
         workflow_id="wf-1",
         execution_id="exec-1",
         inputs={
-            "file": "products.csv"
+            "file": "products.csv",
         },
     )
 
     assert runtime.success is True
+
+    assert trace_persistence.trace is not None
+    assert trace_persistence.trace.execution_id == "exec-1"

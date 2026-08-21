@@ -8,6 +8,9 @@ from services.workflow_engine import WorkflowEngine
 
 
 class FakeCapabilityExecution:
+    def __init__(self):
+        self.plans = {}
+
     def execute_plan(
         self,
         *,
@@ -15,6 +18,8 @@ class FakeCapabilityExecution:
         inputs,
         execution_id,
     ):
+        self.plans[execution_id] = plan
+
         return type(
             "Result",
             (),
@@ -53,13 +58,26 @@ def test_execution_keeps_workflow_version_snapshot():
         project_id="project-1",
         name="Validation",
         version="1.0",
-        plan_json='{"version":"1.0","steps":[],"metadata":{}}',
+        plan_json='''{
+            "version": "1.0",
+            "steps": [
+                {
+                    "capability_id": "data.clean",
+                    "capability_version": "1.0",
+                    "parameters": {},
+                    "input_mapping": {}
+                }
+            ],
+            "metadata": {}
+        }''',
     )
+
+    capability_execution = FakeCapabilityExecution()
 
     engine = WorkflowEngine(
         workflows=workflows,
         executions=executions,
-        capability_execution=FakeCapabilityExecution(),
+        capability_execution=capability_execution,
     )
 
     first = engine.execute(
@@ -78,7 +96,18 @@ def test_execution_keeps_workflow_version_snapshot():
     workflows.create_version(
         workflow_id="wf-1",
         version="2.0",
-        plan_json='{"version":"2.0","steps":[],"metadata":{}}',
+        plan_json='''{
+            "version": "2.0",
+            "steps": [
+                {
+                    "capability_id": "data.normalize",
+                    "capability_version": "1.0",
+                    "parameters": {},
+                    "input_mapping": {}
+                }
+            ],
+            "metadata": {}
+        }''',
     )
 
     workflows.activate_version(
@@ -102,3 +131,12 @@ def test_execution_keeps_workflow_version_snapshot():
 
     assert stored_first.workflow_version == "1.0"
     assert stored_second.workflow_version == "2.0"
+
+    first_plan = capability_execution.plans["exec-1"]
+    second_plan = capability_execution.plans["exec-2"]
+
+    assert first_plan.version == "1.0"
+    assert first_plan.steps[0].capability_id == "data.clean"
+
+    assert second_plan.version == "2.0"
+    assert second_plan.steps[0].capability_id == "data.normalize"
