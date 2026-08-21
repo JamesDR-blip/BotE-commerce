@@ -175,8 +175,8 @@ class Container:
         self.users = UserRepository(sessions)
         self.workflows = WorkflowRepository(sessions)
         self.trace_persistence = (
-            CapabilityExecutionTraceRepository(
-                sessions
+            ExecutionTracePersistence(
+                self.capability_traces
             )
         )
         self.workspaces = WorkspaceRepository(sessions)
@@ -209,7 +209,7 @@ class Container:
         self.workflow_history = (
                     WorkflowHistoryService(
                         executions=self.executions,
-                        traces=self.trace_persistence,
+                        traces=self.capability_traces,
                     )
                 )
 def build_container(

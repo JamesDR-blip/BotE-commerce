@@ -114,8 +114,7 @@ class WorkflowEngine:
 
             if self.trace_persistence is not None:
                 self.trace_persistence.save(
-                    execution_id=execution_id,
-                    trace=result.trace,
+                    result.trace
                 )
 
         except Exception as exc:

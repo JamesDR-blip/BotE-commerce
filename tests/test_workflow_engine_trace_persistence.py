@@ -47,14 +47,7 @@ class FakeCapabilityExecution:
 
 
 class FakeTracePersistence:
-
-    def save(
-        self,
-        *,
-        execution_id,
-        trace,
-    ):
-        self.execution_id = execution_id
+    def save(self, trace):
         self.trace = trace
 
 def test_workflow_engine_persists_trace():
