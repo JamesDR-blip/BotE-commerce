@@ -74,12 +74,15 @@ class CapabilityExecutor:
                 )
 
                 if source_key not in context:
-                    raise ValueError(
-                        f"Missing required input for "
-                        f"{step.capability_id}: "
-                        f"{input_key} "
-                        f"(source: {source_key})"
-                    )
+                    if input_key in capability.spec.required_input_keys:
+                        raise ValueError(
+                            f"Missing required input for "
+                            f"{step.capability_id}: "
+                            f"{input_key} "
+                            f"(source: {source_key})"
+                        )
+
+                    continue
 
                 mapped_inputs[input_key] = context[source_key]
 

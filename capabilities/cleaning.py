@@ -20,6 +20,9 @@ CLEANING_CAPABILITY_SPEC = CapabilitySpec(
         "frame",
         "requested_category",
     ),
+    required_input_keys=(
+        "frame",
+    ),
     output_keys=(
         "frame",
         "category",

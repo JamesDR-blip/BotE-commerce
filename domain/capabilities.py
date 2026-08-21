@@ -15,6 +15,7 @@ class CapabilitySpec:
 
     input_keys: tuple[str, ...]
     output_keys: tuple[str, ...]
+    required_input_keys: tuple[str, ...] | None = None
 
     required_capabilities: tuple[
         str | CapabilityDependency,
@@ -164,6 +165,39 @@ class CapabilitySpec:
             raise ValueError(
                 f"Duplicate input mapping for {self.id}"
             )
+
+        required_inputs = (
+            self.input_keys
+            if self.required_input_keys is None
+            else self.required_input_keys
+        )
+
+        object.__setattr__(
+            self,
+            "required_input_keys",
+            tuple(required_inputs),
+        )
+
+        unknown_required_inputs = (
+            set(self.required_input_keys)
+            - set(self.input_keys)
+        )
+
+        if unknown_required_inputs:
+            raise ValueError(
+                f"Required input keys reference unknown "
+                f"inputs for {self.id}: "
+                f"{sorted(unknown_required_inputs)}"
+            )
+
+        if len(self.required_input_keys) != len(
+            set(self.required_input_keys)
+        ):
+            raise ValueError(
+                f"Duplicate required input key "
+                f"for {self.id}"
+            )
+        
 @dataclass(frozen=True)
 class CapabilityContext:
     """Runtime context supplied to a capability."""

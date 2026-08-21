@@ -82,7 +82,7 @@ class PlanValidator:
             # ---------------------------------------------------------
             # 4. Required inputs must exist
             # ---------------------------------------------------------
-            for input_key in spec.input_keys:
+            for input_key in spec.required_input_keys:
                 if input_key in mapped_input_keys:
                     continue
 
@@ -249,7 +249,7 @@ class PlanValidator:
     ) -> None:
         """Validate inputs resolved by matching key names."""
 
-        for input_key in spec.input_keys:
+        for input_key in spec.required_input_keys:
             if input_key in mapped_input_keys:
                 continue
 

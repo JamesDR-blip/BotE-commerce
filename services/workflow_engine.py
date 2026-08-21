@@ -121,8 +121,6 @@ class WorkflowEngine:
                 self.trace_persistence.save(trace)
 
         except Exception as exc:
-            import traceback
-            traceback.print_exc()
 
             failed = runtime.fail(
                 error=str(exc)
