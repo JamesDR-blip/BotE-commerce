@@ -2,17 +2,36 @@
 from __future__ import annotations
 import logging
 from pathlib import Path
+from schemas.responses import (
+    ExecutionDetailResponse,
+    ExtractionResponse,
+    HistoryResponse,
+    MappingResponse,
+    TabularPreviewResponse,
+    UploadResponse,
+    ValidationResponse,
+    CapabilityTraceResponse,
+)
+from configs.settings import Settings
+from domain.exceptions import ValidationRequestError
+from api.dependencies import (
+    get_container,
+    get_data_operations,
+    get_mapping_service,
+    get_quality_service,
+    get_workflow_history,
+)
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
-from domain.exceptions import ValidationRequestError
-from api.dependencies import get_container, get_data_operations, get_mapping_service, get_quality_service
-from schemas.responses import ExtractionResponse, HistoryResponse, MappingResponse, TabularPreviewResponse, UploadResponse, ValidationResponse
-from configs.settings import Settings
+
 from services.container import Container
 from services.logging import configure_logging, instrument_fastapi
 from services.quality_service import QualityService
 from services.data_operations import DataOperationsService
 from services.mapping_service import MappingService
+from services.workflow_history_service import (
+    WorkflowHistoryService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +67,78 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/executions")
     def history(limit: int = 50, current: Container = Depends(get_container)) -> list[dict[str, str | float]]:
         return _history_items(current, limit)
+    
+    @app.get(
+        "/executions/{execution_id}",
+        response_model=ExecutionDetailResponse,
+    )
+    def execution_detail(
+        execution_id: str,
+        current: Container = Depends(get_container),
+    ) -> ExecutionDetailResponse:
+        try:
+            data = current.workflow_history.get_execution_detail(
+                execution_id
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
+
+        return ExecutionDetailResponse(
+            execution_id=data["execution_id"],
+            category=data["category"],
+            status=data["status"],
+            health_score=data["health_score"],
+            created_at=data["created_at"],
+            requirement_json=data["requirement_json"],
+            plan_json=data["plan_json"],
+            planner_version=data["planner_version"],
+            traces=[
+                {
+                    "capability_id": trace.capability_id,
+                    "capability_version": trace.capability_version,
+                    "status": (
+                        trace.status.value
+                        if hasattr(trace.status, "value")
+                        else str(trace.status)
+                    ),
+                    "started_at": trace.started_at,
+                    "finished_at": trace.finished_at,
+                }
+                for trace in data["traces"]
+            ],
+        )
+    
     @app.get("/history", response_model=HistoryResponse)
     def history_alias(limit: int = 50, current: Container = Depends(get_container)) -> HistoryResponse:
         return HistoryResponse(items=_history_items(current, limit))
+
+    @app.get(
+        "/executions/{execution_id}",
+        response_model=ExecutionDetailResponse,
+    )
+    def execution_detail(
+        execution_id: str,
+        history: WorkflowHistoryService = Depends(
+            get_workflow_history
+        ),
+    ) -> ExecutionDetailResponse:
+        try:
+            data = history.get_execution_detail(
+                execution_id
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
+
+        return ExecutionDetailResponse(
+            **data
+        )
+
     @app.get("/executions/{execution_id}/reports/{report_format}")
     def download_report(execution_id: str, report_format: str, current: Container = Depends(get_container)) -> FileResponse:
         return _download_report(current, execution_id, report_format)

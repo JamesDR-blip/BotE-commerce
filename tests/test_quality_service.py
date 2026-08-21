@@ -8,7 +8,7 @@ from domain.execution_trace import ExecutionTrace
 
 from services.quality_service import QualityService
 from agents.requirement import ValidationRequirement
-
+from .conftest import FakeExecutions
 
 class FakeReporter:
     def generate(self, execution_id, result):

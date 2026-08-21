@@ -2,6 +2,7 @@
 from typing import Any
 
 from pydantic import BaseModel
+from datetime import datetime
 
 class ValidationResponse(BaseModel):
     execution_id: str
@@ -47,3 +48,22 @@ class ExecutionHistoryItem(BaseModel):
 
 class HistoryResponse(BaseModel):
     items: list[ExecutionHistoryItem]
+
+class CapabilityTraceResponse(BaseModel):
+    capability_id: str
+    capability_version: str
+    status: str
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+
+
+class ExecutionDetailResponse(BaseModel):
+    execution_id: str
+    category: str
+    status: str
+    health_score: float
+    created_at: datetime
+    requirement_json: str | None = None
+    plan_json: str | None = None
+    planner_version: str | None = None
+    traces: list[CapabilityTraceResponse]

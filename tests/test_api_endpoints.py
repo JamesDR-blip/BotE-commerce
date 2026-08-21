@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from api.main import create_app
 from unittest.mock import patch
 from configs.settings import Settings
+from datetime import datetime, timezone
 
 
 def _client() -> TestClient:
@@ -139,3 +140,91 @@ def test_validate_uses_real_capability_pipeline() -> None:
     assert isinstance(payload["health_score"], (int, float))
     assert isinstance(payload["reports"], dict)
     assert payload["cached"] is False
+
+
+def test_execution_detail_returns_execution_and_traces() -> None:
+    client = _client()
+
+    execution = client.app.state.container.executions.get(
+        "missing"
+    )
+
+    assert execution is None
+
+    class FakeExecution:
+        id = "exec-1"
+        category = "Fashion"
+        status = "COMPLETED"
+        health_score = 95.0
+        created_at = datetime.now(timezone.utc)
+        requirement_json = '{"requested_category":"Fashion"}'
+        plan_json = '{"steps":[]}'
+        planner_version = "planner-1"
+
+    class FakeTrace:
+        capability_id = "data.validate"
+        capability_version = "1.0"
+        status = "COMPLETED"
+        started_at = datetime.now(timezone.utc)
+        finished_at = datetime.now(timezone.utc)
+
+    class FakeExecutions:
+        def get(self, execution_id):
+            if execution_id == "exec-1":
+                return FakeExecution()
+            return None
+
+    class FakeTraces:
+        def list_by_execution(self, execution_id):
+            return [FakeTrace()]
+
+    client.app.state.container.workflow_history.executions = (
+        FakeExecutions()
+    )
+    client.app.state.container.workflow_history.traces = (
+        FakeTraces()
+    )
+
+    response = client.get(
+        "/executions/exec-1"
+    )
+
+    assert response.status_code == 200
+
+    payload = response.json()
+
+    assert payload["execution_id"] == "exec-1"
+    assert payload["category"] == "Fashion"
+    assert payload["status"] == "COMPLETED"
+    assert payload["health_score"] == 95.0
+    assert payload["planner_version"] == "planner-1"
+
+    assert len(payload["traces"]) == 1
+    assert payload["traces"][0]["capability_id"] == "data.validate"
+    assert payload["traces"][0]["status"] == "COMPLETED"
+
+
+def test_execution_detail_returns_404_for_missing_execution() -> None:
+    client = _client()
+
+    class EmptyExecutions:
+        def get(self, execution_id):
+            return None
+
+    class EmptyTraces:
+        def list_by_execution(self, execution_id):
+            return []
+
+    client.app.state.container.workflow_history.executions = (
+        EmptyExecutions()
+    )
+    client.app.state.container.workflow_history.traces = (
+        EmptyTraces()
+    )
+
+    response = client.get(
+        "/executions/missing"
+    )
+
+    assert response.status_code == 404
+    assert "Execution not found" in response.json()["detail"]

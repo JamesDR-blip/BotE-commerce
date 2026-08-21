@@ -14,7 +14,12 @@ from repositories.projects import ProjectRepository
 from repositories.datasets import DatasetRepository
 from repositories.workflows import WorkflowRepository
 from repositories.workflow_executions import WorkflowExecutionRepository
-
+from repositories.capability_execution_traces import (
+    CapabilityExecutionTraceRepository,
+)
+from services.workflow_history_service import (
+    WorkflowHistoryService,
+)
 
 from domain.capability_selector import CapabilitySelector
 from domain.capability_registry import CapabilityRegistry
@@ -48,6 +53,9 @@ from services.quality_service import QualityService
 from services.normalization_service import NormalizationService
 from services.deterministic_validation_workflow import (
     DeterministicValidationWorkflow,
+)
+from services.execution_trace_persistence import (
+    ExecutionTracePersistence,
 )
 from services.studio_service import StudioService
 from services.workflow_engine import WorkflowEngine
@@ -160,10 +168,17 @@ class Container:
         self.reports = ReportAgent(settings.reports_path)
         self.reporter = ReporterAgent(self.reports)
         self.executions = ExecutionRepository(sessions)
+        self.capability_traces = CapabilityExecutionTraceRepository(
+            sessions
+        )
         self.workflow_executions = WorkflowExecutionRepository(sessions)
-
         self.users = UserRepository(sessions)
         self.workflows = WorkflowRepository(sessions)
+        self.trace_persistence = (
+            CapabilityExecutionTraceRepository(
+                sessions
+            )
+        )
         self.workspaces = WorkspaceRepository(sessions)
         self.projects = ProjectRepository(sessions)
         self.datasets = DatasetRepository(sessions)
@@ -189,8 +204,14 @@ class Container:
             workflows=self.workflows,
             capability_execution=self.capability_execution,
             executions=self.workflow_executions,
+            trace_persistence=self.trace_persistence,
         )
-
+        self.workflow_history = (
+                    WorkflowHistoryService(
+                        executions=self.executions,
+                        traces=self.trace_persistence,
+                    )
+                )
 def build_container(
     app_settings: Settings | None = None,
 ) -> Container:

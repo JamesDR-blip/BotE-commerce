@@ -5,6 +5,7 @@ from services.container import Container
 from services.data_operations import DataOperationsService
 from services.mapping_service import MappingService
 from services.quality_service import QualityService
+from services.workflow_history_service import WorkflowHistoryService
 
 
 def get_container(request: Request) -> Container:
@@ -21,3 +22,6 @@ def get_data_operations(request: Request) -> DataOperationsService:
 
 def get_mapping_service(request: Request) -> MappingService:
     return request.app.state.mapping_service
+
+def get_workflow_history(request: Request) -> WorkflowHistoryService:
+    return request.app.state.container.workflow_history

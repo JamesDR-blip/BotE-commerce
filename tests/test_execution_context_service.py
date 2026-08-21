@@ -11,14 +11,7 @@ from services.execution_plan_serializer import (
 from services.requirement_serializer import (
     RequirementSerializer,
 )
-
-
-class FakeExecutions:
-    def __init__(self, data):
-        self.data = data
-
-    def execution_context(self, execution_id):
-        return self.data
+from .conftest import FakeExecutions
 
 
 def test_execution_context_service_reconstructs_context():

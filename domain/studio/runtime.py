@@ -61,6 +61,7 @@ class WorkflowExecution:
         return replace(
             self,
             status=WorkflowExecutionStatus.COMPLETED,
+            success=True,
             outputs=outputs,
             finished_at=datetime.now(timezone.utc),
         )
@@ -72,6 +73,7 @@ class WorkflowExecution:
         return replace(
             self,
             status=WorkflowExecutionStatus.FAILED,
+            success=False,
             error=error,
             finished_at=datetime.now(timezone.utc),
         )

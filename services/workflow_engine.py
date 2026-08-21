@@ -20,11 +20,13 @@ class WorkflowEngine:
         workflows,
         capability_execution,
         executions=None,
+        trace_persistence=None,
     ) -> None:
 
         self.workflows = workflows
         self.capability_execution = capability_execution
         self.executions = executions
+        self.trace_persistence = trace_persistence
 
 
     def execute(
@@ -109,6 +111,12 @@ class WorkflowEngine:
                 inputs=inputs,
                 execution_id=execution_id,
             )
+
+            if self.trace_persistence is not None:
+                self.trace_persistence.save(
+                    execution_id=execution_id,
+                    trace=result.trace,
+                )
 
         except Exception as exc:
 
