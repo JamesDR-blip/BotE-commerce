@@ -121,6 +121,13 @@ class StudioService:
             metadata=metadata,
         )
 
+    def get_dataset(
+        self,
+        dataset_id: str,
+    ):
+        return self.datasets.get(
+            dataset_id
+        )
 
     def list_datasets(
         self,

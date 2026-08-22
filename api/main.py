@@ -1,6 +1,8 @@
 """FastAPI application factory."""
 from __future__ import annotations
 import logging
+import json
+from uuid import uuid4
 from pathlib import Path
 from schemas.responses import (
     ExecutionDetailResponse,
@@ -11,6 +13,20 @@ from schemas.responses import (
     UploadResponse,
     ValidationResponse,
     CapabilityTraceResponse,
+    WorkspaceResponse,
+    ProjectResponse,
+    DatasetResponse,
+    WorkflowResponse,
+    WorkflowVersionResponse,
+    WorkflowExecutionResponse,
+)
+from schemas.requests import (
+    WorkspaceCreateRequest,
+    ProjectCreateRequest,
+    DatasetCreateRequest,
+    WorkflowCreateRequest,
+    WorkflowVersionCreateRequest,
+    WorkflowExecutionRequest,
 )
 from configs.settings import Settings
 from domain.exceptions import ValidationRequestError
@@ -32,6 +48,7 @@ from services.mapping_service import MappingService
 from services.workflow_history_service import (
     WorkflowHistoryService,
 )
+from services.execution_plan_serializer import ExecutionPlanSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +187,443 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/validations", response_model=ValidationResponse)
     async def validate(file: UploadFile = File(...), category: str | None = Form(None), current: Container = Depends(get_container), quality: QualityService = Depends(get_quality_service)) -> ValidationResponse:
         return await _validate_upload(file, category, current, quality)
+
+    @app.post(
+        "/workspaces",
+        response_model=WorkspaceResponse,
+    )
+    def create_workspace(
+        payload: WorkspaceCreateRequest,
+        current: Container = Depends(get_container),
+    ) -> WorkspaceResponse:
+        workspace = current.studio.create_workspace(
+            workspace_id=payload.id,
+            name=payload.name,
+        )
+
+        return WorkspaceResponse(
+            id=workspace.id,
+            name=workspace.name,
+            created_at=workspace.created_at,
+        )
+
+
+    @app.get(
+        "/workspaces/{workspace_id}",
+        response_model=WorkspaceResponse,
+    )
+    def get_workspace(
+        workspace_id: str,
+        current: Container = Depends(get_container),
+    ) -> WorkspaceResponse:
+        workspace = current.studio.get_workspace(
+            workspace_id
+        )
+
+        if workspace is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workspace not found: {workspace_id}",
+            )
+
+        return WorkspaceResponse(
+            id=workspace.id,
+            name=workspace.name,
+            created_at=workspace.created_at,
+        )
+
+    @app.post(
+        "/projects",
+        response_model=ProjectResponse,
+    )
+    def create_project(
+        payload: ProjectCreateRequest,
+        current: Container = Depends(get_container),
+    ) -> ProjectResponse:
+        project = current.studio.create_project(
+            project_id=payload.id,
+            workspace_id=payload.workspace_id,
+            name=payload.name,
+            description=payload.description,
+        )
+
+        return ProjectResponse(
+            id=project.id,
+            workspace_id=project.workspace_id,
+            name=project.name,
+            description=project.description,
+            created_at=project.created_at,
+        )
+
+
+    @app.get(
+        "/projects/{project_id}",
+        response_model=ProjectResponse,
+    )
+    def get_project(
+        project_id: str,
+        current: Container = Depends(get_container),
+    ) -> ProjectResponse:
+        project = current.studio.projects.get(
+            project_id
+        )
+
+        if project is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Project not found: {project_id}",
+            )
+
+        return ProjectResponse(
+            id=project.id,
+            workspace_id=project.workspace_id,
+            name=project.name,
+            description=project.description,
+            created_at=project.created_at,
+        )
+
+
+    @app.get(
+        "/workspaces/{workspace_id}/projects",
+        response_model=list[ProjectResponse],
+    )
+    def list_projects(
+        workspace_id: str,
+        current: Container = Depends(get_container),
+    ) -> list[ProjectResponse]:
+        projects = current.studio.list_projects(
+            workspace_id
+        )
+
+        return [
+            ProjectResponse(
+                id=project.id,
+                workspace_id=project.workspace_id,
+                name=project.name,
+                description=project.description,
+                created_at=project.created_at,
+            )
+            for project in projects
+        ]
+
+    @app.post(
+        "/datasets",
+        response_model=DatasetResponse,
+    )
+    def create_dataset(
+        payload: DatasetCreateRequest,
+        current: Container = Depends(get_container),
+    ) -> DatasetResponse:
+
+        dataset = current.studio.create_dataset(
+            dataset_id=payload.id,
+            project_id=payload.project_id,
+            name=payload.name,
+            source_type=payload.source_type,
+            metadata=payload.metadata,
+        )
+
+        return DatasetResponse(
+            id=dataset.id,
+            project_id=dataset.project_id,
+            name=dataset.name,
+            source_type=dataset.source_type,
+            metadata=dataset.metadata_json,
+            created_at=dataset.created_at,
+        )
+
+
+    @app.get(
+        "/datasets/{dataset_id}",
+        response_model=DatasetResponse,
+    )
+    def get_dataset(
+        dataset_id: str,
+        current: Container = Depends(get_container),
+    ) -> DatasetResponse:
+
+        dataset = current.studio.get_dataset(
+            dataset_id
+        )
+
+        if dataset is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Dataset not found: {dataset_id}",
+            )
+
+        return DatasetResponse(
+            id=dataset.id,
+            project_id=dataset.project_id,
+            name=dataset.name,
+            source_type=dataset.source_type,
+            metadata=dataset.metadata_json,
+            created_at=dataset.created_at,
+        )
+
+    @app.get(
+        "/projects/{project_id}/datasets",
+        response_model=list[DatasetResponse],
+    )
+    def list_datasets(
+        project_id: str,
+        current: Container = Depends(get_container),
+    ) -> list[DatasetResponse]:
+
+        datasets = current.studio.list_datasets(
+            project_id
+        )
+
+        return [
+            DatasetResponse(
+                id=dataset.id,
+                project_id=dataset.project_id,
+                name=dataset.name,
+                source_type=dataset.source_type,
+                metadata=dataset.metadata_json,
+                created_at=dataset.created_at,
+            )
+            for dataset in datasets
+        ]
+    @app.post(
+        "/workflows",
+        response_model=WorkflowResponse,
+    )
+    def create_workflow(
+        payload: WorkflowCreateRequest,
+        current: Container = Depends(get_container),
+    ) -> WorkflowResponse:
+
+        plan = _execution_plan_from_payload(
+            payload.plan
+        )
+
+        workflow = current.studio.save_workflow(
+            workflow_id=payload.id,
+            project_id=payload.project_id,
+            name=payload.name,
+            version=payload.version,
+            plan=plan,
+        )
+
+        return WorkflowResponse(
+            id=workflow.id,
+            project_id=workflow.project_id,
+            name=workflow.name,
+            active_version=workflow.active_version,
+            status=workflow.status,
+            created_at=workflow.created_at,
+        )
+
+    @app.get(
+        "/workflows/{workflow_id}",
+        response_model=WorkflowResponse,
+    )
+    def get_workflow(
+        workflow_id: str,
+        current: Container = Depends(get_container),
+    ) -> WorkflowResponse:
+
+        workflow = current.studio.get_workflow(
+            workflow_id
+        )
+
+        if workflow is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow not found: {workflow_id}",
+            )
+
+        return WorkflowResponse(
+            id=workflow.id,
+            project_id=workflow.project_id,
+            name=workflow.name,
+            active_version=workflow.active_version,
+            status=workflow.status,
+            created_at=workflow.created_at,
+        )
+
+    @app.get(
+        "/projects/{project_id}/workflows",
+        response_model=list[WorkflowResponse],
+    )
+    def list_workflows(
+        project_id: str,
+        current: Container = Depends(get_container),
+    ) -> list[WorkflowResponse]:
+
+        workflows = current.studio.list_workflows(
+            project_id
+        )
+
+        return [
+            WorkflowResponse(
+                id=workflow.id,
+                project_id=workflow.project_id,
+                name=workflow.name,
+                active_version=workflow.active_version,
+                status=workflow.status,
+                created_at=workflow.created_at,
+            )
+            for workflow in workflows
+        ]
+
+    @app.post(
+        "/workflows/{workflow_id}/versions",
+        response_model=WorkflowVersionResponse,
+    )
+    def create_workflow_version(
+        workflow_id: str,
+        payload: WorkflowVersionCreateRequest,
+        current: Container = Depends(get_container),
+    ) -> WorkflowVersionResponse:
+
+        plan = _execution_plan_from_payload(
+            payload.plan
+        )
+
+        try:
+            version = current.studio.create_workflow_version(
+                workflow_id=workflow_id,
+                version=payload.version,
+                plan=plan,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
+
+        return WorkflowVersionResponse(
+            id=version.id,
+            workflow_id=version.workflow_id,
+            version=version.version,
+            plan=json.loads(version.plan_json),
+            created_at=version.created_at,
+        )
+
+    @app.get(
+        "/workflows/{workflow_id}/versions",
+        response_model=list[WorkflowVersionResponse],
+    )
+    def list_workflow_versions(
+        workflow_id: str,
+        current: Container = Depends(get_container),
+    ) -> list[WorkflowVersionResponse]:
+
+        versions = current.studio.list_workflow_versions(
+            workflow_id
+        )
+
+        return [
+            WorkflowVersionResponse(
+                id=version.id,
+                workflow_id=version.workflow_id,
+                version=version.version,
+                plan=json.loads(version.plan_json),
+                created_at=version.created_at,
+            )
+            for version in versions
+        ]
+
+    @app.get(
+        "/workflows/{workflow_id}/versions/{version}",
+        response_model=WorkflowVersionResponse,
+    )
+    def get_workflow_version(
+        workflow_id: str,
+        version: str,
+        current: Container = Depends(get_container),
+    ) -> WorkflowVersionResponse:
+
+        record = current.studio.get_workflow_version(
+            workflow_id=workflow_id,
+            version=version,
+        )
+
+        if record is None:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"Workflow version not found: "
+                    f"{version}"
+                ),
+            )
+
+        return WorkflowVersionResponse(
+            id=record.id,
+            workflow_id=record.workflow_id,
+            version=record.version,
+            plan=json.loads(record.plan_json),
+            created_at=record.created_at,
+        )
+
+    @app.post(
+        "/workflows/{workflow_id}/versions/{version}/activate",
+        response_model=WorkflowResponse,
+    )
+    def activate_workflow_version(
+        workflow_id: str,
+        version: str,
+        current: Container = Depends(get_container),
+    ) -> WorkflowResponse:
+
+        try:
+            workflow = current.studio.activate_workflow_version(
+                workflow_id,
+                version,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
+
+        return WorkflowResponse(
+            id=workflow.id,
+            project_id=workflow.project_id,
+            name=workflow.name,
+            active_version=workflow.active_version,
+            status=workflow.status,
+            created_at=workflow.created_at,
+        )
+
+    @app.post(
+        "/workflows/{workflow_id}/execute",
+        response_model=WorkflowExecutionResponse,
+    )
+    def execute_workflow(
+        workflow_id: str,
+        payload: WorkflowExecutionRequest,
+        current: Container = Depends(get_container),
+    ) -> WorkflowExecutionResponse:
+
+        execution_id = str(uuid4())
+
+        try:
+            runtime = current.workflow_engine.execute(
+                workflow_id=workflow_id,
+                execution_id=execution_id,
+                inputs=payload.inputs,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
+
+        return WorkflowExecutionResponse(
+            execution_id=runtime.execution_id,
+            workflow_id=runtime.workflow_id,
+            workflow_version=runtime.workflow_version,
+            status=runtime.status.value,
+            success=runtime.success,
+            outputs=runtime.outputs,
+            error=runtime.error,
+            started_at=runtime.started_at,
+            finished_at=runtime.finished_at,
+        )
+    
     instrument_fastapi(app)
     return app
 
@@ -221,3 +675,15 @@ def _download_report(container: Container, execution_id: str, report_format: str
     if not path or not Path(path).is_file():
         raise HTTPException(status_code=404, detail="Report not found")
     return FileResponse(path, filename=f"data-quality-report.{Path(path).suffix.lstrip('.')}")
+def _execution_plan_from_payload(
+    payload: dict,
+):
+    try:
+        return ExecutionPlanSerializer.from_dict(
+            payload
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid execution plan: {exc}",
+        ) from exc

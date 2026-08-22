@@ -25,3 +25,6 @@ def get_mapping_service(request: Request) -> MappingService:
 
 def get_workflow_history(request: Request) -> WorkflowHistoryService:
     return request.app.state.container.workflow_history
+
+def get_workflow_engine(request: Request):
+    return request.app.state.container.workflow_engine
