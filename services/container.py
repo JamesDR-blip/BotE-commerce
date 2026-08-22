@@ -159,7 +159,13 @@ class Container:
         self.capability_executor = CapabilityExecutor(
             self.capabilities
         )
-        
+
+        self.capability_traces = CapabilityExecutionTraceRepository(
+            sessions
+        )
+        self.trace_persistence = ExecutionTracePersistence(
+            self.capability_traces
+        )
         self.capability_execution = CapabilityExecutionService(
             planner=self.planner,
             executor=self.capability_executor,
@@ -168,17 +174,9 @@ class Container:
         self.reports = ReportAgent(settings.reports_path)
         self.reporter = ReporterAgent(self.reports)
         self.executions = ExecutionRepository(sessions)
-        self.capability_traces = CapabilityExecutionTraceRepository(
-            sessions
-        )
         self.workflow_executions = WorkflowExecutionRepository(sessions)
         self.users = UserRepository(sessions)
         self.workflows = WorkflowRepository(sessions)
-        self.trace_persistence = (
-            ExecutionTracePersistence(
-                self.capability_traces
-            )
-        )
         self.workspaces = WorkspaceRepository(sessions)
         self.projects = ProjectRepository(sessions)
         self.datasets = DatasetRepository(sessions)
