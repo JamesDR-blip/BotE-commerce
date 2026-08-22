@@ -32,7 +32,7 @@ class CapabilityExecutionTraceRepository:
             for record in records:
 
                 item = CapabilityExecutionTraceRecord(
-                    execution_id=execution_id,
+                    workflow_execution_id=execution_id,
                     capability_id=record.capability_id,
                     capability_version=record.capability_version,
                     status=record.status.value,
@@ -67,7 +67,7 @@ class CapabilityExecutionTraceRepository:
         with self._sessions() as session:
 
             record = CapabilityExecutionTraceRecord(
-                execution_id=execution_id,
+                workflow_execution_id=execution_id,
                 capability_id=capability_id,
                 capability_version=capability_version,
                 status=status,
@@ -162,7 +162,7 @@ class CapabilityExecutionTraceRepository:
 
             records = [
                 CapabilityExecutionTraceRecord(
-                    execution_id=execution_id,
+                    workflow_execution_id=execution_id,
                     capability_id=record.capability_id,
                     capability_version=record.capability_version,
                     status=(
@@ -208,7 +208,7 @@ class CapabilityExecutionTraceRepository:
                         CapabilityExecutionTraceRecord
                     )
                     .where(
-                        CapabilityExecutionTraceRecord.execution_id
+                        CapabilityExecutionTraceRecord.workflow_execution_id
                         == execution_id
                     )
                     .order_by(

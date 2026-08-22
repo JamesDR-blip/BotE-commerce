@@ -293,6 +293,11 @@ class WorkflowExecutionRecord(Base):
         back_populates="executions"
     )
 
+    capability_traces: Mapped[list["CapabilityExecutionTraceRecord"]] = relationship(
+        back_populates="workflow_execution",
+        cascade="all, delete-orphan",
+    )
+
 class ExecutionRecord(Base):
     __tablename__ = "executions"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -340,12 +345,6 @@ class ExecutionRecord(Base):
     )
 
 
-    capability_traces = relationship(
-        "CapabilityExecutionTraceRecord",
-        back_populates="execution",
-        cascade="all, delete-orphan",
-    )
-
 class ValidationLogRecord(Base):
     __tablename__ = "validation_logs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -366,12 +365,21 @@ class CapabilityExecutionTraceRecord(Base):
         default=lambda: str(uuid.uuid4()),
     )
 
-    execution_id: Mapped[str] = mapped_column(
+    workflow_execution_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("executions.id"),
+        ForeignKey("workflow_executions.id"),
         nullable=False,
         index=True,
     )
+
+    @property
+    def execution_id(self) -> str:
+        return self.workflow_execution_id
+
+
+    @execution_id.setter
+    def execution_id(self, value: str) -> None:
+        self.workflow_execution_id = value
 
     capability_id: Mapped[str] = mapped_column(
         String(100),
@@ -421,8 +429,8 @@ class CapabilityExecutionTraceRecord(Base):
         DateTime,
         default=lambda: datetime.now(timezone.utc),
     )
-    execution = relationship(
-        "ExecutionRecord",
+    workflow_execution = relationship(
+        "WorkflowExecutionRecord",
         back_populates="capability_traces",
     )
 
