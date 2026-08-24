@@ -343,6 +343,10 @@ class ExecutionRecord(Base):
         back_populates="execution",
         cascade="all, delete-orphan"
     )
+    execution_traces: Mapped[list["ExecutionTraceRecord"]] = relationship(
+        back_populates="execution",
+        cascade="all, delete-orphan",
+    )
 
 
 class ValidationLogRecord(Base):
@@ -355,6 +359,74 @@ class ValidationLogRecord(Base):
     message: Mapped[str] = mapped_column(Text)
     severity: Mapped[str] = mapped_column(String(20))
     execution: Mapped[ExecutionRecord] = relationship(back_populates="logs")
+
+class ExecutionTraceRecord(Base):
+    __tablename__ = "execution_traces"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+
+    execution_id: Mapped[str] = mapped_column(
+        ForeignKey("executions.id"),
+        nullable=False,
+        index=True,
+    )
+
+    capability_id: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    capability_version: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    inputs_json: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    outputs_json: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
+
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
+
+    duration_ms: Mapped[float | None] = mapped_column(
+        nullable=True,
+    )
+
+    error: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    execution: Mapped["ExecutionRecord"] = relationship(
+        back_populates="execution_traces",
+    )
 
 class CapabilityExecutionTraceRecord(Base):
     __tablename__ = "capability_execution_traces"

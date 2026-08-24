@@ -1,14 +1,12 @@
 """Repository for execution audit records."""
 from __future__ import annotations
 
-import json
-from typing import Any, Callable
+from typing import Callable
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database.models import (
-    CapabilityExecutionTraceRecord,
     ExecutionRecord,
     ReportRecord,
     ValidationLogRecord,
@@ -109,41 +107,6 @@ class ExecutionRepository:
                 )
             )
 
-    def save_trace(
-        self,
-        execution_id: str,
-        trace,
-    ) -> None:
-        with self._sessions() as session:
-            execution = session.get(ExecutionRecord, execution_id)
-
-            if execution is None:
-                raise ValueError(
-                    f"Execution {execution_id} does not exist"
-                )
-
-            session.add_all(
-                CapabilityExecutionTraceRecord(
-                    execution_id=execution_id,
-                    capability_id=record.capability_id,
-                    capability_version=record.capability_version,
-                    status=(
-                        record.status.value
-                        if hasattr(record.status, "value")
-                        else str(record.status)
-                    ),
-                    started_at=record.started_at,
-                    finished_at=record.finished_at,
-                    duration_ms=record.duration_ms,
-                    inputs_json=_serialize_json(record.inputs),
-                    outputs_json=_serialize_json(record.outputs),
-                    error=record.error,
-                )
-                for record in trace.records
-            )
-
-            session.commit()
-
     def save_execution_context(
         self,
         execution_id: str,
@@ -187,14 +150,3 @@ class ExecutionRepository:
                 "plan_json": record.plan_json,
                 "planner_version": record.planner_version,
             }
-
-
-def _serialize_json(value: Any) -> Any:
-    """Serialize trace payloads into database-safe JSON values."""
-    if value is None:
-        return None
-
-    if isinstance(value, (str, int, float, bool)):
-        return value
-
-    return json.dumps(value, default=str)

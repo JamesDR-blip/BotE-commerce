@@ -27,6 +27,7 @@ class QualityService:
         requirements: RequirementAgent,
         capability_execution: CapabilityExecutionService,
         executions,
+        trace_persistence,
         cache: TTLCache,
         reporter: ReporterAgent,
         enable_llm: bool = False,
@@ -35,6 +36,7 @@ class QualityService:
         self._requirements = requirements
         self._capability_execution = capability_execution
         self._executions = executions
+        self._trace_persistence = trace_persistence
         self._cache = cache
         self._reporter = reporter
         self._enable_llm = enable_llm
@@ -92,8 +94,7 @@ class QualityService:
                 planner_version=None,
             )
 
-            self._executions.save_trace(
-                execution_id,
+            self._trace_persistence.save(
                 trace,
             )
 

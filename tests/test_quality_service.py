@@ -14,12 +14,18 @@ class FakeReporter:
     def generate(self, execution_id, result):
         return {"json": "report.json"}
 
+class FakeTracePersistence:
+    def __init__(self):
+        self.saved = []
+
+    def save(self, trace):
+        self.saved.append(trace)
+
 class FakeExecutions:
     def __init__(self):
         self.created = []
         self.status_updates = []
         self.saved_context = []
-        self.saved_traces = []
 
     def create(self, record):
         self.created.append(record)
@@ -44,14 +50,6 @@ class FakeExecutions:
                 "requirement_json": requirement_json,
                 "plan_json": plan_json,
                 "planner_version": planner_version,
-            }
-        )
-
-    def save_trace(self, execution_id, trace):
-        self.saved_traces.append(
-            {
-                "execution_id": execution_id,
-                "trace": trace,
             }
         )
 
@@ -86,6 +84,7 @@ class FakeSettings:
 class FakeContainer:
     def __init__(self):
         self.executions = FakeExecutions()
+        self.trace_persistence = FakeTracePersistence()
         self.agents = FakeAgents()
         self.cache = FakeCache()
         self.settings = FakeSettings()
@@ -127,6 +126,17 @@ class FakeCapabilityExecution:
             plan=plan,
             trace=trace,
         )
+
+def make_service(container):
+    return QualityService(
+        requirements=container.agents.requirements,
+        capability_execution=container.capability_execution,
+        executions=container.executions,
+        cache=container.cache,
+        reporter=container.reporter,
+        enable_llm=container.settings.enable_llm,
+        trace_persistence=container.trace_persistence,
+    )
 
 def test_quality_service_marks_execution_completed():
     frame = pd.DataFrame(
@@ -178,12 +188,11 @@ def test_quality_service_marks_execution_completed():
     assert context["plan_json"]
     assert context["planner_version"] is None
 
-    assert len(container.executions.saved_traces) == 1
+    assert len(container.trace_persistence.saved) == 1
 
-    saved_trace = container.executions.saved_traces[0]
+    saved_trace = container.trace_persistence.saved[0]
 
-    assert saved_trace["execution_id"] == execution_id
-    assert saved_trace["trace"].execution_id == execution_id
+    assert saved_trace.execution_id == execution_id
 
 def test_quality_service_marks_execution_failed_and_reraises():
     frame = pd.DataFrame(
@@ -263,13 +272,3 @@ def test_quality_service_uses_capability_execution_service():
     assert call["inputs"]["requested_category"] == "Fashion"
     assert call["execution_id"]
 
-
-def make_service(container):
-    return QualityService(
-        requirements=container.agents.requirements,
-        capability_execution=container.capability_execution,
-        executions=container.executions,
-        cache=container.cache,
-        reporter=container.reporter,
-        enable_llm=container.settings.enable_llm,
-    )

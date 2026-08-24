@@ -85,49 +85,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def history(limit: int = 50, current: Container = Depends(get_container)) -> list[dict[str, str | float]]:
         return _history_items(current, limit)
     
-    @app.get(
-        "/executions/{execution_id}",
-        response_model=ExecutionDetailResponse,
-    )
-    def execution_detail(
-        execution_id: str,
-        current: Container = Depends(get_container),
-    ) -> ExecutionDetailResponse:
-        try:
-            data = current.workflow_history.get_execution_detail(
-                execution_id
-            )
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=404,
-                detail=str(exc),
-            ) from exc
-
-        return ExecutionDetailResponse(
-            execution_id=data["execution_id"],
-            category=data["category"],
-            status=data["status"],
-            health_score=data["health_score"],
-            created_at=data["created_at"],
-            requirement_json=data["requirement_json"],
-            plan_json=data["plan_json"],
-            planner_version=data["planner_version"],
-            traces=[
-                {
-                    "capability_id": trace.capability_id,
-                    "capability_version": trace.capability_version,
-                    "status": (
-                        trace.status.value
-                        if hasattr(trace.status, "value")
-                        else str(trace.status)
-                    ),
-                    "started_at": trace.started_at,
-                    "finished_at": trace.finished_at,
-                }
-                for trace in data["traces"]
-            ],
-        )
-    
     @app.get("/history", response_model=HistoryResponse)
     def history_alias(limit: int = 50, current: Container = Depends(get_container)) -> HistoryResponse:
         return HistoryResponse(items=_history_items(current, limit))
@@ -153,8 +110,29 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             ) from exc
 
         return ExecutionDetailResponse(
-            **data
-        )
+        execution_id=data["execution_id"],
+        category=data["category"],
+        status=data["status"],
+        health_score=data["health_score"],
+        created_at=data["created_at"],
+        requirement_json=data["requirement_json"],
+        plan_json=data["plan_json"],
+        planner_version=data["planner_version"],
+        traces=[
+            {
+                "capability_id": trace.capability_id,
+                "capability_version": trace.capability_version,
+                "status": (
+                    trace.status.value
+                    if hasattr(trace.status, "value")
+                    else str(trace.status)
+                ),
+                "started_at": trace.started_at,
+                "finished_at": trace.finished_at,
+            }
+            for trace in data["traces"]
+        ],
+    )
 
     @app.get("/executions/{execution_id}/reports/{report_format}")
     def download_report(execution_id: str, report_format: str, current: Container = Depends(get_container)) -> FileResponse:

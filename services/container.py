@@ -14,11 +14,9 @@ from repositories.projects import ProjectRepository
 from repositories.datasets import DatasetRepository
 from repositories.workflows import WorkflowRepository
 from repositories.workflow_executions import WorkflowExecutionRepository
+from repositories.execution_traces import ExecutionTraceRepository
 from repositories.capability_execution_traces import (
     CapabilityExecutionTraceRepository,
-)
-from services.workflow_history_service import (
-    WorkflowHistoryService,
 )
 
 from domain.capability_selector import CapabilitySelector
@@ -51,15 +49,17 @@ from services.capability_executor import CapabilityExecutor
 from services.capability_execution_service import CapabilityExecutionService
 from services.quality_service import QualityService
 from services.normalization_service import NormalizationService
+from services.studio_service import StudioService
+from services.workflow_engine import WorkflowEngine
 from services.deterministic_validation_workflow import (
     DeterministicValidationWorkflow,
 )
 from services.execution_trace_persistence import (
     ExecutionTracePersistence,
 )
-from services.studio_service import StudioService
-from services.workflow_engine import WorkflowEngine
-
+from services.workflow_history_service import (
+    WorkflowHistoryService,
+)
 class Container:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -160,11 +160,11 @@ class Container:
             self.capabilities
         )
 
-        self.capability_traces = CapabilityExecutionTraceRepository(
+        self.workflow_capability_traces = CapabilityExecutionTraceRepository(
             sessions
         )
-        self.trace_persistence = ExecutionTracePersistence(
-            self.capability_traces
+        self.workflow_trace_persistence = ExecutionTracePersistence(
+            self.workflow_capability_traces
         )
         self.capability_execution = CapabilityExecutionService(
             planner=self.planner,
@@ -174,6 +174,13 @@ class Container:
         self.reports = ReportAgent(settings.reports_path)
         self.reporter = ReporterAgent(self.reports)
         self.executions = ExecutionRepository(sessions)
+        self.execution_traces = ExecutionTraceRepository(
+            sessions
+        )
+
+        self.execution_trace_persistence = ExecutionTracePersistence(
+            self.execution_traces
+        )
         self.workflow_executions = WorkflowExecutionRepository(sessions)
         self.users = UserRepository(sessions)
         self.workflows = WorkflowRepository(sessions)
@@ -188,6 +195,7 @@ class Container:
             requirements=self.agents.requirements,
             capability_execution=self.capability_execution,
             executions=self.executions,
+            trace_persistence=self.workflow_trace_persistence,
             cache=self.cache,
             reporter=self.reporter,
             enable_llm=settings.enable_llm,
@@ -202,12 +210,12 @@ class Container:
             workflows=self.workflows,
             capability_execution=self.capability_execution,
             executions=self.workflow_executions,
-            trace_persistence=self.trace_persistence,
+            trace_persistence=self.workflow_trace_persistence,
         )
         self.workflow_history = (
                     WorkflowHistoryService(
                         executions=self.executions,
-                        traces=self.capability_traces,
+                        traces=self.workflow_capability_traces,
                     )
                 )
 def build_container(
