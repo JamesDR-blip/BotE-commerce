@@ -195,7 +195,7 @@ class Container:
             requirements=self.agents.requirements,
             capability_execution=self.capability_execution,
             executions=self.executions,
-            trace_persistence=self.workflow_trace_persistence,
+            trace_persistence=self.execution_trace_persistence,
             cache=self.cache,
             reporter=self.reporter,
             enable_llm=settings.enable_llm,
