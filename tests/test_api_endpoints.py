@@ -178,12 +178,8 @@ def test_execution_detail_returns_execution_and_traces() -> None:
         def list_by_execution(self, execution_id):
             return [FakeTrace()]
 
-    client.app.state.container.workflow_history.executions = (
-        FakeExecutions()
-    )
-    client.app.state.container.workflow_history.traces = (
-        FakeTraces()
-    )
+    client.app.state.container.executions = FakeExecutions()
+    client.app.state.container.execution_traces = FakeTraces()
 
     response = client.get(
         "/executions/exec-1"

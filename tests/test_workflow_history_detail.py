@@ -16,11 +16,12 @@ def test_get_execution_detail():
         traces=FakeTraces(),
     )
 
-    result = service.get_execution_detail(
+    result = service.get_execution_history(
         "exec-1"
     )
 
-    assert result["execution_id"] == "exec-1"
+    assert result["execution"].id == "exec-1"
+    assert len(result["traces"]) == 1
 
 def test_get_workflow_execution_detail():
     service = WorkflowHistoryService(
@@ -44,3 +45,11 @@ def test_get_workflow_execution_detail():
     }
     assert result["error"] is None
     assert len(result["traces"]) == 1
+
+    trace = result["traces"][0]
+
+    assert trace.capability_id == "data.clean"
+    assert trace.capability_version == "1.0"
+    assert trace.status == "COMPLETED"
+    assert trace.started_at is None
+    assert trace.finished_at is None

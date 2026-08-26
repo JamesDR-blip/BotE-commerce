@@ -94,44 +94,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         execution_id: str,
         current: Container = Depends(get_container),
     ) -> ExecutionDetailResponse:
-        try:
-            data = current.workflow_history.get_execution_detail(
-                execution_id
-            )
-        except ValueError:
-            execution = current.executions.get(execution_id)
+        execution = current.executions.get(execution_id)
 
-            if execution is None:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Execution not found: {execution_id}",
-                )
-
-            traces = current.workflow_capability_traces.list_by_execution(
-                execution_id
+        if execution is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Execution not found: {execution_id}",
             )
 
-            data = {
-                "execution_id": execution.id,
-                "category": execution.category,
-                "status": execution.status,
-                "health_score": execution.health_score,
-                "created_at": execution.created_at,
-                "requirement_json": execution.requirement_json,
-                "plan_json": execution.plan_json,
-                "planner_version": execution.planner_version,
-                "traces": traces,
-            }
+        traces = current.execution_traces.list_by_execution(
+            execution_id
+        )
 
         return ExecutionDetailResponse(
-            execution_id=data["execution_id"],
-            category=data["category"],
-            status=data["status"],
-            health_score=data["health_score"],
-            created_at=data["created_at"],
-            requirement_json=data["requirement_json"],
-            plan_json=data["plan_json"],
-            planner_version=data["planner_version"],
+            execution_id=execution.id,
+            category=execution.category,
+            status=execution.status,
+            health_score=execution.health_score,
+            created_at=execution.created_at,
+            requirement_json=execution.requirement_json,
+            plan_json=execution.plan_json,
+            planner_version=execution.planner_version,
             traces=[
                 CapabilityTraceResponse(
                     capability_id=trace.capability_id,
@@ -140,7 +123,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     started_at=trace.started_at,
                     finished_at=trace.finished_at,
                 )
-                for trace in data["traces"]
+                for trace in traces
             ],
         )
 

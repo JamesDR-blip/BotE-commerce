@@ -35,7 +35,7 @@ def test_execution_detail_reads_real_persisted_data():
         )
     )
 
-    container.workflow_capability_traces.create(
+    container.execution_traces.create(
         execution_id="exec-1",
         capability_id="data.validate",
         capability_version="1.0",

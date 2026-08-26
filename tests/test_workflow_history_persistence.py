@@ -2,8 +2,8 @@ from database.models import make_session_factory
 from database.models import ExecutionRecord
 
 from repositories.executions import ExecutionRepository
-from repositories.capability_execution_traces import (
-    CapabilityExecutionTraceRepository,
+from repositories.execution_traces import (
+    ExecutionTraceRepository,
 )
 
 from services.workflow_history_service import (
@@ -15,7 +15,7 @@ def test_workflow_history_reads_persisted_execution_and_traces():
     sessions = make_session_factory("sqlite://")
 
     executions = ExecutionRepository(sessions)
-    traces = CapabilityExecutionTraceRepository(sessions)
+    traces = ExecutionTraceRepository(sessions)
 
     executions.create(
         ExecutionRecord(
@@ -40,14 +40,14 @@ def test_workflow_history_reads_persisted_execution_and_traces():
         traces=traces,
     )
 
-    result = history.get_execution_detail(
+    result = history.get_execution_history(
         "exec-1"
     )
 
-    assert result["execution_id"] == "exec-1"
-    assert result["category"] == "Fashion"
-    assert result["status"] == "COMPLETED"
-    assert result["health_score"] == 95.0
+    assert result["execution"].id == "exec-1"
+    assert result["execution"].category == "Fashion"
+    assert result["execution"].status == "COMPLETED"
+    assert result["execution"].health_score == 95.0
 
     assert len(result["traces"]) == 1
 

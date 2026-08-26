@@ -14,6 +14,8 @@ class FakeTraces:
                 capability_id="data.clean",
                 capability_version="1.0",
                 status="COMPLETED",
+                started_at=None,
+                finished_at=None,
             )
         ]
     
@@ -127,10 +129,10 @@ class FakeWorkflowExecutions:
         )
 
     def get(self, execution_id):
-        if execution_id != self.execution.id:
-            return None
+        if execution_id == self.execution.id:
+            return self.execution
 
-        return self.execution
+        return None
 
 class FakeRequirements:
     def interpret(

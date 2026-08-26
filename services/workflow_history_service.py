@@ -50,27 +50,6 @@ class WorkflowHistoryService:
             execution_id
         )
     
-    def get_execution_detail(
-        self,
-        execution_id: str,
-    ):
-        data = self.get_execution(
-            execution_id
-        )
-
-        execution = data["execution"]
-
-        return {
-            "execution_id": execution.id,
-            "category": execution.category,
-            "status": execution.status,
-            "health_score": execution.health_score,
-            "created_at": execution.created_at,
-            "requirement_json": execution.requirement_json,
-            "plan_json": execution.plan_json,
-            "planner_version": execution.planner_version,
-            "traces": data["traces"],
-        }
 
     def get_workflow_execution_detail(
         self,

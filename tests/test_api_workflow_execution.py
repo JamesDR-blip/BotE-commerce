@@ -508,4 +508,18 @@ def test_workflow_execution_detail_reads_persisted_workflow_execution():
     assert trace["capability_id"] == "data.validate"
     assert trace["capability_version"] == "1.0"
     assert trace["status"] == "COMPLETED"
-    assert trace["started_at"] is not None or trace["started_at"] is None
+    assert trace["started_at"] is None
+    assert trace["finished_at"] is None
+
+def test_workflow_execution_detail_returns_404_for_missing_execution():
+    client = _client()
+
+    response = client.get(
+        "/workflow-executions/missing-workflow-execution"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Workflow execution not found: "
+        "missing-workflow-execution"
+    )
