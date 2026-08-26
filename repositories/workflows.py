@@ -113,6 +113,19 @@ class WorkflowRepository:
 
         with self._sessions() as session:
 
+            existing = session.scalar(
+                select(WorkflowVersionRecord).where(
+                    WorkflowVersionRecord.workflow_id == workflow_id,
+                    WorkflowVersionRecord.version == version,
+                )
+            )
+
+            if existing is not None:
+                raise ValueError(
+                    f"Workflow version already exists: "
+                    f"{workflow_id}@{version}"
+                )
+
             record = WorkflowVersionRecord(
                 id=str(uuid.uuid4()),
                 workflow_id=workflow_id,

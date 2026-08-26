@@ -23,6 +23,7 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 from sqlalchemy.pool import StaticPool
+from sqlalchemy import UniqueConstraint
 
 class Base(DeclarativeBase):
     pass
@@ -203,6 +204,14 @@ class WorkflowRecord(Base):
 class WorkflowVersionRecord(Base):
 
     __tablename__ = "workflow_versions"
+    
+    __table_args__ = (
+        UniqueConstraint(
+            "workflow_id",
+            "version",
+            name="uq_workflow_version",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(
         String(36),

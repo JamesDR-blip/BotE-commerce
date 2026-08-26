@@ -69,3 +69,46 @@ def test_workflow_version_lifecycle():
 
     assert active is not None
     assert active.version == "2.0"
+
+def test_workflow_version_cannot_be_created_twice():
+    repo = WorkflowRepository(
+        create_session()
+    )
+
+    repo.create(
+        workflow_id="wf-duplicate",
+        project_id="project-1",
+        name="Validation",
+        version="1.0",
+        plan_json='{"stage":"initial"}',
+    )
+
+    repo.create_version(
+        workflow_id="wf-duplicate",
+        version="2.0",
+        plan_json='{"stage":"v2"}',
+    )
+
+    try:
+        repo.create_version(
+            workflow_id="wf-duplicate",
+            version="2.0",
+            plan_json='{"stage":"duplicate"}',
+        )
+    except ValueError as exc:
+        assert str(exc) == (
+            "Workflow version already exists: "
+            "wf-duplicate@2.0"
+        )
+    else:
+        raise AssertionError(
+            "Expected duplicate workflow version to fail"
+        )
+
+    version = repo.get_version(
+        "wf-duplicate",
+        "2.0",
+    )
+
+    assert version is not None
+    assert version.plan_json == '{"stage":"v2"}'
