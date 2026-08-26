@@ -119,3 +119,16 @@ class WorkflowExecutionResponse(BaseModel):
     error: str | None = None
     started_at: datetime
     finished_at: datetime | None = None
+
+class WorkflowExecutionDetailResponse(BaseModel):
+    execution_id: str
+    workflow_id: str
+    workflow_version: str
+    status: str
+    inputs: dict[str, Any]
+    outputs: dict[str, Any]
+    error: str | None = None
+    created_at: datetime
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    traces: list[CapabilityTraceResponse]

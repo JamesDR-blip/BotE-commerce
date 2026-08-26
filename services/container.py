@@ -214,7 +214,7 @@ class Container:
         )
         self.workflow_history = (
                     WorkflowHistoryService(
-                        executions=self.executions,
+                        executions=self.workflow_executions,
                         traces=self.workflow_capability_traces,
                     )
                 )

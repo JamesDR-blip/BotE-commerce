@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from typing import Mapping
+from types import MappingProxyType
+
 from domain.capabilities import Capability, CapabilitySpec
 from domain.exceptions import (
     CapabilityAlreadyRegisteredError,
@@ -47,9 +50,9 @@ class CapabilityRegistry:
             for capability in self._capabilities.values()
         )
 
-    def catalog(self) -> dict[str, CapabilitySpec]:
+    def catalog(self) -> Mapping[str, CapabilitySpec]:
         """Return registered capability specifications keyed by ID."""
-        return self._catalog
+        return MappingProxyType(self._catalog)
 
     def metadata(self) -> tuple[dict[str, object], ...]:
         return tuple(
