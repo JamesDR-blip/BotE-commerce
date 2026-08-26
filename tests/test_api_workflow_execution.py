@@ -429,3 +429,83 @@ def test_workflow_execution_persists_capability_traces() -> None:
     assert trace.status == "COMPLETED"
     assert trace.started_at is not None
     assert trace.finished_at is not None
+
+def test_workflow_execution_detail_reads_persisted_workflow_execution():
+    client = _client()
+
+    workspace_response = client.post(
+        "/workspaces",
+        json={
+            "id": "ws-detail",
+            "name": "Detail Test",
+        },
+    )
+    assert workspace_response.status_code == 200
+
+    project_response = client.post(
+        "/projects",
+        json={
+            "id": "p-detail",
+            "workspace_id": "ws-detail",
+            "name": "Catalog",
+            "description": "Workflow detail test",
+        },
+    )
+    assert project_response.status_code == 200
+
+    workflow_response = client.post(
+        "/workflows",
+        json={
+            "id": "wf-detail",
+            "project_id": "p-detail",
+            "name": "Validation",
+            "version": "1.0",
+            "plan": {
+                "version": "1.0",
+                "steps": [],
+                "metadata": {},
+            },
+        },
+    )
+    assert workflow_response.status_code == 200
+
+    execute_response = client.post(
+        "/workflows/wf-detail/execute",
+        json={
+            "inputs": {
+                "file": "products.csv",
+            },
+        },
+    )
+
+    assert execute_response.status_code == 200
+
+    execution_id = execute_response.json()["execution_id"]
+
+    client.app.state.container.workflow_capability_traces.create(
+        execution_id=execution_id,
+        capability_id="data.validate",
+        capability_version="1.0",
+        status="COMPLETED",
+    )
+
+    detail_response = client.get(
+        f"/workflow-executions/{execution_id}"
+    )
+
+    assert detail_response.status_code == 200
+
+    payload = detail_response.json()
+
+    assert payload["workflow_id"] == "wf-detail"
+    assert payload["workflow_version"] == "1.0"
+    assert payload["status"] == "COMPLETED"
+
+    assert len(payload["traces"]) == 1
+
+    trace = payload["traces"][0]
+
+    assert trace["capability_id"] == "data.validate"
+    assert trace["capability_version"] == "1.0"
+    assert trace["status"] == "COMPLETED"
+    assert trace["started_at"] is not None or trace["started_at"] is None

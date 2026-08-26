@@ -179,3 +179,6 @@ def test_workflow_engine_persists_partial_trace_on_failure():
 
     assert records[1].capability_id == "data.validate"
     assert records[1].status == "FAILED"
+    assert records[1].error == (
+        "Capability execution failed"
+    )

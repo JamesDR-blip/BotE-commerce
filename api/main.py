@@ -19,6 +19,7 @@ from schemas.responses import (
     WorkflowResponse,
     WorkflowVersionResponse,
     WorkflowExecutionResponse,
+    WorkflowExecutionDetailResponse,
 )
 from schemas.requests import (
     WorkspaceCreateRequest,
@@ -35,7 +36,6 @@ from api.dependencies import (
     get_data_operations,
     get_mapping_service,
     get_quality_service,
-    get_workflow_history,
 )
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
@@ -45,9 +45,6 @@ from services.logging import configure_logging, instrument_fastapi
 from services.quality_service import QualityService
 from services.data_operations import DataOperationsService
 from services.mapping_service import MappingService
-from services.workflow_history_service import (
-    WorkflowHistoryService,
-)
 from services.execution_plan_serializer import ExecutionPlanSerializer
 
 logger = logging.getLogger(__name__)
@@ -613,6 +610,50 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             error=runtime.error,
             started_at=runtime.started_at,
             finished_at=runtime.finished_at,
+        )
+
+    @app.get(
+        "/workflow-executions/{execution_id}",
+        response_model=WorkflowExecutionDetailResponse,
+    )
+    def workflow_execution_detail(
+        execution_id: str,
+        current: Container = Depends(get_container),
+    ) -> WorkflowExecutionDetailResponse:
+        try:
+            data = (
+                current.workflow_history
+                .get_workflow_execution_detail(
+                    execution_id
+                )
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
+
+        return WorkflowExecutionDetailResponse(
+            execution_id=data["execution_id"],
+            workflow_id=data["workflow_id"],
+            workflow_version=data["workflow_version"],
+            status=data["status"],
+            inputs=data["inputs"],
+            outputs=data["outputs"],
+            error=data["error"],
+            created_at=data["created_at"],
+            started_at=data["started_at"],
+            finished_at=data["finished_at"],
+            traces=[
+                CapabilityTraceResponse(
+                    capability_id=trace.capability_id,
+                    capability_version=trace.capability_version,
+                    status=trace.status,
+                    started_at=trace.started_at,
+                    finished_at=trace.finished_at,
+                )
+                for trace in data["traces"]
+            ],
         )
     
     instrument_fastapi(app)

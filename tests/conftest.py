@@ -10,12 +10,13 @@ from domain.capability_execution import CapabilityExecutionResult
 class FakeTraces:
     def list_by_execution(self, execution_id):
         return [
-            {
-                "capability_id": "data.clean",
-                "status": "COMPLETED",
-            }
+            SimpleNamespace(
+                capability_id="data.clean",
+                capability_version="1.0",
+                status="COMPLETED",
+            )
         ]
-
+    
 class FakeCapability:
     def __init__(self, spec: CapabilitySpec) -> None:
         self._spec = spec
@@ -73,6 +74,7 @@ class FakeExecutions:
 
         self.created = []
         self.status_updates = []
+        self.saved_traces = []
 
     def get(self, execution_id):
         if execution_id != self.execution.id:
@@ -108,6 +110,27 @@ class FakeExecutions:
                 "trace": trace,
             }
         )
+
+class FakeWorkflowExecutions:
+    def __init__(self):
+        self.execution = SimpleNamespace(
+            id="wf-exec-1",
+            workflow_id="wf-1",
+            workflow_version="1.0",
+            status="COMPLETED",
+            inputs_json='{"file":"products.csv"}',
+            outputs_json='{"file":"products.csv"}',
+            error=None,
+            created_at=None,
+            started_at=None,
+            finished_at=None,
+        )
+
+    def get(self, execution_id):
+        if execution_id != self.execution.id:
+            return None
+
+        return self.execution
 
 class FakeRequirements:
     def interpret(

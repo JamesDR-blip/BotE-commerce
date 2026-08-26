@@ -139,6 +139,7 @@ class CapabilityExecutionTraceRepository:
                 )
 
             record.status = "FAILED"
+            record.error = error
             record.outputs_json = json.dumps(
                 {
                     "error": error
@@ -188,6 +189,7 @@ class CapabilityExecutionTraceRepository:
                     started_at=record.started_at,
                     finished_at=record.finished_at,
                     duration_ms=record.duration_ms,
+                    error=record.error,
                 )
                 for record in trace.records
             ]
