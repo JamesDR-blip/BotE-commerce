@@ -211,12 +211,8 @@ def test_execution_detail_returns_404_for_missing_execution() -> None:
         def list_by_execution(self, execution_id):
             return []
 
-    client.app.state.container.workflow_history.executions = (
-        EmptyExecutions()
-    )
-    client.app.state.container.workflow_history.traces = (
-        EmptyTraces()
-    )
+    client.app.state.container.executions = EmptyExecutions()
+    client.app.state.container.execution_traces = EmptyTraces()
 
     response = client.get(
         "/executions/missing"

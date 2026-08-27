@@ -16,41 +16,6 @@ class WorkflowHistoryService:
         self.executions = executions
         self.traces = traces
 
-
-    def get_execution(
-        self,
-        execution_id: str,
-    ):
-
-        execution = self.executions.get(
-            execution_id
-        )
-
-        if execution is None:
-            raise ValueError(
-                f"Execution not found: {execution_id}"
-            )
-
-        trace_records = (
-            self.traces.list_by_execution(
-                execution_id
-            )
-        )
-
-        return {
-            "execution": execution,
-            "traces": trace_records,
-        }
-
-    def get_execution_history(
-        self,
-        execution_id: str,
-    ):
-        return self.get_execution(
-            execution_id
-        )
-    
-
     def get_workflow_execution_detail(
         self,
         execution_id: str,
