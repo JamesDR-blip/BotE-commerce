@@ -20,39 +20,6 @@ class CapabilityExecutionTraceRepository:
     ):
         self._sessions = sessions
 
-
-    def create_many(
-        self,
-        *,
-        execution_id: str,
-        records,
-    ):
-        with self._sessions() as session:
-
-            for record in records:
-
-                item = CapabilityExecutionTraceRecord(
-                    workflow_execution_id=execution_id,
-                    capability_id=record.capability_id,
-                    capability_version=record.capability_version,
-                    status=record.status.value,
-                    inputs_json=json.dumps(
-                        record.inputs,
-                        default=str,
-                    ),
-                    outputs_json=json.dumps(
-                        record.outputs,
-                        default=str,
-                    ),
-                    started_at=record.started_at,
-                    finished_at=record.finished_at,
-                )
-
-                session.add(item)
-
-            session.commit()
-
-
     def create(
         self,
         *,
@@ -151,52 +118,6 @@ class CapabilityExecutionTraceRepository:
             session.refresh(record)
 
             return record
-
-    def save(
-        self,
-        *,
-        execution_id: str,
-        trace,
-    ) -> None:
-
-        with self._sessions() as session:
-
-            records = [
-                CapabilityExecutionTraceRecord(
-                    workflow_execution_id=execution_id,
-                    capability_id=record.capability_id,
-                    capability_version=record.capability_version,
-                    status=(
-                        record.status.value
-                        if hasattr(
-                            record.status,
-                            "value",
-                        )
-                        else str(record.status)
-                    ),
-                    inputs_json=json.dumps(
-                        record.inputs,
-                        default=str,
-                    )
-                    if record.inputs is not None
-                    else None,
-                    outputs_json=json.dumps(
-                        record.outputs,
-                        default=str,
-                    )
-                    if record.outputs is not None
-                    else None,
-                    started_at=record.started_at,
-                    finished_at=record.finished_at,
-                    duration_ms=record.duration_ms,
-                    error=record.error,
-                )
-                for record in trace.records
-            ]
-
-            session.add_all(records)
-
-            session.commit()
 
     def list_by_execution(
         self,
