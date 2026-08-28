@@ -49,10 +49,10 @@ class FakeCapabilityExecution:
 
 class FakeTracePersistence:
     def __init__(self):
-        self.trace = None
+        self.saved = []
 
     def save(self, trace):
-        self.trace = trace
+        self.saved.append(trace)
 
 
 def test_workflow_engine_persists_trace():
@@ -74,5 +74,33 @@ def test_workflow_engine_persists_trace():
 
     assert runtime.success is True
 
-    assert trace_persistence.trace is not None
-    assert trace_persistence.trace.execution_id == "exec-1"
+    assert len(trace_persistence.saved) == 1
+
+    saved_trace = trace_persistence.saved[0]
+
+    assert saved_trace.execution_id == "exec-1"
+
+def test_workflow_engine_persists_trace_exactly_once():
+    trace_persistence = FakeTracePersistence()
+
+    engine = WorkflowEngine(
+        workflows=FakeWorkflow(),
+        capability_execution=FakeCapabilityExecution(),
+        trace_persistence=trace_persistence,
+    )
+
+    runtime = engine.execute(
+        workflow_id="wf-1",
+        execution_id="exec-1",
+        inputs={
+            "file": "products.csv",
+        },
+    )
+
+    assert runtime.success is True
+
+    assert len(trace_persistence.saved) == 1
+
+    saved_trace = trace_persistence.saved[0]
+
+    assert saved_trace.execution_id == "exec-1"
