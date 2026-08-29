@@ -51,9 +51,6 @@ from services.quality_service import QualityService
 from services.normalization_service import NormalizationService
 from services.studio_service import StudioService
 from services.workflow_engine import WorkflowEngine
-from services.deterministic_validation_workflow import (
-    DeterministicValidationWorkflow,
-)
 from services.execution_trace_persistence import (
     ExecutionTracePersistence,
 )
@@ -128,17 +125,6 @@ class Container:
             intent_resolver=intent_resolver,
             parameter_resolver=parameter_resolver,
             catalog=self.capabilities.catalog(),
-        )
-
-        self.workflow = DeterministicValidationWorkflow(
-            requirements=self.agents.requirements,
-            classifier=self.agents.classifier,
-            rules=self.agents.rules,
-            extraction=self.agents.extraction,
-            fixer=self.agents.fixer,
-            validator=self.agents.validator,
-            qa=self.agents.qa,
-            registry=self.registry,
         )
 
         selector = CapabilitySelector(

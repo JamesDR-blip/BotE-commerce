@@ -64,8 +64,8 @@ def _render_history(client: DashboardApiClient) -> None:
 
 def main() -> None:
     settings = Settings()
-    st.set_page_config(page_title="AI Data Quality Platform", layout="wide")
-    st.title("AI Data Quality Platform")
+    st.set_page_config(page_title="AI Studio E-commerce Platform", layout="wide")
+    st.title("AI Studio E-commerce Platform")
     st.caption(f"Connected to FastAPI: {settings.api_base_url}")
     client = _api_client(settings.api_base_url)
     try:

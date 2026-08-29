@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from pathlib import Path
 
 from api.main import create_app
 from unittest.mock import patch
@@ -6,15 +7,21 @@ from configs.settings import Settings
 from datetime import datetime, timezone
 
 
-def _client() -> TestClient:
+def _client(reports_path: Path) -> TestClient:
     return TestClient(
-        create_app(Settings(database_url="sqlite://")), 
+        create_app(
+            Settings(
+                database_url="sqlite://",
+                reports_path=reports_path / "reports",
+            )
+        ),
         raise_server_exceptions=False,
     )
 
 
-def test_upload_clean_extract_and_mapping_endpoints() -> None:
-    client = _client()
+def test_upload_clean_extract_and_mapping_endpoints(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+    assert client.app.title == "AI Studio E-commerce Platform"
     file = {"file": ("products.csv", b"product_title,Price\nPhilips HX-200 Blue 220V,100\n", "text/csv")}
     assert client.post("/upload", files=file).json()["rows"] == 1
     clean = client.post("/clean", files=file)
@@ -25,8 +32,8 @@ def test_upload_clean_extract_and_mapping_endpoints() -> None:
     assert mapped.json()["mappings"]["product_title"] == "product_title"
 
 
-def test_history_and_report_aliases_are_available() -> None:
-    client = _client()
+def test_history_and_report_aliases_are_available(tmp_path: Path) -> None:
+    client = _client(tmp_path)
     class EmptyExecutions:
         def history(self, limit: int) -> list[object]:
             return []
@@ -39,8 +46,8 @@ def test_history_and_report_aliases_are_available() -> None:
     assert client.get("/report/missing/json").status_code == 404
 
 
-def test_validate_rejects_unsupported_category() -> None:
-    client = _client()
+def test_validate_rejects_unsupported_category(tmp_path: Path) -> None:
+    client = _client(tmp_path)
 
     file = {
         "file": (
@@ -60,8 +67,8 @@ def test_validate_rejects_unsupported_category() -> None:
     assert "Unsupported category" in response.json()["detail"]
 
 
-def test_validate_does_not_convert_unexpected_error_to_422() -> None:
-    client = _client()
+def test_validate_does_not_convert_unexpected_error_to_422(tmp_path: Path) -> None:
+    client = _client(tmp_path)
 
     file = {
         "file": (
@@ -85,8 +92,8 @@ def test_validate_does_not_convert_unexpected_error_to_422() -> None:
     assert response.json() == {"detail": "Internal server error"}
 
 
-def test_unexpected_error_is_logged_without_exposing_details(caplog) -> None:
-    client = _client()
+def test_unexpected_error_is_logged_without_exposing_details(caplog, tmp_path: Path) -> None:
+    client = _client(tmp_path)
 
     file = {
         "file": (
@@ -110,8 +117,8 @@ def test_unexpected_error_is_logged_without_exposing_details(caplog) -> None:
 
 
 
-def test_validate_uses_real_capability_pipeline() -> None:
-    client = _client()
+def test_validate_uses_real_capability_pipeline(tmp_path: Path) -> None:
+    client = _client(tmp_path)
 
     file = {
         "file": (
@@ -142,8 +149,8 @@ def test_validate_uses_real_capability_pipeline() -> None:
     assert payload["cached"] is False
 
 
-def test_execution_detail_returns_execution_and_traces() -> None:
-    client = _client()
+def test_execution_detail_returns_execution_and_traces(tmp_path: Path) -> None:
+    client = _client(tmp_path)
 
     execution = client.app.state.container.executions.get(
         "missing"
@@ -200,8 +207,8 @@ def test_execution_detail_returns_execution_and_traces() -> None:
     assert payload["traces"][0]["status"] == "COMPLETED"
 
 
-def test_execution_detail_returns_404_for_missing_execution() -> None:
-    client = _client()
+def test_execution_detail_returns_404_for_missing_execution(tmp_path: Path) -> None:
+    client = _client(tmp_path)
 
     class EmptyExecutions:
         def get(self, execution_id):
