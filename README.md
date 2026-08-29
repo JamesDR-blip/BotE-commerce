@@ -6,6 +6,8 @@ An AI Studio for ecommerce data workflows. Workspaces, projects, datasets, versi
 
 `FastAPI route -> Container -> StudioService / WorkflowEngine -> CapabilityExecutionService -> capability family -> repositories and reports`
 
+The HTTP layer is an adapter only: Studio resource operations go through `StudioService`, while workflow run and execution-history use cases go through `WorkflowRuntimeService`. Repositories remain behind application services; capability execution remains behind the workflow engine.
+
 ## Project structure
 
 The project is organised by responsibility. Application entry points are in `app/`; framework-independent value objects are in `domain/`; SQLAlchemy persistence models are in `database/`; and transport contracts are in `schemas/`. Existing `main.py`, `dashboard.py`, `models.domain`, `models.database`, and `api.schemas` modules remain as compatibility imports for current users and integrations.

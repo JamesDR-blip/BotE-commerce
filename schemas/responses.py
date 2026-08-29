@@ -105,10 +105,6 @@ class WorkflowVersionResponse(BaseModel):
     plan: dict[str, Any]
     created_at: datetime
 
-class WorkflowExecutionRequest(BaseModel):
-    inputs: dict[str, Any] = {}
-
-
 class WorkflowExecutionResponse(BaseModel):
     execution_id: str
     workflow_id: str

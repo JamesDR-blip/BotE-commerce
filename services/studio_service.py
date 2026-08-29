@@ -98,6 +98,12 @@ class StudioService:
             workspace_id
         )
 
+    def get_project(
+        self,
+        project_id: str,
+    ):
+        return self.projects.get(project_id)
+
 
     # -------------------------
     # Dataset

@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class WorkspaceCreateRequest(BaseModel):
@@ -37,4 +37,4 @@ class WorkflowVersionCreateRequest(BaseModel):
 
 
 class WorkflowExecutionRequest(BaseModel):
-    inputs: dict[str, Any] = {}
+    inputs: dict[str, Any] = Field(default_factory=dict)

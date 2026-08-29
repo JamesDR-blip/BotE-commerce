@@ -2,7 +2,6 @@
 from __future__ import annotations
 import logging
 import json
-from uuid import uuid4
 from pathlib import Path
 from schemas.responses import (
     ExecutionDetailResponse,
@@ -235,9 +234,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         project_id: str,
         current: Container = Depends(get_container),
     ) -> ProjectResponse:
-        project = current.studio.projects.get(
-            project_id
-        )
+        project = current.studio.get_project(project_id)
 
         if project is None:
             raise HTTPException(
@@ -569,12 +566,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         current: Container = Depends(get_container),
     ) -> WorkflowExecutionResponse:
 
-        execution_id = str(uuid4())
-
         try:
-            runtime = current.workflow_engine.execute(
+            runtime = current.workflow_runtime.execute(
                 workflow_id=workflow_id,
-                execution_id=execution_id,
                 inputs=payload.inputs,
             )
         except ValueError as exc:
@@ -605,10 +599,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> WorkflowExecutionDetailResponse:
         try:
             data = (
-                current.workflow_history
-                .get_workflow_execution_detail(
-                    execution_id
-                )
+                current.workflow_runtime.get_execution_detail(execution_id)
             )
         except ValueError as exc:
             raise HTTPException(

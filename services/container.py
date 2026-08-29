@@ -57,6 +57,7 @@ from services.execution_trace_persistence import (
 from services.workflow_history_service import (
     WorkflowHistoryService,
 )
+from services.workflow_runtime_service import WorkflowRuntimeService
 class Container:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -204,6 +205,10 @@ class Container:
                         traces=self.workflow_capability_traces,
                     )
                 )
+        self.workflow_runtime = WorkflowRuntimeService(
+            workflow_engine=lambda: self.workflow_engine,
+            workflow_history=lambda: self.workflow_history,
+        )
 def build_container(
     app_settings: Settings | None = None,
 ) -> Container:
