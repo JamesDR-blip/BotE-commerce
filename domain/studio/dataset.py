@@ -9,9 +9,7 @@ from typing import Any
 
 @dataclass(frozen=True)
 class Dataset:
-    """
-    Dataset uploaded into an AI Studio project.
-    """
+    """Dataset managed by an AI Studio project."""
 
     id: str
     project_id: str
@@ -19,5 +17,15 @@ class Dataset:
     source_type: str
 
     metadata: dict[str, Any]
+
+    filename: str | None = None
+    file_format: str | None = None
+    size_bytes: int | None = None
+    content_hash: str | None = None
+
+    row_count: int | None = None
+    column_count: int | None = None
+
+    status: str = "READY"
 
     created_at: datetime | None = None

@@ -106,15 +106,12 @@ class ProjectRecord(Base):
     )
 
 class DatasetRecord(Base):
-
     __tablename__ = "datasets"
-
 
     id: Mapped[str] = mapped_column(
         String(36),
         primary_key=True,
     )
-
 
     project_id: Mapped[str] = mapped_column(
         ForeignKey("projects.id"),
@@ -122,30 +119,63 @@ class DatasetRecord(Base):
         index=True,
     )
 
-
     name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
     )
-
 
     source_type: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
     )
 
+    filename: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    file_format: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+    )
+
+    size_bytes: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
+    content_hash: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
+    )
+
+    row_count: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
+    column_count: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(30),
+        default="READY",
+        nullable=False,
+        index=True,
+    )
 
     metadata_json: Mapped[dict] = mapped_column(
         JSON,
         default=dict,
     )
 
-
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
     )
-
 
     project: Mapped[ProjectRecord] = relationship(
         back_populates="datasets"

@@ -325,7 +325,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             project_id=dataset.project_id,
             name=dataset.name,
             source_type=dataset.source_type,
-            metadata=dataset.metadata_json,
+            metadata=dataset.metadata,
             created_at=dataset.created_at,
         )
 
@@ -348,7 +348,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 project_id=dataset.project_id,
                 name=dataset.name,
                 source_type=dataset.source_type,
-                metadata=dataset.metadata_json,
+                metadata=dataset.metadata,
                 created_at=dataset.created_at,
             )
             for dataset in datasets
