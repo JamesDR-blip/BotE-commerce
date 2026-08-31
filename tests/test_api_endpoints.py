@@ -5,6 +5,10 @@ from api.main import create_app
 from unittest.mock import patch
 from configs.settings import Settings
 from datetime import datetime, timezone
+from api.dependencies import (
+    get_execution_repository,
+    get_execution_trace_repository,
+)
 
 
 def _client(reports_path: Path) -> TestClient:
@@ -41,7 +45,9 @@ def test_history_and_report_aliases_are_available(tmp_path: Path) -> None:
         def report_path(self, execution_id: str, report_format: str) -> None:
             return None
 
-    client.app.state.container.executions = EmptyExecutions()
+    client.app.dependency_overrides[
+        get_execution_repository
+    ] = lambda: EmptyExecutions()
     assert client.get("/history").status_code == 200
     assert client.get("/report/missing/json").status_code == 404
 
@@ -185,8 +191,13 @@ def test_execution_detail_returns_execution_and_traces(tmp_path: Path) -> None:
         def list_by_execution(self, execution_id):
             return [FakeTrace()]
 
-    client.app.state.container.executions = FakeExecutions()
-    client.app.state.container.execution_traces = FakeTraces()
+    client.app.dependency_overrides[
+        get_execution_repository
+    ] = lambda: FakeExecutions()
+
+    client.app.dependency_overrides[
+        get_execution_trace_repository
+    ] = lambda: FakeTraces()
 
     response = client.get(
         "/executions/exec-1"
@@ -218,8 +229,13 @@ def test_execution_detail_returns_404_for_missing_execution(tmp_path: Path) -> N
         def list_by_execution(self, execution_id):
             return []
 
-    client.app.state.container.executions = EmptyExecutions()
-    client.app.state.container.execution_traces = EmptyTraces()
+    client.app.dependency_overrides[
+        get_execution_repository
+    ] = lambda: EmptyExecutions()
+
+    client.app.dependency_overrides[
+        get_execution_trace_repository
+    ] = lambda: EmptyTraces()
 
     response = client.get(
         "/executions/missing"
