@@ -86,7 +86,18 @@ class DatasetResponse(BaseModel):
     project_id: str
     name: str
     source_type: str
+
+    filename: str | None = None
+    file_format: str | None = None
+    size_bytes: int | None = None
+    content_hash: str | None = None
+
+    row_count: int | None = None
+    column_count: int | None = None
+
+    status: str
     metadata: dict[str, Any]
+
     created_at: datetime
 
 class WorkflowResponse(BaseModel):

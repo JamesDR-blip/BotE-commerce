@@ -13,7 +13,7 @@ from repositories.datasets import DatasetRepository
 from repositories.workflows import WorkflowRepository
 
 from services.execution_plan_serializer import ExecutionPlanSerializer
-
+from services.dataset_ingestion import DatasetIngestionService
 
 class StudioService:
     """
@@ -33,12 +33,14 @@ class StudioService:
         projects: ProjectRepository,
         datasets: DatasetRepository,
         workflows: WorkflowRepository,
+        ingestion: DatasetIngestionService | None = None,
     ) -> None:
 
         self.workspaces = workspaces
         self.projects = projects
         self.datasets = datasets
         self.workflows = workflows
+        self.ingestion = ingestion
 
 
     # -------------------------
@@ -126,6 +128,30 @@ class StudioService:
             source_type=source_type,
             metadata=metadata,
         )
+
+    def ingest_dataset(
+        self,
+        *,
+        dataset_id: str,
+        project_id: str,
+        name: str,
+        filename: str,
+        content: bytes,
+        source_type: str = "upload",
+    ):
+        if self.ingestion is None:
+            raise RuntimeError(
+                "Dataset ingestion service is not configured"
+            )
+
+        return self.ingestion.ingest(
+            dataset_id=dataset_id,
+            project_id=project_id,
+            name=name,
+            filename=filename,
+            content=content,
+            source_type=source_type,
+        )        
 
     def get_dataset(
         self,

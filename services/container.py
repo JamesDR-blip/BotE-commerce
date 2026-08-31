@@ -47,6 +47,8 @@ from services.data_operations import DataOperationsService
 from services.mapping_service import MappingService
 from services.capability_executor import CapabilityExecutor
 from services.capability_execution_service import CapabilityExecutionService
+from services.dataset_ingestion import DatasetIngestionService
+from services.dataset_profile import DatasetProfileService
 from services.quality_service import QualityService
 from services.normalization_service import NormalizationService
 from services.studio_service import StudioService
@@ -176,6 +178,12 @@ class Container:
         self.datasets = DatasetRepository(sessions)
         self.cache = TTLCache(settings.cache_ttl_seconds)
         self.uploads = TabularUploadReader(settings.max_upload_bytes)
+        self.dataset_profile = DatasetProfileService()
+        self.dataset_ingestion = DatasetIngestionService(
+            reader=self.uploads,
+            datasets=self.datasets,
+            profiler=self.dataset_profile,
+        )
         self.mapping = MappingService()
 
         self.quality_service = QualityService(
@@ -192,6 +200,7 @@ class Container:
             projects=self.projects,
             datasets=self.datasets,
             workflows=self.workflows,
+            ingestion=self.dataset_ingestion,
         )
         self.workflow_engine = WorkflowEngine(
             workflows=self.workflows,

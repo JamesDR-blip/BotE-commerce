@@ -274,6 +274,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             for project in projects
         ]
 
+    def _dataset_response(dataset) -> DatasetResponse:
+        metadata = getattr(dataset, "metadata_json", None)
+
+        if metadata is None:
+            metadata = getattr(dataset, "metadata", {})
+
+        return DatasetResponse(
+            id=dataset.id,
+            project_id=dataset.project_id,
+            name=dataset.name,
+            source_type=dataset.source_type,
+            filename=dataset.filename,
+            file_format=dataset.file_format,
+            size_bytes=dataset.size_bytes,
+            content_hash=dataset.content_hash,
+            row_count=dataset.row_count,
+            column_count=dataset.column_count,
+            status=dataset.status,
+            metadata=metadata,
+            created_at=dataset.created_at,
+        )
+
     @app.post(
         "/datasets",
         response_model=DatasetResponse,
@@ -291,14 +313,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             metadata=payload.metadata,
         )
 
-        return DatasetResponse(
-            id=dataset.id,
-            project_id=dataset.project_id,
-            name=dataset.name,
-            source_type=dataset.source_type,
-            metadata=dataset.metadata_json,
-            created_at=dataset.created_at,
-        )
+        return _dataset_response(dataset)
 
 
     @app.get(
@@ -310,9 +325,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         current: Container = Depends(get_container),
     ) -> DatasetResponse:
 
-        dataset = current.studio.get_dataset(
-            dataset_id
-        )
+        dataset = current.studio.get_dataset(dataset_id)
 
         if dataset is None:
             raise HTTPException(
@@ -320,14 +333,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 detail=f"Dataset not found: {dataset_id}",
             )
 
-        return DatasetResponse(
-            id=dataset.id,
-            project_id=dataset.project_id,
-            name=dataset.name,
-            source_type=dataset.source_type,
-            metadata=dataset.metadata,
-            created_at=dataset.created_at,
-        )
+        return _dataset_response(dataset)
+
 
     @app.get(
         "/projects/{project_id}/datasets",
@@ -338,21 +345,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         current: Container = Depends(get_container),
     ) -> list[DatasetResponse]:
 
-        datasets = current.studio.list_datasets(
-            project_id
-        )
+        datasets = current.studio.list_datasets(project_id)
 
         return [
-            DatasetResponse(
-                id=dataset.id,
-                project_id=dataset.project_id,
-                name=dataset.name,
-                source_type=dataset.source_type,
-                metadata=dataset.metadata,
-                created_at=dataset.created_at,
-            )
+            _dataset_response(dataset)
             for dataset in datasets
         ]
+
+
+    @app.post(
+        "/workflows",
+        response_model=WorkflowResponse,
+    )
     @app.post(
         "/workflows",
         response_model=WorkflowResponse,

@@ -7,6 +7,7 @@ from pathlib import PurePath
 from typing import Any
 
 from services.upload_reader import TabularUploadReader
+from services.dataset_profile import DatasetProfileService
 
 
 class DatasetIngestionService:
@@ -17,9 +18,11 @@ class DatasetIngestionService:
         *,
         reader: TabularUploadReader,
         datasets: Any,
+        profiler: DatasetProfileService,
     ) -> None:
         self.reader = reader
         self.datasets = datasets
+        self.profiler = profiler
 
     def ingest(
         self,
@@ -33,6 +36,8 @@ class DatasetIngestionService:
     ):
         frame = self.reader.read(filename, content)
 
+        profile = self.profiler.profile(frame)
+
         extension = PurePath(filename).suffix.lower().lstrip(".")
 
         return self.datasets.create(
@@ -40,7 +45,24 @@ class DatasetIngestionService:
             project_id=project_id,
             name=name,
             source_type=source_type,
-            metadata={},
+            metadata={
+                "profile": {
+                    "row_count": profile.row_count,
+                    "column_count": profile.column_count,
+                    "duplicate_row_count": profile.duplicate_row_count,
+                    "columns": [
+                        {
+                            "name": column.name,
+                            "dtype": column.dtype,
+                            "null_count": column.null_count,
+                            "null_ratio": column.null_ratio,
+                            "unique_count": column.unique_count,
+                            "sample_values": list(column.sample_values),
+                        }
+                        for column in profile.columns
+                    ],
+                }
+            },
             filename=filename,
             file_format=extension,
             size_bytes=len(content),
