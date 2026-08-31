@@ -60,20 +60,13 @@ class WorkflowExecutionRepository:
 
         with self._sessions() as session:
 
-            record = session.get(
-                WorkflowExecutionRecord,
+            record = self._get_mutable(
+                session,
                 execution_id,
             )
 
-            if record is None:
-                raise ValueError(
-                    f"Workflow execution not found: {execution_id}"
-                )
-
             record.status = "RUNNING"
-            record.started_at = datetime.now(
-                timezone.utc
-            )
+            record.started_at = datetime.now(timezone.utc)
 
             session.commit()
             session.refresh(record)
@@ -90,21 +83,14 @@ class WorkflowExecutionRepository:
 
         with self._sessions() as session:
 
-            record = session.get(
-                WorkflowExecutionRecord,
+            record = self._get_mutable(
+                session,
                 execution_id,
             )
 
-            if record is None:
-                raise ValueError(
-                    f"Workflow execution not found: {execution_id}"
-                )
-
             record.status = "COMPLETED"
             record.outputs_json = outputs_json
-            record.finished_at = datetime.now(
-                timezone.utc
-            )
+            record.finished_at = datetime.now(timezone.utc)
 
             session.commit()
             session.refresh(record)
@@ -121,21 +107,14 @@ class WorkflowExecutionRepository:
 
         with self._sessions() as session:
 
-            record = session.get(
-                WorkflowExecutionRecord,
+            record = self._get_mutable(
+                session,
                 execution_id,
             )
 
-            if record is None:
-                raise ValueError(
-                    f"Workflow execution not found: {execution_id}"
-                )
-
             record.status = "FAILED"
             record.error = error
-            record.finished_at = datetime.now(
-                timezone.utc
-            )
+            record.finished_at = datetime.now(timezone.utc)
 
             session.commit()
             session.refresh(record)
@@ -177,3 +156,25 @@ class WorkflowExecutionRepository:
                     )
                 )
             )
+    def _get_mutable(
+        self,
+        session: Session,
+        execution_id: str,
+    ) -> WorkflowExecutionRecord:
+        record = session.get(
+            WorkflowExecutionRecord,
+            execution_id,
+        )
+
+        if record is None:
+            raise ValueError(
+                f"Workflow execution not found: {execution_id}"
+            )
+
+        if record.status in {"COMPLETED", "FAILED"}:
+            raise ValueError(
+                f"Workflow execution is terminal: "
+                f"{execution_id} ({record.status})"
+            )
+
+        return record

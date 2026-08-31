@@ -139,6 +139,11 @@ class StudioService:
         content: bytes,
         source_type: str = "upload",
     ):
+        if self.projects.get(project_id) is None:
+            raise ValueError(
+                f"Project not found: {project_id}"
+            )
+
         if self.ingestion is None:
             raise RuntimeError(
                 "Dataset ingestion service is not configured"

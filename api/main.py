@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import json
 from pathlib import Path
+import uuid
 from schemas.responses import (
     ExecutionDetailResponse,
     ExtractionResponse,
@@ -66,11 +67,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     configure_logging(settings.log_level)
     logger.info("application_configured", extra={"event": "application_configured", "environment": settings.environment})
-    container = Container(settings);service = container.quality_service
+    container = Container(settings)
+    quality_service = container.quality_service
     app = FastAPI(title="AI Studio E-commerce Platform", version="1.0.0")
     app.add_exception_handler(Exception, _internal_server_error)
     app.state.container = container
-    app.state.quality_service = service
+    app.state.quality_service = quality_service
     app.state.data_operations = container.data_operations
     app.state.mapping_service = container.mapping
     @app.get("/health")
@@ -315,6 +317,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         return _dataset_response(dataset)
 
+    @app.post(
+        "/projects/{project_id}/datasets/upload",
+        response_model=DatasetResponse,
+    )
+    async def upload_dataset(
+        project_id: str,
+        name: str = Form(...),
+        file: UploadFile = File(...),
+        current: Container = Depends(get_container),
+    ) -> DatasetResponse:
+        content = await file.read()
+
+        try:
+            dataset = current.studio.ingest_dataset(
+                dataset_id=f"dataset-{uuid.uuid4().hex}",
+                project_id=project_id,
+                name=name,
+                filename=file.filename or "",
+                content=content,
+                source_type="upload",
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=str(exc),
+            ) from exc
+
+        return _dataset_response(dataset)
+
 
     @app.get(
         "/datasets/{dataset_id}",
@@ -352,11 +383,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             for dataset in datasets
         ]
 
-
-    @app.post(
-        "/workflows",
-        response_model=WorkflowResponse,
-    )
     @app.post(
         "/workflows",
         response_model=WorkflowResponse,
