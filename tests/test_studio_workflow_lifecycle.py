@@ -5,16 +5,16 @@ from database.models import Base
 
 from repositories.workspaces import WorkspaceRepository
 from repositories.projects import ProjectRepository
-from repositories.datasets import DatasetRepository
 from repositories.workflows import WorkflowRepository
 
-from services.studio_service import StudioService
+from services.workflow_authoring_service import WorkflowAuthoringService
+from services.workspace_project_service import WorkspaceProjectService
 
 from domain.plans import ExecutionPlan
 from domain.identity import CurrentUser
 
 
-def build_service():
+def build_services():
     engine = create_engine("sqlite://")
 
     Base.metadata.create_all(engine)
@@ -24,27 +24,34 @@ def build_service():
         expire_on_commit=False,
     )
 
-    return StudioService(
-        workspaces=WorkspaceRepository(sessions),
-        projects=ProjectRepository(sessions),
-        datasets=DatasetRepository(sessions),
-        workflows=WorkflowRepository(sessions),
+    workspaces = WorkspaceRepository(sessions)
+    projects = ProjectRepository(sessions)
+    workflows = WorkflowRepository(sessions)
+
+    workspace_projects = WorkspaceProjectService(
+        workspaces=workspaces,
+        projects=projects,
     )
 
+    authoring_service = WorkflowAuthoringService(
+        workflows=workflows,
+    )
+
+    return workspace_projects, authoring_service
 
 def test_studio_workflow_lifecycle():
-    service = build_service()
+    workspace_projects, authoring_service = build_services()
     current_user = CurrentUser(
         user_id="test-user"
     )
 
-    service.create_workspace(
+    workspace_projects.create_workspace(
         current_user=current_user,
         workspace_id="ws-1",
         name="Demo",
     )
 
-    service.create_project(
+    workspace_projects.create_project(
         current_user=current_user,
         project_id="p-1",
         workspace_id="ws-1",
@@ -57,7 +64,7 @@ def test_studio_workflow_lifecycle():
         metadata={},
     )
 
-    workflow = service.save_workflow(
+    workflow = authoring_service.save_workflow(
         workflow_id="wf-1",
         project_id="p-1",
         name="Validation",
@@ -67,13 +74,13 @@ def test_studio_workflow_lifecycle():
 
     assert workflow.id == "wf-1"
 
-    loaded = service.get_workflow("wf-1")
+    loaded = authoring_service.get_workflow("wf-1")
 
     assert loaded is not None
     assert loaded.name == "Validation"
     assert loaded.active_version == "1.0"
 
-    workflows = service.list_workflows("p-1")
+    workflows = authoring_service.list_workflows("p-1")
 
     assert len(workflows) == 1
     assert workflows[0].id == "wf-1"
@@ -86,7 +93,7 @@ def test_studio_workflow_lifecycle():
         },
     )
 
-    version = service.create_workflow_version(
+    version = authoring_service.create_workflow_version(
         workflow_id="wf-1",
         version="2.0",
         plan=plan_v2,
@@ -94,11 +101,11 @@ def test_studio_workflow_lifecycle():
 
     assert version.version == "2.0"
 
-    versions = service.list_workflow_versions("wf-1")
+    versions = authoring_service.list_workflow_versions("wf-1")
 
     assert len(versions) == 2
 
-    loaded_v2 = service.get_workflow_version(
+    loaded_v2 = authoring_service.get_workflow_version(
         workflow_id="wf-1",
         version="2.0",
     )
@@ -106,14 +113,14 @@ def test_studio_workflow_lifecycle():
     assert loaded_v2 is not None
     assert loaded_v2.version == "2.0"
 
-    activated = service.activate_workflow_version(
+    activated = authoring_service.activate_workflow_version(
         "wf-1",
         "2.0",
     )
 
     assert activated.active_version == "2.0"
 
-    active = service.workflows.get_active_version(
+    active = authoring_service.workflows.get_active_version(
         "wf-1"
     )
 

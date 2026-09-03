@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from api.dependencies import (
     get_current_user,
-    get_studio_service,
+    get_workspace_project_service,
 )
 from domain.identity import CurrentUser
 from schemas.requests import (
@@ -17,7 +17,7 @@ from schemas.responses import (
     ProjectResponse,
     WorkspaceResponse,
 )
-from services.studio_service import StudioService
+from services.workspace_project_service import WorkspaceProjectService
 
 router = APIRouter()
 
@@ -28,9 +28,9 @@ router = APIRouter()
 def create_workspace(
     payload: WorkspaceCreateRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    studio: StudioService = Depends(get_studio_service),
+    workspace_project_service: WorkspaceProjectService = Depends(get_workspace_project_service),
 ) -> WorkspaceResponse:
-    workspace = studio.create_workspace(
+    workspace = workspace_project_service.create_workspace(
         current_user=current_user,
         workspace_id=payload.id,
         name=payload.name,
@@ -50,9 +50,9 @@ def create_workspace(
 def get_workspace(
     workspace_id: str,
     current_user: CurrentUser = Depends(get_current_user),
-    studio: StudioService = Depends(get_studio_service),
+    workspace_project_service: WorkspaceProjectService = Depends(get_workspace_project_service),
 ) -> WorkspaceResponse:
-    workspace = studio.get_workspace(
+    workspace = workspace_project_service.get_workspace(
         current_user=current_user,
         workspace_id=workspace_id,
     )
@@ -76,9 +76,9 @@ def get_workspace(
 def create_project(
     payload: ProjectCreateRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    studio: StudioService = Depends(get_studio_service),
+    workspace_project_service: WorkspaceProjectService = Depends(get_workspace_project_service),
 ) -> ProjectResponse:
-    project = studio.create_project(
+    project = workspace_project_service.create_project(
         current_user=current_user,
         project_id=payload.id,
         workspace_id=payload.workspace_id,
@@ -102,9 +102,9 @@ def create_project(
 def get_project(
     project_id: str,
     current_user: CurrentUser = Depends(get_current_user),
-    studio: StudioService = Depends(get_studio_service),
+    workspace_project_service: WorkspaceProjectService = Depends(get_workspace_project_service),
 ) -> ProjectResponse:
-    project = studio.get_project(
+    project = workspace_project_service.get_project(
         current_user=current_user,
         project_id=project_id,
     )
@@ -131,11 +131,11 @@ def get_project(
 def list_projects(
     workspace_id: str,
     current_user: CurrentUser = Depends(get_current_user),
-    studio: StudioService = Depends(get_studio_service),
+    workspace_project_service: WorkspaceProjectService = Depends(get_workspace_project_service),
 ) -> list[ProjectResponse]:
     
     try:
-        projects = studio.list_projects(
+        projects = workspace_project_service.list_projects(
             current_user=current_user,
             workspace_id=workspace_id,
         )

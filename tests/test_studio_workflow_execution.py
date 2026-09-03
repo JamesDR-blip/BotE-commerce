@@ -2,6 +2,8 @@ from domain.plans import ExecutionPlan
 from services.container import build_container
 from configs.settings import Settings
 from domain.identity import CurrentUser
+from services.workspace_project_service import WorkspaceProjectService
+
 
 class FakeCapabilityExecution:
     def execute_plan(
@@ -37,19 +39,20 @@ def test_studio_workflow_executes_through_runtime():
         )
     )
 
-    studio = container.studio
+    authoring_service = container.workflow_authoring
+    workspace_projects = container.workspace_projects
 
     current_user = CurrentUser(
         user_id="test-user"
     )
 
-    studio.create_workspace(
+    workspace_projects.create_workspace(
         current_user=current_user,
         workspace_id="ws-1",
         name="Demo",
     )
 
-    studio.create_project(
+    workspace_projects.create_project(
         current_user=current_user,
         project_id="p-1",
         workspace_id="ws-1",
@@ -62,7 +65,7 @@ def test_studio_workflow_executes_through_runtime():
         metadata={},
     )
 
-    workflow = studio.save_workflow(
+    workflow = authoring_service.save_workflow(
         workflow_id="wf-1",
         project_id="p-1",
         name="Validation",

@@ -3,7 +3,7 @@ from domain.identity import CurrentUser
 from configs.settings import Settings
 from services.container import build_container
 import pandas as pd
-
+from services.workspace_project_service import WorkspaceProjectService
 
 def test_studio_workflow_executes_real_capability():
     container = build_container(
@@ -12,18 +12,19 @@ def test_studio_workflow_executes_real_capability():
         )
     )
 
-    studio = container.studio
+    authoring_service = container.workflow_authoring
+    workspace_projects = container.workspace_projects
     current_user = CurrentUser(
         user_id="test-user"
     )
 
-    studio.create_workspace(
+    workspace_projects.create_workspace(
         current_user=current_user,
         workspace_id="ws-1",
         name="Demo",
     )
 
-    studio.create_project(
+    workspace_projects.create_project(
         current_user=current_user,
         project_id="p-1",
         workspace_id="ws-1",
@@ -42,7 +43,7 @@ def test_studio_workflow_executes_real_capability():
         metadata={},
     )
 
-    workflow = studio.save_workflow(
+    workflow = authoring_service.save_workflow(
         workflow_id="wf-1",
         project_id="p-1",
         name="Normalize Catalog",
@@ -82,19 +83,20 @@ def test_studio_workflow_executes_real_capability_chain():
         )
     )
 
-    studio = container.studio
+    authoring_service = container.workflow_authoring
+    workspace_projects = container.workspace_projects
 
     current_user = CurrentUser(
         user_id="test-user"
     )
 
-    studio.create_workspace(
+    workspace_projects.create_workspace(
         current_user=current_user,
         workspace_id="ws-chain",
         name="Demo Chain",
     )
 
-    studio.create_project(
+    workspace_projects.create_project(
         current_user=current_user,
         project_id="p-chain",
         workspace_id="ws-chain",
@@ -122,7 +124,7 @@ def test_studio_workflow_executes_real_capability_chain():
         metadata={},
     )
 
-    workflow = studio.save_workflow(
+    workflow = authoring_service.save_workflow(
         workflow_id="wf-chain",
         project_id="p-chain",
         name="Clean and Validate Catalog",

@@ -1,8 +1,13 @@
 """Workflow API routes."""
 
 from __future__ import annotations
-
 import json
+
+from api.dependencies import (
+    get_workflow_history,
+    get_workflow_runtime,
+    get_workflow_authoring_service,
+)
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -18,15 +23,10 @@ from schemas.responses import (
     WorkflowResponse,
     WorkflowVersionResponse,
 )
-from api.dependencies import (
-    get_studio_service,
-    get_workflow_history,
-    get_workflow_runtime,
-)
+from services.execution_plan_serializer import ExecutionPlanSerializer
+from services.workflow_authoring_service import WorkflowAuthoringService
 from services.workflow_history_service import WorkflowHistoryService
 from services.workflow_runtime_service import WorkflowRuntimeService
-from services.studio_service import StudioService
-from services.execution_plan_serializer import ExecutionPlanSerializer
 
 
 router = APIRouter()
@@ -48,11 +48,13 @@ def _execution_plan_from_payload(payload: dict):
 )
 def create_workflow(
     payload: WorkflowCreateRequest,
-    studio: StudioService = Depends(get_studio_service),
+    authoring_service: WorkflowAuthoringService = Depends(
+        get_workflow_authoring_service
+    ),
 ) -> WorkflowResponse:
     plan = _execution_plan_from_payload(payload.plan)
 
-    workflow = studio.save_workflow(
+    workflow = authoring_service.save_workflow(
         workflow_id=payload.id,
         project_id=payload.project_id,
         name=payload.name,
@@ -76,9 +78,11 @@ def create_workflow(
 )
 def get_workflow(
     workflow_id: str,
-    studio: StudioService = Depends(get_studio_service),
+    authoring_service: WorkflowAuthoringService = Depends(
+        get_workflow_authoring_service
+    ),
 ) -> WorkflowResponse:
-    workflow = studio.get_workflow(workflow_id)
+    workflow = authoring_service.get_workflow(workflow_id)
 
     if workflow is None:
         raise HTTPException(
@@ -102,9 +106,11 @@ def get_workflow(
 )
 def list_workflows(
     project_id: str,
-    studio: StudioService = Depends(get_studio_service),
+    authoring_service: WorkflowAuthoringService = Depends(
+        get_workflow_authoring_service
+    ),
 ) -> list[WorkflowResponse]:
-    workflows = studio.list_workflows(project_id)
+    workflows = authoring_service.list_workflows(project_id)
 
     return [
         WorkflowResponse(
@@ -126,12 +132,14 @@ def list_workflows(
 def create_workflow_version(
     workflow_id: str,
     payload: WorkflowVersionCreateRequest,
-    studio: StudioService = Depends(get_studio_service),
+    authoring_service: WorkflowAuthoringService = Depends(
+        get_workflow_authoring_service
+    ),
 ) -> WorkflowVersionResponse:
     plan = _execution_plan_from_payload(payload.plan)
 
     try:
-        version = studio.create_workflow_version(
+        version = authoring_service.create_workflow_version(
             workflow_id=workflow_id,
             version=payload.version,
             plan=plan,
@@ -157,9 +165,11 @@ def create_workflow_version(
 )
 def list_workflow_versions(
     workflow_id: str,
-    studio: StudioService = Depends(get_studio_service),
+    authoring_service: WorkflowAuthoringService = Depends(
+        get_workflow_authoring_service
+    ),
 ) -> list[WorkflowVersionResponse]:
-    versions = studio.get_workflow_version(workflow_id)
+    versions = authoring_service.get_workflow_version(workflow_id)
 
     return [
         WorkflowVersionResponse(
@@ -180,9 +190,11 @@ def list_workflow_versions(
 def get_workflow_version(
     workflow_id: str,
     version: str,
-    studio: StudioService = Depends(get_studio_service),
+    authoring_service: WorkflowAuthoringService = Depends(
+        get_workflow_authoring_service
+    ),
 ) -> WorkflowVersionResponse:
-    record = studio.get_workflow_version(
+    record = authoring_service.get_workflow_version(
         workflow_id=workflow_id,
         version=version,
     )
@@ -209,10 +221,12 @@ def get_workflow_version(
 def activate_workflow_version(
     workflow_id: str,
     version: str,
-    studio: StudioService = Depends(get_studio_service),
+    authoring_service: WorkflowAuthoringService = Depends(
+        get_workflow_authoring_service
+    ),
 ) -> WorkflowResponse:
     try:
-        workflow = studio.activate_workflow_version(
+        workflow = authoring_service.activate_workflow_version(
             workflow_id,
             version,
         )

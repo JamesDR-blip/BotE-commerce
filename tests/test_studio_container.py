@@ -3,7 +3,7 @@ from services.container import Container
 from services.dataset_ingestion import DatasetIngestionService
 
 
-def test_container_exposes_studio_service():
+def test_container_exposes_workflow_authoring_service():
 
     settings = Settings(
         database_url="sqlite://"
@@ -11,7 +11,7 @@ def test_container_exposes_studio_service():
 
     container = Container(settings)
 
-    assert container.studio is not None
+    assert container.workflow_authoring is not None
     assert isinstance(
         container.dataset_ingestion,
         DatasetIngestionService,

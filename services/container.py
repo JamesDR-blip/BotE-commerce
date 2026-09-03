@@ -6,63 +6,58 @@ from plugins.registry import ValidatorRegistry
 from reports.generator import ReportAgent
 from configs.settings import Settings
 
-from repositories.executions import ExecutionRepository
-from repositories.users import UserRepository
-from repositories.rules import RuleRepository
-from repositories.workspaces import WorkspaceRepository
-from repositories.projects import ProjectRepository
-from repositories.datasets import DatasetRepository
-from repositories.workflows import WorkflowRepository
-from repositories.workflow_executions import WorkflowExecutionRepository
-from repositories.execution_traces import ExecutionTraceRepository
-from repositories.capability_execution_traces import (
-    CapabilityExecutionTraceRepository,
-)
+from agents.extraction import ExtractionAgent
+from agents.intent_classifier import IntentClassifier
+from agents.llm import LLMAssistantAgent
+from agents.parameter_resolver import ParameterResolver
+from agents.planner import PlannerAgent
+from agents.reporter import ReporterAgent
+from agents.requirement import RequirementAgent
+from agents.workflow import Agents, AutoFixAgent, ClassifierAgent, QAAgent, RuleRetrieverAgent, ValidatorAgent
 
-from domain.capability_selector import CapabilitySelector
-from domain.capability_registry import CapabilityRegistry
-from domain.dependency_resolver import DependencyResolver
-from domain.intent_resolver import IntentResolver
-
-from capabilities.validation import ValidationCapability
 from capabilities.cleaning import CleaningCapability
 from capabilities.extraction import ExtractionCapability
 from capabilities.normalization import NormalizationCapability
 from capabilities.qa import QACapability
+from capabilities.validation import ValidationCapability
 
-from agents.workflow import Agents, AutoFixAgent, ClassifierAgent, QAAgent, RuleRetrieverAgent, ValidatorAgent
-from agents.requirement import RequirementAgent
-from agents.reporter import ReporterAgent
-from agents.extraction import ExtractionAgent
-from agents.parameter_resolver import ParameterResolver
-from agents.planner import PlannerAgent
-from agents.llm import LLMAssistantAgent
-from agents.intent_classifier import IntentClassifier
+from domain.capability_registry import CapabilityRegistry
+from domain.capability_selector import CapabilitySelector
+from domain.dependency_resolver import DependencyResolver
+from domain.intent_resolver import IntentResolver
+
+from repositories.capability_execution_traces import CapabilityExecutionTraceRepository
+from repositories.datasets import DatasetRepository
+from repositories.executions import ExecutionRepository
+from repositories.execution_traces import ExecutionTraceRepository
+from repositories.projects import ProjectRepository
+from repositories.rules import RuleRepository
+from repositories.users import UserRepository
+from repositories.workflows import WorkflowRepository
+from repositories.workflow_executions import WorkflowExecutionRepository
+from repositories.workspaces import WorkspaceRepository
 
 from services.authentication import AuthenticationService
 from services.authorization import AuthorizationService
 from services.cache import TTLCache
-from services.upload_reader import TabularUploadReader
-from services.health_score_service import HealthScoreService
-from services.validation_service import ValidationService
-from services.data_operations import DataOperationsService
-from services.mapping_service import MappingService
 from services.capability_executor import CapabilityExecutor
 from services.capability_execution_service import CapabilityExecutionService
 from services.dataset_ingestion import DatasetIngestionService
+from services.data_operations import DataOperationsService
 from services.dataset_profile import DatasetProfileService
-from services.quality_service import QualityService
+from services.dataset_service import DatasetService
+from services.execution_trace_persistence import ExecutionTracePersistence
+from services.health_score_service import HealthScoreService
+from services.mapping_service import MappingService
 from services.normalization_service import NormalizationService
-from services.studio_service import StudioService
+from services.quality_service import QualityService
+from services.upload_reader import TabularUploadReader
+from services.validation_service import ValidationService
+from services.workflow_authoring_service import WorkflowAuthoringService
 from services.workflow_engine import WorkflowEngine
-from services.execution_trace_persistence import (
-    ExecutionTracePersistence,
-)
-from services.workflow_history_service import (
-    WorkflowHistoryService,
-)
+from services.workflow_history_service import WorkflowHistoryService
 from services.workflow_runtime_service import WorkflowRuntimeService
-
+from services.workspace_project_service import WorkspaceProjectService
 
 class Container:
     def __init__(self, settings: Settings) -> None:
@@ -202,12 +197,17 @@ class Container:
             reporter=self.reporter,
             enable_llm=settings.enable_llm,
         )
-        self.studio = StudioService(
+        self.workflow_authoring = WorkflowAuthoringService(
+            workflows=self.workflows,
+        )
+        self.dataset_service = DatasetService(
+            datasets=self.datasets,
+            projects=self.projects,
+            ingestion=self.dataset_ingestion,
+        )
+        self.workspace_projects = WorkspaceProjectService(
             workspaces=self.workspaces,
             projects=self.projects,
-            datasets=self.datasets,
-            workflows=self.workflows,
-            ingestion=self.dataset_ingestion,
         )
         self.workflow_engine = WorkflowEngine(
             workflows=self.workflows,

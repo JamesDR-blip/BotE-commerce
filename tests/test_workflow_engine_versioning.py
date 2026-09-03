@@ -4,7 +4,7 @@ from configs.settings import Settings
 from domain.plans import ExecutionPlan, PlanStep
 from services.container import build_container
 from domain.identity import CurrentUser
-
+from services.workspace_project_service import WorkspaceProjectService
 
 def test_workflow_engine_executes_active_version():
     container = build_container(
@@ -13,18 +13,19 @@ def test_workflow_engine_executes_active_version():
         )
     )
 
-    studio = container.studio
+    authoring_service = container.workflow_authoring
+    workspace_projects = container.workspace_projects
     current_user = CurrentUser(
         user_id="test-user"
     )
 
-    studio.create_workspace(
+    workspace_projects.create_workspace(
         current_user=current_user,
         workspace_id="ws-engine-version",
         name="Engine Version Workspace",
     )
 
-    studio.create_project(
+    workspace_projects.create_project(
         current_user=current_user,
         project_id="project-engine-version",
         workspace_id="ws-engine-version",
@@ -43,7 +44,7 @@ def test_workflow_engine_executes_active_version():
         metadata={},
     )
 
-    studio.save_workflow(
+    authoring_service.save_workflow(
         workflow_id="wf-engine-version",
         project_id="project-engine-version",
         name="Versioned Normalize",
@@ -65,7 +66,7 @@ def test_workflow_engine_executes_active_version():
         },
     )
 
-    studio.create_workflow_version(
+    authoring_service.create_workflow_version(
         workflow_id="wf-engine-version",
         version="2.0",
         plan=v2_plan,
@@ -90,7 +91,7 @@ def test_workflow_engine_executes_active_version():
     assert runtime_v1.workflow_version == "1.0"
 
     # Activate v2.
-    studio.activate_workflow_version(
+    authoring_service.activate_workflow_version(
         "wf-engine-version",
         "2.0",
     )

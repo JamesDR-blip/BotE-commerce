@@ -1,6 +1,7 @@
 from configs.settings import Settings
 from services.container import build_container
 from domain.identity import CurrentUser
+from services.workspace_project_service import WorkspaceProjectService
 
 
 def test_workflow_version_lifecycle():
@@ -10,18 +11,19 @@ def test_workflow_version_lifecycle():
         )
     )
 
-    studio = container.studio
+    authoring_service = container.workflow_authoring
+    workspace_projects = container.workspace_projects
     current_user = CurrentUser(
         user_id="test-user"
     )
 
-    studio.create_workspace(
+    workspace_projects.create_workspace(
         current_user=current_user,
         workspace_id="ws-version",
         name="Version Workspace",
     )
 
-    studio.create_project(
+    workspace_projects.create_project(
         current_user=current_user,
         project_id="project-version",
         workspace_id="ws-version",
@@ -38,7 +40,7 @@ def test_workflow_version_lifecycle():
         },
     )
 
-    workflow = studio.save_workflow(
+    workflow = authoring_service.save_workflow(
         workflow_id="wf-version",
         project_id="project-version",
         name="Versioned Workflow",
@@ -56,7 +58,7 @@ def test_workflow_version_lifecycle():
         },
     )
 
-    version = studio.create_workflow_version(
+    version = authoring_service.create_workflow_version(
         workflow_id="wf-version",
         version="2.0",
         plan=v2_plan,
@@ -66,13 +68,13 @@ def test_workflow_version_lifecycle():
 
     # Creating a new version must NOT automatically
     # change the active version.
-    workflow = studio.get_workflow(
+    workflow = authoring_service.get_workflow(
         "wf-version"
     )
 
     assert workflow.active_version == "1.0"
 
-    versions = studio.list_workflow_versions(
+    versions = authoring_service.list_workflow_versions(
         "wf-version"
     )
 
@@ -81,12 +83,12 @@ def test_workflow_version_lifecycle():
         "2.0",
     ]
 
-    studio.activate_workflow_version(
+    authoring_service.activate_workflow_version(
         "wf-version",
         "2.0",
     )
 
-    workflow = studio.get_workflow(
+    workflow = authoring_service.get_workflow(
         "wf-version"
     )
 

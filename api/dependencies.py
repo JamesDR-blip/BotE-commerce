@@ -6,14 +6,16 @@ from fastapi import Depends, Header, HTTPException, Request
 from services.authentication import AuthenticationService
 from services.authorization import AuthorizationService
 from services.data_operations import DataOperationsService
-from repositories.executions import ExecutionRepository
+from services.dataset_service import DatasetService
 from services.mapping_service import MappingService
 from services.quality_service import QualityService
-from services.studio_service import StudioService
+from services.workspace_project_service import WorkspaceProjectService
 from services.upload_reader import TabularUploadReader
+from services.workflow_authoring_service import WorkflowAuthoringService
 from services.workflow_history_service import WorkflowHistoryService
 from services.workflow_runtime_service import WorkflowRuntimeService
 
+from repositories.executions import ExecutionRepository
 from repositories.execution_traces import ExecutionTraceRepository
 
 
@@ -33,10 +35,20 @@ def get_workflow_history(
 ) -> WorkflowHistoryService:
     return request.app.state.workflow_history
 
-def get_studio_service(
+def get_workflow_authoring_service(
     request: Request,
-) -> StudioService:
-    return request.app.state.studio_service
+) -> WorkflowAuthoringService:
+    return request.app.state.workflow_authoring
+
+def get_dataset_service(
+    request: Request,
+) -> DatasetService:
+    return request.app.state.dataset_service
+
+def get_workspace_project_service(
+    request: Request,
+) -> WorkspaceProjectService:
+    return request.app.state.workspace_projects
 
 def get_workflow_runtime(
     request: Request,

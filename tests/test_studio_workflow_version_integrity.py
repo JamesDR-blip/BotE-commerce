@@ -1,20 +1,19 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from database.models import Base
-
-from repositories.workspaces import WorkspaceRepository
-from repositories.projects import ProjectRepository
-from repositories.datasets import DatasetRepository
-from repositories.workflows import WorkflowRepository
-
-from services.studio_service import StudioService
 
 from domain.plans import ExecutionPlan
 from domain.identity import CurrentUser
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-def build_service():
+from repositories.workspaces import WorkspaceRepository
+from repositories.projects import ProjectRepository
+from repositories.workflows import WorkflowRepository
+
+from services.workflow_authoring_service import WorkflowAuthoringService
+from services.workspace_project_service import WorkspaceProjectService
+
+def build_services():
     engine = create_engine("sqlite://")
 
     Base.metadata.create_all(engine)
@@ -24,27 +23,35 @@ def build_service():
         expire_on_commit=False,
     )
 
-    return StudioService(
-        workspaces=WorkspaceRepository(sessions),
-        projects=ProjectRepository(sessions),
-        datasets=DatasetRepository(sessions),
-        workflows=WorkflowRepository(sessions),
+    workspaces = WorkspaceRepository(sessions)
+    projects = ProjectRepository(sessions)
+    workflows = WorkflowRepository(sessions)
+
+    workspace_projects = WorkspaceProjectService(
+        workspaces=workspaces,
+        projects=projects,
     )
+
+    authoring_service = WorkflowAuthoringService(
+        workflows=workflows,
+    )
+
+    return workspace_projects, authoring_service
 
 
 def test_workflow_versions_are_immutable_snapshots():
-    service = build_service()
+    workspace_projects, authoring_service = build_services()
     current_user = CurrentUser(
         user_id="test-user"
     )
 
-    service.create_workspace(
+    workspace_projects.create_workspace(
         current_user=current_user,
         workspace_id="ws-1",
         name="Demo",
     )
 
-    service.create_project(
+    workspace_projects.create_project(
         current_user=current_user,
         project_id="p-1",
         workspace_id="ws-1",
@@ -59,7 +66,7 @@ def test_workflow_versions_are_immutable_snapshots():
         },
     )
 
-    service.save_workflow(
+    authoring_service.save_workflow(
         workflow_id="wf-1",
         project_id="p-1",
         name="Validation",
@@ -67,7 +74,7 @@ def test_workflow_versions_are_immutable_snapshots():
         plan=plan_v1,
     )
 
-    v1_before = service.get_workflow_version(
+    v1_before = authoring_service.get_workflow_version(
         workflow_id="wf-1",
         version="1.0",
     )
@@ -84,23 +91,23 @@ def test_workflow_versions_are_immutable_snapshots():
         },
     )
 
-    service.create_workflow_version(
+    authoring_service.create_workflow_version(
         workflow_id="wf-1",
         version="2.0",
         plan=plan_v2,
     )
 
-    service.activate_workflow_version(
+    authoring_service.activate_workflow_version(
         "wf-1",
         "2.0",
     )
 
-    v1_after = service.get_workflow_version(
+    v1_after = authoring_service.get_workflow_version(
         workflow_id="wf-1",
         version="1.0",
     )
 
-    v2 = service.get_workflow_version(
+    v2 = authoring_service.get_workflow_version(
         workflow_id="wf-1",
         version="2.0",
     )
@@ -111,7 +118,7 @@ def test_workflow_versions_are_immutable_snapshots():
     assert v1_after.plan_json == original_v1_plan
     assert v2.plan_json != v1_after.plan_json
 
-    workflow = service.get_workflow("wf-1")
+    workflow = authoring_service.get_workflow("wf-1")
 
     assert workflow is not None
     assert workflow.active_version == "2.0"

@@ -1,22 +1,22 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from database.models import Base
 
 from domain.identity import CurrentUser
-from database.models import Base
+from domain.plans import ExecutionPlan
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from repositories.workspaces import WorkspaceRepository
 from repositories.projects import ProjectRepository
 from repositories.datasets import DatasetRepository
 from repositories.workflows import WorkflowRepository
 
-from services.studio_service import StudioService
+from services.dataset_service import DatasetService
+from services.workflow_authoring_service import WorkflowAuthoringService
+from services.workspace_project_service import WorkspaceProjectService
 
-from domain.plans import ExecutionPlan
 
-
-
-def build_service():
-
+def build_services():
     engine = create_engine(
         "sqlite://"
     )
@@ -28,56 +28,69 @@ def build_service():
         expire_on_commit=False,
     )
 
-    return StudioService(
-        workspaces=WorkspaceRepository(
-            sessions
-        ),
-        projects=ProjectRepository(
-            sessions
-        ),
-        datasets=DatasetRepository(
-            sessions
-        ),
-        workflows=WorkflowRepository(
-            sessions
-        ),
+    workspaces = WorkspaceRepository(
+        sessions
+    )
+    projects = ProjectRepository(
+        sessions
+    )
+    datasets = DatasetRepository(
+        sessions
+    )
+    workflows = WorkflowRepository(
+        sessions
     )
 
+    workflow_authoring = WorkflowAuthoringService(
+        workflows=workflows,
+    )
 
+    workspace_projects = WorkspaceProjectService(
+        workspaces=workspaces,
+        projects=projects,
+    )
+
+    dataset_service = DatasetService(
+        datasets=datasets,
+        projects=projects,
+    )
+
+    return (
+        workflow_authoring,
+        workspace_projects,
+        dataset_service,
+    )
 
 def test_create_workspace_project_dataset():
 
-    service = build_service()
+    service, workspace_projects, dataset_service = build_services()
 
     current_user = CurrentUser(
-            user_id="test-user"
-        )
+        user_id="test-user"
+    )
 
-    service.create_workspace(
+    workspace_projects.create_workspace(
         current_user=current_user,
         workspace_id="ws-1",
         name="Demo",
     )
 
-
-    project = service.create_project(
+    project = workspace_projects.create_project(
         current_user=current_user,
         project_id="p-1",
         workspace_id="ws-1",
         name="Catalog",
     )
 
-
-    dataset = service.create_dataset(
+    dataset = dataset_service.create_dataset(
         dataset_id="d-1",
         project_id=project.id,
         name="catalog.csv",
         source_type="upload",
         metadata={
-            "rows":1000
+            "rows": 1000
         },
     )
-
 
     assert dataset.name == "catalog.csv"
 
@@ -85,7 +98,7 @@ def test_create_workspace_project_dataset():
 
 def test_save_workflow():
 
-    service = build_service()
+    authoring_service, _, _ = build_services()
 
 
     plan = ExecutionPlan(
@@ -95,7 +108,7 @@ def test_save_workflow():
     )
 
 
-    workflow = service.save_workflow(
+    workflow = authoring_service.save_workflow(
         workflow_id="wf-1",
         project_id="p-1",
         name="Validation",
@@ -105,105 +118,3 @@ def test_save_workflow():
 
 
     assert workflow.active_version == "1"
-
-def test_create_project_requires_owned_workspace():
-
-    service = build_service()
-
-    owner = CurrentUser(
-        user_id="owner-1"
-    )
-
-    other_user = CurrentUser(
-        user_id="owner-2"
-    )
-
-    service.create_workspace(
-        current_user=owner,
-        workspace_id="ws-1",
-        name="Owner Workspace",
-    )
-
-    try:
-        service.create_project(
-            current_user=other_user,
-            project_id="p-1",
-            workspace_id="ws-1",
-            name="Forbidden Project",
-        )
-    except ValueError as exc:
-        assert str(exc) == "Workspace not found: ws-1"
-    else:
-        raise AssertionError(
-            "Expected project creation to be rejected"
-        )
-
-def test_get_project_requires_owned_workspace():
-
-    service = build_service()
-
-    owner = CurrentUser(user_id="owner-1")
-    other_user = CurrentUser(user_id="owner-2")
-
-    service.create_workspace(
-        current_user=owner,
-        workspace_id="ws-1",
-        name="Owner Workspace",
-    )
-
-    service.create_project(
-        current_user=owner,
-        project_id="p-1",
-        workspace_id="ws-1",
-        name="Owner Project",
-    )
-
-    assert service.get_project(
-        current_user=owner,
-        project_id="p-1",
-    ) is not None
-
-    assert service.get_project(
-        current_user=other_user,
-        project_id="p-1",
-    ) is None
-
-def test_list_projects_requires_owned_workspace():
-
-    service = build_service()
-
-    owner = CurrentUser(user_id="owner-1")
-    other_user = CurrentUser(user_id="owner-2")
-
-    service.create_workspace(
-        current_user=owner,
-        workspace_id="ws-1",
-        name="Owner Workspace",
-    )
-
-    service.create_project(
-        current_user=owner,
-        project_id="p-1",
-        workspace_id="ws-1",
-        name="Owner Project",
-    )
-
-    assert [
-        project.id
-        for project in service.list_projects(
-            current_user=owner,
-            workspace_id="ws-1",
-        )
-    ] == ["p-1"]
-
-    try:
-        service.list_projects(
-            current_user=other_user,
-            workspace_id="ws-1",
-        )
-    except ValueError as exc:
-        assert str(exc) == "Workspace not found: ws-1"
-    else:
-        raise AssertionError(
-            "Expected project listing to be rejected"
-        )

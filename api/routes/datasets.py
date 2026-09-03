@@ -6,8 +6,8 @@ import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from api.dependencies import get_studio_service
-from services.studio_service import StudioService
+from api.dependencies import get_dataset_service
+from services.dataset_service import DatasetService
 from schemas.requests import DatasetCreateRequest
 from schemas.responses import DatasetResponse
 
@@ -44,9 +44,9 @@ def _dataset_response(dataset) -> DatasetResponse:
 )
 def create_dataset(
     payload: DatasetCreateRequest,
-    studio: StudioService = Depends(get_studio_service),
+    dataset_service: DatasetService = Depends(get_dataset_service),
 ) -> DatasetResponse:
-    dataset = studio.create_dataset(
+    dataset = dataset_service.create_dataset(
         dataset_id=payload.id,
         project_id=payload.project_id,
         name=payload.name,
@@ -65,12 +65,12 @@ async def upload_dataset(
     project_id: str,
     name: str = Form(...),
     file: UploadFile = File(...),
-    studio: StudioService = Depends(get_studio_service),
+    dataset_service: DatasetService = Depends(get_dataset_service),
 ) -> DatasetResponse:
     content = await file.read()
 
     try:
-        dataset = studio.ingest_dataset(
+        dataset = dataset_service.ingest_dataset(
             dataset_id=f"dataset-{uuid.uuid4().hex}",
             project_id=project_id,
             name=name,
@@ -93,9 +93,9 @@ async def upload_dataset(
 )
 def get_dataset(
     dataset_id: str,
-    studio: StudioService = Depends(get_studio_service),
+    dataset_service: DatasetService = Depends(get_dataset_service),
 ) -> DatasetResponse:
-    dataset = studio.get_dataset(dataset_id)
+    dataset = dataset_service.get_dataset(dataset_id)
 
     if dataset is None:
         raise HTTPException(
@@ -112,9 +112,9 @@ def get_dataset(
 )
 def list_datasets(
     project_id: str,
-    studio: StudioService = Depends(get_studio_service),
+    dataset_service: DatasetService = Depends(get_dataset_service),
 ) -> list[DatasetResponse]:
-    datasets = studio.list_datasets(project_id)
+    datasets = dataset_service.list_datasets(project_id)
 
     return [
         _dataset_response(dataset)
