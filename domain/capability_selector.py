@@ -7,7 +7,7 @@ from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agents.requirement import ValidationRequirement
+    from domain.requirement import ValidationRequirement
 
 
 CapabilityCatalog = (

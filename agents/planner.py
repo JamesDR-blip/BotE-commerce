@@ -9,7 +9,7 @@ from domain.intent_resolver import IntentResolver
 from domain.exceptions import CapabilityDependencyContractError
 from domain.type_contracts import TYPE_CONTRACTS
 
-from .requirement import ValidationRequirement
+from domain.requirement import ValidationRequirement
 
 
 class PlannerAgent:

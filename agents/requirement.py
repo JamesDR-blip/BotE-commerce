@@ -7,21 +7,13 @@ from agents.intent_classifier import IntentClassifier
 from agents.parameter_resolver import ParameterResolver
 from domain.intent_resolver import IntentResolver
 from domain.capabilities import CapabilitySpec
+from domain.requirement import (
+    ValidationRequirement,
+    WorkflowRequirement,
+)
 
 from collections.abc import Mapping
 
-
-@dataclass(frozen=True)
-class WorkflowRequirement:
-    """The validated user intent available to the orchestration graph."""
-
-    requested_category: str | None = None
-    requested_capabilities: tuple[str, ...] = ()
-    requested_intents: tuple[str, ...] = ()
-    input_mappings: dict[str, dict[str, str]] | None = None
-    parameters: dict[str, dict[str, object]] | None = None
-
-ValidationRequirement = WorkflowRequirement
 
 class RequirementAgent:
     """Convert transport input into typed workflow requirement."""

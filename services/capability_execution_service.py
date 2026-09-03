@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from agents.planner import PlannerAgent
-from agents.requirement import ValidationRequirement
+from domain.requirement import ValidationRequirement
 
 from services.capability_executor import CapabilityExecutor
 from services.execution_trace_collector import ExecutionTraceCollector

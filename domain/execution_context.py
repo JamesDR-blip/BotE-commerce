@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agents.requirement import ValidationRequirement
+from domain.requirement import ValidationRequirement
 from domain.plans import ExecutionPlan
 
 

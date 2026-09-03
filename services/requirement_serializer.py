@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agents.requirement import WorkflowRequirement
+from domain.requirement import WorkflowRequirement
 
 
 class RequirementSerializer:
