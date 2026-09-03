@@ -2,7 +2,8 @@ import json
 from fastapi.testclient import TestClient
 from api.main import create_app
 from configs.settings import Settings
-
+from api.dependencies import get_current_user
+from domain.identity import CurrentUser
 
 class FailingWorkflowEngine:
     def execute(
@@ -75,10 +76,16 @@ class SuccessfulCapabilityExecution:
 
 
 def _client() -> TestClient:
+    app = create_app(
+        Settings(database_url="sqlite://")
+    )
+
+    app.dependency_overrides[get_current_user] = (
+        lambda: CurrentUser(user_id="test-user")
+    )
+
     return TestClient(
-        create_app(
-            Settings(database_url="sqlite://")
-        ),
+        app,
         raise_server_exceptions=False,
     )
 

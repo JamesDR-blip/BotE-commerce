@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.dependencies import get_studio_service
+from api.dependencies import (
+    get_current_user,
+    get_studio_service,
+)
+from domain.identity import CurrentUser
 from schemas.requests import (
     ProjectCreateRequest,
     WorkspaceCreateRequest,
@@ -23,6 +27,7 @@ router = APIRouter()
 )
 def create_workspace(
     payload: WorkspaceCreateRequest,
+    current_user: CurrentUser = Depends(get_current_user),
     studio: StudioService = Depends(get_studio_service),
 ) -> WorkspaceResponse:
     workspace = studio.create_workspace(
@@ -43,6 +48,7 @@ def create_workspace(
 )
 def get_workspace(
     workspace_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
     studio: StudioService = Depends(get_studio_service),
 ) -> WorkspaceResponse:
     workspace = studio.get_workspace(workspace_id)
@@ -65,6 +71,7 @@ def get_workspace(
 )
 def create_project(
     payload: ProjectCreateRequest,
+    current_user: CurrentUser = Depends(get_current_user),
     studio: StudioService = Depends(get_studio_service),
 ) -> ProjectResponse:
     project = studio.create_project(
@@ -89,6 +96,7 @@ def create_project(
 )
 def get_project(
     project_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
     studio: StudioService = Depends(get_studio_service),
 ) -> ProjectResponse:
     project = studio.get_project(project_id)
@@ -114,6 +122,7 @@ def get_project(
 )
 def list_projects(
     workspace_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
     studio: StudioService = Depends(get_studio_service),
 ) -> list[ProjectResponse]:
     projects = studio.list_projects(workspace_id)

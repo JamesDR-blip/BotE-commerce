@@ -49,6 +49,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(workflows_router)
     app.add_exception_handler(Exception, _internal_server_error)
     app.state.container = container
+    app.state.authentication = container.authentication
     app.state.quality_service = quality_service
     app.state.data_operations = container.data_operations
     app.state.mapping_service = container.mapping

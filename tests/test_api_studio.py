@@ -2,16 +2,22 @@ from fastapi.testclient import TestClient
 
 from api.main import create_app
 from configs.settings import Settings
+from domain.identity import CurrentUser
+from api.dependencies import get_current_user
 
 
 def build_client():
-    return TestClient(
-        create_app(
-            Settings(
-                database_url="sqlite://",
-            )
+    app = create_app(
+        Settings(
+            database_url="sqlite://",
         )
     )
+
+    app.dependency_overrides[get_current_user] = (
+        lambda: CurrentUser(user_id="test-user")
+    )
+
+    return TestClient(app)
 
 
 def test_create_workspace():
@@ -558,3 +564,22 @@ def test_activate_workflow_version():
 
     assert data["id"] == "wf-1"
     assert data["active_version"] == "2.0"
+
+def test_create_workspace_requires_authentication():
+    client = TestClient(
+        create_app(
+            Settings(
+                database_url="sqlite://",
+            )
+        )
+    )
+
+    response = client.post(
+        "/workspaces",
+        json={
+            "id": "ws-unauth",
+            "name": "Unauthenticated",
+        },
+    )
+
+    assert response.status_code == 401

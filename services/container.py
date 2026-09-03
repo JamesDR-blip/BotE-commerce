@@ -39,6 +39,8 @@ from agents.planner import PlannerAgent
 from agents.llm import LLMAssistantAgent
 from agents.intent_classifier import IntentClassifier
 
+from services.authentication import AuthenticationService
+from services.authorization import AuthorizationService
 from services.cache import TTLCache
 from services.upload_reader import TabularUploadReader
 from services.health_score_service import HealthScoreService
@@ -60,9 +62,14 @@ from services.workflow_history_service import (
     WorkflowHistoryService,
 )
 from services.workflow_runtime_service import WorkflowRuntimeService
+
+
 class Container:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self.authentication = AuthenticationService()
+        self.authorization = AuthorizationService()
+
         sessions = make_session_factory(settings.database_url)
         self.registry = ValidatorRegistry()
         self.rules = RuleRepository(settings.rules_path)

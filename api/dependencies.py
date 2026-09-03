@@ -1,6 +1,10 @@
 """FastAPI dependency providers backed by the application composition root."""
-from fastapi import Request
+from domain.identity import CurrentUser
 
+from fastapi import Depends, Header, HTTPException, Request
+
+from services.authentication import AuthenticationService
+from services.authorization import AuthorizationService
 from services.data_operations import DataOperationsService
 from repositories.executions import ExecutionRepository
 from services.mapping_service import MappingService
@@ -62,3 +66,36 @@ def get_categories(
     request: Request,
 ) -> list[str]:
     return request.app.state.categories
+
+def get_authentication_service(
+    request: Request,
+) -> AuthenticationService:
+    return request.app.state.authentication
+
+
+def get_current_user(
+    authorization: str | None = Header(default=None),
+    authentication: AuthenticationService = Depends(
+        get_authentication_service
+    ),
+) -> CurrentUser:
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required",
+        )
+
+    scheme, _, token = authorization.partition(" ")
+
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authentication credentials",
+        )
+
+    return authentication.authenticate(token)
+
+def get_authorization_service(
+    request: Request,
+) -> AuthorizationService:
+    return request.app.state.authorization
