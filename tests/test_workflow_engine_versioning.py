@@ -3,6 +3,7 @@ import pandas as pd
 from configs.settings import Settings
 from domain.plans import ExecutionPlan, PlanStep
 from services.container import build_container
+from domain.identity import CurrentUser
 
 
 def test_workflow_engine_executes_active_version():
@@ -13,13 +14,18 @@ def test_workflow_engine_executes_active_version():
     )
 
     studio = container.studio
+    current_user = CurrentUser(
+        user_id="test-user"
+    )
 
     studio.create_workspace(
+        current_user=current_user,
         workspace_id="ws-engine-version",
         name="Engine Version Workspace",
     )
 
     studio.create_project(
+        current_user=current_user,
         project_id="project-engine-version",
         workspace_id="ws-engine-version",
         name="Engine Version Project",

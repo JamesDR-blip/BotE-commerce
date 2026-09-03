@@ -1,4 +1,5 @@
 from domain.plans import ExecutionPlan, PlanStep
+from domain.identity import CurrentUser
 from configs.settings import Settings
 from services.container import build_container
 import pandas as pd
@@ -12,13 +13,18 @@ def test_studio_workflow_executes_real_capability():
     )
 
     studio = container.studio
+    current_user = CurrentUser(
+        user_id="test-user"
+    )
 
     studio.create_workspace(
+        current_user=current_user,
         workspace_id="ws-1",
         name="Demo",
     )
 
     studio.create_project(
+        current_user=current_user,
         project_id="p-1",
         workspace_id="ws-1",
         name="Catalog",
@@ -78,12 +84,18 @@ def test_studio_workflow_executes_real_capability_chain():
 
     studio = container.studio
 
+    current_user = CurrentUser(
+        user_id="test-user"
+    )
+
     studio.create_workspace(
+        current_user=current_user,
         workspace_id="ws-chain",
         name="Demo Chain",
     )
 
     studio.create_project(
+        current_user=current_user,
         project_id="p-chain",
         workspace_id="ws-chain",
         name="Catalog Chain",

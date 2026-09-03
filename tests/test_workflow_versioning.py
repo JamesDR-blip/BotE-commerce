@@ -1,5 +1,6 @@
 from configs.settings import Settings
 from services.container import build_container
+from domain.identity import CurrentUser
 
 
 def test_workflow_version_lifecycle():
@@ -10,13 +11,18 @@ def test_workflow_version_lifecycle():
     )
 
     studio = container.studio
+    current_user = CurrentUser(
+        user_id="test-user"
+    )
 
     studio.create_workspace(
+        current_user=current_user,
         workspace_id="ws-version",
         name="Version Workspace",
     )
 
     studio.create_project(
+        current_user=current_user,
         project_id="project-version",
         workspace_id="ws-version",
         name="Version Project",

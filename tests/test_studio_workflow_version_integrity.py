@@ -11,6 +11,7 @@ from repositories.workflows import WorkflowRepository
 from services.studio_service import StudioService
 
 from domain.plans import ExecutionPlan
+from domain.identity import CurrentUser
 
 
 def build_service():
@@ -33,13 +34,18 @@ def build_service():
 
 def test_workflow_versions_are_immutable_snapshots():
     service = build_service()
+    current_user = CurrentUser(
+        user_id="test-user"
+    )
 
     service.create_workspace(
+        current_user=current_user,
         workspace_id="ws-1",
         name="Demo",
     )
 
     service.create_project(
+        current_user=current_user,
         project_id="p-1",
         workspace_id="ws-1",
         name="Catalog",

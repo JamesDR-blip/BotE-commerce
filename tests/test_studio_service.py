@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from domain.identity import CurrentUser
 from database.models import Base
 
 from repositories.workspaces import WorkspaceRepository
@@ -48,14 +49,19 @@ def test_create_workspace_project_dataset():
 
     service = build_service()
 
+    current_user = CurrentUser(
+            user_id="test-user"
+        )
 
     service.create_workspace(
+        current_user=current_user,
         workspace_id="ws-1",
         name="Demo",
     )
 
 
     project = service.create_project(
+        current_user=current_user,
         project_id="p-1",
         workspace_id="ws-1",
         name="Catalog",
@@ -99,3 +105,105 @@ def test_save_workflow():
 
 
     assert workflow.active_version == "1"
+
+def test_create_project_requires_owned_workspace():
+
+    service = build_service()
+
+    owner = CurrentUser(
+        user_id="owner-1"
+    )
+
+    other_user = CurrentUser(
+        user_id="owner-2"
+    )
+
+    service.create_workspace(
+        current_user=owner,
+        workspace_id="ws-1",
+        name="Owner Workspace",
+    )
+
+    try:
+        service.create_project(
+            current_user=other_user,
+            project_id="p-1",
+            workspace_id="ws-1",
+            name="Forbidden Project",
+        )
+    except ValueError as exc:
+        assert str(exc) == "Workspace not found: ws-1"
+    else:
+        raise AssertionError(
+            "Expected project creation to be rejected"
+        )
+
+def test_get_project_requires_owned_workspace():
+
+    service = build_service()
+
+    owner = CurrentUser(user_id="owner-1")
+    other_user = CurrentUser(user_id="owner-2")
+
+    service.create_workspace(
+        current_user=owner,
+        workspace_id="ws-1",
+        name="Owner Workspace",
+    )
+
+    service.create_project(
+        current_user=owner,
+        project_id="p-1",
+        workspace_id="ws-1",
+        name="Owner Project",
+    )
+
+    assert service.get_project(
+        current_user=owner,
+        project_id="p-1",
+    ) is not None
+
+    assert service.get_project(
+        current_user=other_user,
+        project_id="p-1",
+    ) is None
+
+def test_list_projects_requires_owned_workspace():
+
+    service = build_service()
+
+    owner = CurrentUser(user_id="owner-1")
+    other_user = CurrentUser(user_id="owner-2")
+
+    service.create_workspace(
+        current_user=owner,
+        workspace_id="ws-1",
+        name="Owner Workspace",
+    )
+
+    service.create_project(
+        current_user=owner,
+        project_id="p-1",
+        workspace_id="ws-1",
+        name="Owner Project",
+    )
+
+    assert [
+        project.id
+        for project in service.list_projects(
+            current_user=owner,
+            workspace_id="ws-1",
+        )
+    ] == ["p-1"]
+
+    try:
+        service.list_projects(
+            current_user=other_user,
+            workspace_id="ws-1",
+        )
+    except ValueError as exc:
+        assert str(exc) == "Workspace not found: ws-1"
+    else:
+        raise AssertionError(
+            "Expected project listing to be rejected"
+        )

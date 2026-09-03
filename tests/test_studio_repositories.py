@@ -32,6 +32,7 @@ def test_workspace_repository():
 
     item = repo.create(
         workspace_id="ws-1",
+        owner_id="user-1",
         name="Demo",
     )
 
@@ -51,6 +52,7 @@ def test_project_repository():
 
     workspace_repo.create(
         workspace_id="ws-1",
+        owner_id="user-1",
         name="Demo",
     )
 
@@ -117,3 +119,36 @@ def test_workflow_repository():
     assert version.workflow_id == "wf-1"
     assert version.version == "1.0"
     assert version.plan_json == "{}"
+
+def test_workspace_repository_scopes_by_owner():
+
+    repo = WorkspaceRepository(
+        create_session()
+    )
+
+    repo.create(
+        workspace_id="ws-1",
+        owner_id="user-1",
+        name="User 1 Workspace",
+    )
+
+    repo.create(
+        workspace_id="ws-2",
+        owner_id="user-2",
+        name="User 2 Workspace",
+    )
+
+    assert repo.get_for_owner(
+        workspace_id="ws-1",
+        owner_id="user-1",
+    ) is not None
+
+    assert repo.get_for_owner(
+        workspace_id="ws-1",
+        owner_id="user-2",
+    ) is None
+
+    assert [
+        item.id
+        for item in repo.list_for_owner("user-1")
+    ] == ["ws-1"]

@@ -583,3 +583,87 @@ def test_create_workspace_requires_authentication():
     )
 
     assert response.status_code == 401
+
+def test_get_project_forbidden_for_other_user():
+    app = create_app(
+        Settings(
+            database_url="sqlite://",
+        )
+    )
+
+    current_user = CurrentUser(user_id="owner-1")
+
+    app.dependency_overrides[get_current_user] = (
+        lambda: current_user
+    )
+
+    client = TestClient(app)
+
+    client.post(
+        "/workspaces",
+        json={
+            "id": "ws-1",
+            "name": "Owner Workspace",
+        },
+    )
+
+    client.post(
+        "/projects",
+        json={
+            "id": "p-1",
+            "workspace_id": "ws-1",
+            "name": "Owner Project",
+        },
+    )
+
+    current_user = CurrentUser(user_id="other-user")
+
+    response = client.get("/projects/p-1")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Project not found: p-1"
+    )
+
+def test_list_projects_forbidden_for_other_user():
+    app = create_app(
+        Settings(
+            database_url="sqlite://",
+        )
+    )
+
+    current_user = CurrentUser(user_id="owner-1")
+
+    app.dependency_overrides[get_current_user] = (
+        lambda: current_user
+    )
+
+    client = TestClient(app)
+
+    client.post(
+        "/workspaces",
+        json={
+            "id": "ws-1",
+            "name": "Owner Workspace",
+        },
+    )
+
+    client.post(
+        "/projects",
+        json={
+            "id": "p-1",
+            "workspace_id": "ws-1",
+            "name": "Owner Project",
+        },
+    )
+
+    current_user = CurrentUser(user_id="other-user")
+
+    response = client.get(
+        "/workspaces/ws-1/projects"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Workspace not found: ws-1"
+    )

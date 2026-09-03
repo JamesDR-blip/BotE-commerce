@@ -31,6 +31,7 @@ def create_workspace(
     studio: StudioService = Depends(get_studio_service),
 ) -> WorkspaceResponse:
     workspace = studio.create_workspace(
+        current_user=current_user,
         workspace_id=payload.id,
         name=payload.name,
     )
@@ -51,7 +52,10 @@ def get_workspace(
     current_user: CurrentUser = Depends(get_current_user),
     studio: StudioService = Depends(get_studio_service),
 ) -> WorkspaceResponse:
-    workspace = studio.get_workspace(workspace_id)
+    workspace = studio.get_workspace(
+        current_user=current_user,
+        workspace_id=workspace_id,
+    )
 
     if workspace is None:
         raise HTTPException(
@@ -75,6 +79,7 @@ def create_project(
     studio: StudioService = Depends(get_studio_service),
 ) -> ProjectResponse:
     project = studio.create_project(
+        current_user=current_user,
         project_id=payload.id,
         workspace_id=payload.workspace_id,
         name=payload.name,
@@ -99,7 +104,10 @@ def get_project(
     current_user: CurrentUser = Depends(get_current_user),
     studio: StudioService = Depends(get_studio_service),
 ) -> ProjectResponse:
-    project = studio.get_project(project_id)
+    project = studio.get_project(
+        current_user=current_user,
+        project_id=project_id,
+    )
 
     if project is None:
         raise HTTPException(
@@ -125,7 +133,17 @@ def list_projects(
     current_user: CurrentUser = Depends(get_current_user),
     studio: StudioService = Depends(get_studio_service),
 ) -> list[ProjectResponse]:
-    projects = studio.list_projects(workspace_id)
+    
+    try:
+        projects = studio.list_projects(
+            current_user=current_user,
+            workspace_id=workspace_id,
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Workspace not found: {workspace_id}",
+        )
 
     return [
         ProjectResponse(

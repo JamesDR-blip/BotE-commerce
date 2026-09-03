@@ -31,18 +31,39 @@ class Base(DeclarativeBase):
 
 class UserRecord(Base):
     __tablename__ = "users"
+
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
-    executions: Mapped[list["ExecutionRecord"]] = relationship(back_populates="user")
+    display_name: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
 
+    executions: Mapped[list["ExecutionRecord"]] = relationship(
+        back_populates="user"
+    )
+
+    workspaces: Mapped[list["WorkspaceRecord"]] = relationship(
+        back_populates="owner",
+        cascade="all, delete-orphan",
+    )
 class WorkspaceRecord(Base):
     __tablename__ = "workspaces"
 
     id: Mapped[str] = mapped_column(
         String(36),
         primary_key=True,
+    )
+
+    owner_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
     )
 
     name: Mapped[str] = mapped_column(
@@ -54,6 +75,10 @@ class WorkspaceRecord(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         index=True,
+    )
+
+    owner: Mapped[UserRecord] = relationship(
+        back_populates="workspaces"
     )
 
     projects: Mapped[list["ProjectRecord"]] = relationship(
