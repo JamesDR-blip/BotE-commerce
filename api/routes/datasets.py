@@ -6,10 +6,14 @@ import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from api.dependencies import get_dataset_service
+from api.dependencies import (
+    get_dataset_service, 
+    get_current_user,
+)
 from services.dataset_service import DatasetService
 from schemas.requests import DatasetCreateRequest
 from schemas.responses import DatasetResponse
+from domain.identity import CurrentUser
 
 
 router = APIRouter()
@@ -45,8 +49,10 @@ def _dataset_response(dataset) -> DatasetResponse:
 def create_dataset(
     payload: DatasetCreateRequest,
     dataset_service: DatasetService = Depends(get_dataset_service),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> DatasetResponse:
     dataset = dataset_service.create_dataset(
+        current_user=current_user,
         dataset_id=payload.id,
         project_id=payload.project_id,
         name=payload.name,
@@ -94,8 +100,13 @@ async def upload_dataset(
 def get_dataset(
     dataset_id: str,
     dataset_service: DatasetService = Depends(get_dataset_service),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> DatasetResponse:
-    dataset = dataset_service.get_dataset(dataset_id)
+    
+    dataset = dataset_service.get_dataset(
+        current_user=current_user,
+        dataset_id=dataset_id,
+    )
 
     if dataset is None:
         raise HTTPException(
@@ -113,8 +124,12 @@ def get_dataset(
 def list_datasets(
     project_id: str,
     dataset_service: DatasetService = Depends(get_dataset_service),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> list[DatasetResponse]:
-    datasets = dataset_service.list_datasets(project_id)
+    datasets = dataset_service.list_datasets(
+        current_user=current_user,
+        project_id=project_id,
+    )
 
     return [
         _dataset_response(dataset)

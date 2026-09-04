@@ -44,6 +44,7 @@ def test_studio_workflow_executes_real_capability():
     )
 
     workflow = authoring_service.save_workflow(
+        current_user=current_user,
         workflow_id="wf-1",
         project_id="p-1",
         name="Normalize Catalog",
@@ -125,6 +126,7 @@ def test_studio_workflow_executes_real_capability_chain():
     )
 
     workflow = authoring_service.save_workflow(
+        current_user=current_user,
         workflow_id="wf-chain",
         project_id="p-chain",
         name="Clean and Validate Catalog",

@@ -7,7 +7,7 @@ from typing import Callable
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from database.models import ProjectRecord
+from database.models import ProjectRecord, WorkspaceRecord
 
 
 class ProjectRepository:
@@ -53,6 +53,27 @@ class ProjectRepository:
             return session.get(
                 ProjectRecord,
                 project_id,
+            )
+        
+    def get_for_owner(
+        self,
+        *,
+        project_id: str,
+        owner_id: str,
+    ) -> ProjectRecord | None:
+
+        with self._sessions() as session:
+            return session.scalar(
+                select(ProjectRecord)
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id
+                    == WorkspaceRecord.id,
+                )
+                .where(
+                    ProjectRecord.id == project_id,
+                    WorkspaceRecord.owner_id == owner_id,
+                )
             )
 
 

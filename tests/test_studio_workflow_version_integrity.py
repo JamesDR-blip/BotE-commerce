@@ -1,3 +1,5 @@
+import pytest
+
 from database.models import Base
 
 from domain.plans import ExecutionPlan
@@ -34,6 +36,7 @@ def build_services():
 
     authoring_service = WorkflowAuthoringService(
         workflows=workflows,
+        projects=projects,
     )
 
     return workspace_projects, authoring_service
@@ -67,6 +70,7 @@ def test_workflow_versions_are_immutable_snapshots():
     )
 
     authoring_service.save_workflow(
+        current_user=current_user,
         workflow_id="wf-1",
         project_id="p-1",
         name="Validation",
@@ -75,6 +79,7 @@ def test_workflow_versions_are_immutable_snapshots():
     )
 
     v1_before = authoring_service.get_workflow_version(
+        current_user=current_user,
         workflow_id="wf-1",
         version="1.0",
     )
@@ -92,22 +97,26 @@ def test_workflow_versions_are_immutable_snapshots():
     )
 
     authoring_service.create_workflow_version(
+        current_user=current_user,
         workflow_id="wf-1",
         version="2.0",
         plan=plan_v2,
     )
 
     authoring_service.activate_workflow_version(
-        "wf-1",
-        "2.0",
+        current_user=current_user,
+        workflow_id="wf-1",
+        version="2.0",
     )
 
     v1_after = authoring_service.get_workflow_version(
+        current_user=current_user,
         workflow_id="wf-1",
         version="1.0",
     )
 
     v2 = authoring_service.get_workflow_version(
+        current_user=current_user,
         workflow_id="wf-1",
         version="2.0",
     )
@@ -118,7 +127,167 @@ def test_workflow_versions_are_immutable_snapshots():
     assert v1_after.plan_json == original_v1_plan
     assert v2.plan_json != v1_after.plan_json
 
-    workflow = authoring_service.get_workflow("wf-1")
+    workflow = authoring_service.get_workflow(
+        current_user=CurrentUser(user_id="test-user"),
+        workflow_id="wf-1",
+    )
 
     assert workflow is not None
     assert workflow.active_version == "2.0"
+
+def test_other_user_cannot_create_workflow_version():
+    workspace_projects, authoring_service = build_services()
+
+    owner = CurrentUser(user_id="owner")
+    other_user = CurrentUser(user_id="other-user")
+
+    workspace_projects.create_workspace(
+        current_user=owner,
+        workspace_id="ws-owner",
+        name="Owner Workspace",
+    )
+
+    workspace_projects.create_project(
+        current_user=owner,
+        project_id="project-owner",
+        workspace_id="ws-owner",
+        name="Owner Project",
+    )
+
+    plan_v1 = ExecutionPlan(
+        steps=(),
+        version="1.0",
+        metadata={},
+    )
+
+    authoring_service.save_workflow(
+        current_user=owner,
+        workflow_id="wf-owner",
+        project_id="project-owner",
+        name="Owner Workflow",
+        version="1.0",
+        plan=plan_v1,
+    )
+
+    plan_v2 = ExecutionPlan(
+        steps=(),
+        version="2.0",
+        metadata={},
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Workflow not found",
+    ):
+        authoring_service.create_workflow_version(
+            current_user=other_user,
+            workflow_id="wf-owner",
+            version="2.0",
+            plan=plan_v2,
+        )
+
+def test_other_user_cannot_list_workflow_versions():
+    workspace_projects, authoring_service = build_services()
+
+    owner = CurrentUser(user_id="owner")
+    other_user = CurrentUser(user_id="other-user")
+
+    workspace_projects.create_workspace(
+        current_user=owner,
+        workspace_id="ws-owner",
+        name="Owner Workspace",
+    )
+
+    workspace_projects.create_project(
+        current_user=owner,
+        project_id="project-owner",
+        workspace_id="ws-owner",
+        name="Owner Project",
+    )
+
+    plan = ExecutionPlan(
+        steps=(),
+        version="1.0",
+        metadata={},
+    )
+
+    authoring_service.save_workflow(
+        current_user=owner,
+        workflow_id="wf-owner",
+        project_id="project-owner",
+        name="Owner Workflow",
+        version="1.0",
+        plan=plan,
+    )
+
+    versions = authoring_service.list_workflow_versions(
+        current_user=other_user,
+        workflow_id="wf-owner",
+    )
+
+    assert versions == []
+
+def test_other_user_cannot_activate_workflow_version():
+    workspace_projects, authoring_service = build_services()
+
+    owner = CurrentUser(user_id="owner")
+    other_user = CurrentUser(user_id="other-user")
+
+    workspace_projects.create_workspace(
+        current_user=owner,
+        workspace_id="ws-owner",
+        name="Owner Workspace",
+    )
+
+    workspace_projects.create_project(
+        current_user=owner,
+        project_id="project-owner",
+        workspace_id="ws-owner",
+        name="Owner Project",
+    )
+
+    plan_v1 = ExecutionPlan(
+        steps=(),
+        version="1.0",
+        metadata={},
+    )
+
+    authoring_service.save_workflow(
+        current_user=owner,
+        workflow_id="wf-owner",
+        project_id="project-owner",
+        name="Owner Workflow",
+        version="1.0",
+        plan=plan_v1,
+    )
+
+    plan_v2 = ExecutionPlan(
+        steps=(),
+        version="2.0",
+        metadata={},
+    )
+
+    authoring_service.create_workflow_version(
+        current_user=owner,
+        workflow_id="wf-owner",
+        version="2.0",
+        plan=plan_v2,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Workflow not found",
+    ):
+        authoring_service.activate_workflow_version(
+            current_user=other_user,
+            workflow_id="wf-owner",
+            version="2.0",
+        )
+
+    workflow = authoring_service.get_workflow(
+        current_user=owner,
+        workflow_id="wf-owner",
+    )
+
+    assert workflow is not None
+    assert workflow.active_version == "1.0"

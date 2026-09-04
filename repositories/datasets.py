@@ -7,7 +7,7 @@ from typing import Any, Callable
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from database.models import DatasetRecord
+from database.models import DatasetRecord, ProjectRecord, WorkspaceRecord
 from domain.studio.dataset import Dataset
 
 
@@ -96,6 +96,37 @@ class DatasetRepository:
 
             return self._to_domain(record)
 
+    def get_for_owner(
+        self,
+        *,
+        dataset_id: str,
+        owner_id: str,
+    ) -> Dataset | None:
+
+        with self._sessions() as session:
+            record = session.scalar(
+                select(DatasetRecord)
+                .join(
+                    ProjectRecord,
+                    DatasetRecord.project_id
+                    == ProjectRecord.id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id
+                    == WorkspaceRecord.id,
+                )
+                .where(
+                    DatasetRecord.id == dataset_id,
+                    WorkspaceRecord.owner_id == owner_id,
+                )
+            )
+
+            if record is None:
+                return None
+
+            return self._to_domain(record)
+
 
     def list_by_project(
         self,
@@ -108,6 +139,39 @@ class DatasetRepository:
                     select(DatasetRecord)
                     .where(
                         DatasetRecord.project_id == project_id
+                    )
+                )
+            )
+
+            return [
+                self._to_domain(record)
+                for record in records
+            ]
+
+    def list_by_project_for_owner(
+        self,
+        *,
+        project_id: str,
+        owner_id: str,
+    ) -> list[Dataset]:
+
+        with self._sessions() as session:
+            records = list(
+                session.scalars(
+                    select(DatasetRecord)
+                    .join(
+                        ProjectRecord,
+                        DatasetRecord.project_id
+                        == ProjectRecord.id,
+                    )
+                    .join(
+                        WorkspaceRecord,
+                        ProjectRecord.workspace_id
+                        == WorkspaceRecord.id,
+                    )
+                    .where(
+                        DatasetRecord.project_id == project_id,
+                        WorkspaceRecord.owner_id == owner_id,
                     )
                 )
             )

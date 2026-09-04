@@ -203,6 +203,7 @@ class Container:
         )
         self.workflow_authoring = WorkflowAuthoringService(
             workflows=self.workflows,
+            projects=self.projects,
         )
         self.dataset_service = DatasetService(
             datasets=self.datasets,

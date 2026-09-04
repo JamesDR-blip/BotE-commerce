@@ -66,6 +66,7 @@ def test_studio_workflow_executes_through_runtime():
     )
 
     workflow = authoring_service.save_workflow(
+        current_user=current_user,
         workflow_id="wf-1",
         project_id="p-1",
         name="Validation",

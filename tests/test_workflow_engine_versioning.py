@@ -45,6 +45,7 @@ def test_workflow_engine_executes_active_version():
     )
 
     authoring_service.save_workflow(
+        current_user=current_user,
         workflow_id="wf-engine-version",
         project_id="project-engine-version",
         name="Versioned Normalize",
@@ -67,6 +68,7 @@ def test_workflow_engine_executes_active_version():
     )
 
     authoring_service.create_workflow_version(
+        current_user=current_user,
         workflow_id="wf-engine-version",
         version="2.0",
         plan=v2_plan,
@@ -92,8 +94,9 @@ def test_workflow_engine_executes_active_version():
 
     # Activate v2.
     authoring_service.activate_workflow_version(
-        "wf-engine-version",
-        "2.0",
+        current_user=current_user,
+        workflow_id="wf-engine-version",
+        version="2.0",
     )
 
     runtime_v2 = container.workflow_engine.execute(

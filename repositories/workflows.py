@@ -9,8 +9,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database.models import (
+    ProjectRecord,
     WorkflowRecord,
     WorkflowVersionRecord,
+    WorkspaceRecord,
 )
 
 
@@ -96,6 +98,42 @@ class WorkflowRepository:
                     select(WorkflowVersionRecord)
                     .where(
                         WorkflowVersionRecord.workflow_id == workflow_id
+                    )
+                    .order_by(
+                        WorkflowVersionRecord.created_at
+                    )
+                )
+            )
+
+    def list_versions_for_owner(
+        self,
+        *,
+        workflow_id: str,
+        owner_id: str,
+    ) -> list[WorkflowVersionRecord]:
+
+        with self._sessions() as session:
+            return list(
+                session.scalars(
+                    select(WorkflowVersionRecord)
+                    .join(
+                        WorkflowRecord,
+                        WorkflowVersionRecord.workflow_id
+                        == WorkflowRecord.id,
+                    )
+                    .join(
+                        ProjectRecord,
+                        WorkflowRecord.project_id
+                        == ProjectRecord.id,
+                    )
+                    .join(
+                        WorkspaceRecord,
+                        ProjectRecord.workspace_id
+                        == WorkspaceRecord.id,
+                    )
+                    .where(
+                        WorkflowVersionRecord.workflow_id == workflow_id,
+                        WorkspaceRecord.owner_id == owner_id,
                     )
                     .order_by(
                         WorkflowVersionRecord.created_at
@@ -213,6 +251,92 @@ class WorkflowRepository:
                     .where(
                         WorkflowRecord.project_id
                         == project_id
+                    )
+                )
+            )
+
+    def get_for_owner(
+        self,
+        *,
+        workflow_id: str,
+        owner_id: str,
+    ) -> WorkflowRecord | None:
+
+        with self._sessions() as session:
+            return session.scalar(
+                select(WorkflowRecord)
+                .join(
+                    ProjectRecord,
+                    WorkflowRecord.project_id
+                    == ProjectRecord.id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id
+                    == WorkspaceRecord.id,
+                )
+                .where(
+                    WorkflowRecord.id == workflow_id,
+                    WorkspaceRecord.owner_id == owner_id,
+                )
+            )
+
+    def get_version_for_owner(
+        self,
+        *,
+        workflow_id: str,
+        version: str,
+        owner_id: str,
+    ):
+        with self._sessions() as session:
+            return session.scalar(
+                select(WorkflowVersionRecord)
+                .join(
+                    WorkflowRecord,
+                    WorkflowVersionRecord.workflow_id
+                    == WorkflowRecord.id,
+                )
+                .join(
+                    ProjectRecord,
+                    WorkflowRecord.project_id
+                    == ProjectRecord.id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id
+                    == WorkspaceRecord.id,
+                )
+                .where(
+                    WorkflowVersionRecord.workflow_id == workflow_id,
+                    WorkflowVersionRecord.version == version,
+                    WorkspaceRecord.owner_id == owner_id,
+                )
+            )
+
+    def list_by_project_for_owner(
+        self,
+        *,
+        project_id: str,
+        owner_id: str,
+    ) -> list[WorkflowRecord]:
+
+        with self._sessions() as session:
+            return list(
+                session.scalars(
+                    select(WorkflowRecord)
+                    .join(
+                        ProjectRecord,
+                        WorkflowRecord.project_id
+                        == ProjectRecord.id,
+                    )
+                    .join(
+                        WorkspaceRecord,
+                        ProjectRecord.workspace_id
+                        == WorkspaceRecord.id,
+                    )
+                    .where(
+                        WorkflowRecord.project_id == project_id,
+                        WorkspaceRecord.owner_id == owner_id,
                     )
                 )
             )

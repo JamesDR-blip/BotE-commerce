@@ -667,3 +667,230 @@ def test_list_projects_forbidden_for_other_user():
     assert response.json()["detail"] == (
         "Workspace not found: ws-1"
     )
+
+def test_user_cannot_get_other_users_dataset():
+    owner_client = build_client()
+
+    owner_client.post(
+        "/workspaces",
+        json={
+            "id": "ws-owner",
+            "name": "Owner Workspace",
+        },
+    )
+
+    owner_client.post(
+        "/projects",
+        json={
+            "id": "p-owner",
+            "workspace_id": "ws-owner",
+            "name": "Owner Project",
+        },
+    )
+
+    owner_client.post(
+        "/datasets",
+        json={
+            "id": "d-owner",
+            "project_id": "p-owner",
+            "name": "owner.csv",
+            "source_type": "upload",
+            "metadata": {},
+        },
+    )
+
+    other_client = build_client()
+    other_client.app.dependency_overrides[get_current_user] = (
+        lambda: CurrentUser(user_id="other-user")
+    )
+
+    response = other_client.get(
+        "/datasets/d-owner"
+    )
+
+    assert response.status_code == 404
+
+def test_user_cannot_create_workflow_for_other_users_project():
+    owner_client = build_client()
+
+    owner_client.post(
+        "/workspaces",
+        json={
+            "id": "ws-owner",
+            "name": "Owner Workspace",
+        },
+    )
+
+    owner_client.post(
+        "/projects",
+        json={
+            "id": "p-owner",
+            "workspace_id": "ws-owner",
+            "name": "Owner Project",
+        },
+    )
+
+    other_client = build_client()
+    other_client.app.dependency_overrides[get_current_user] = (
+        lambda: CurrentUser(user_id="other-user")
+    )
+
+    response = other_client.post(
+        "/workflows",
+        json={
+            "id": "wf-forbidden",
+            "project_id": "p-owner",
+            "name": "Forbidden Workflow",
+            "version": "1",
+            "plan": {
+                "steps": [],
+                "version": "1.0",
+                "metadata": {},
+            },
+        },
+    )
+
+    assert response.status_code == 404
+
+def test_user_cannot_list_other_users_datasets():
+    owner_client = build_client()
+
+    owner_client.post(
+        "/workspaces",
+        json={
+            "id": "ws-owner",
+            "name": "Owner Workspace",
+        },
+    )
+
+    owner_client.post(
+        "/projects",
+        json={
+            "id": "p-owner",
+            "workspace_id": "ws-owner",
+            "name": "Owner Project",
+        },
+    )
+
+    owner_client.post(
+        "/datasets",
+        json={
+            "id": "d-owner",
+            "project_id": "p-owner",
+            "name": "owner.csv",
+            "source_type": "upload",
+            "metadata": {},
+        },
+    )
+
+    other_client = build_client()
+    other_client.app.dependency_overrides[get_current_user] = (
+        lambda: CurrentUser(user_id="other-user")
+    )
+
+    response = other_client.get(
+        "/projects/p-owner/datasets"
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+def test_user_cannot_get_other_users_workflow():
+    owner_client = build_client()
+
+    owner_client.post(
+        "/workspaces",
+        json={
+            "id": "ws-owner",
+            "name": "Owner Workspace",
+        },
+    )
+
+    owner_client.post(
+        "/projects",
+        json={
+            "id": "p-owner",
+            "workspace_id": "ws-owner",
+            "name": "Owner Project",
+        },
+    )
+
+    owner_client.post(
+        "/workflows",
+        json={
+            "id": "wf-owner",
+            "project_id": "p-owner",
+            "name": "Owner Workflow",
+            "version": "1",
+            "plan": {
+                "steps": [],
+                "version": "1.0",
+                "metadata": {},
+            },
+        },
+    )
+
+    other_client = build_client()
+    other_client.app.dependency_overrides[get_current_user] = (
+        lambda: CurrentUser(user_id="other-user")
+    )
+
+    response = other_client.get(
+        "/workflows/wf-owner"
+    )
+
+    assert response.status_code == 404
+
+def test_user_cannot_list_other_users_workflows():
+    owner_client = build_client()
+
+    owner_client.post(
+        "/workspaces",
+        json={
+            "id": "ws-owner",
+            "name": "Owner Workspace",
+        },
+    )
+
+    owner_client.post(
+        "/projects",
+        json={
+            "id": "p-owner",
+            "workspace_id": "ws-owner",
+            "name": "Owner Project",
+        },
+    )
+
+    owner_client.post(
+        "/workflows",
+        json={
+            "id": "wf-owner",
+            "project_id": "p-owner",
+            "name": "Owner Workflow",
+            "version": "1",
+            "plan": {
+                "steps": [],
+                "version": "1.0",
+                "metadata": {},
+            },
+        },
+    )
+
+    response = owner_client.get(
+        "/projects/p-owner/workflows"
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+    other_client = build_client()
+    other_client.app.dependency_overrides[get_current_user] = (
+        lambda: CurrentUser(user_id="other-user")
+    )
+
+    response = other_client.get(
+        "/projects/p-owner/workflows"
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []

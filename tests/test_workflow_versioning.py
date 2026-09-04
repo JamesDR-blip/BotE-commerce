@@ -41,6 +41,7 @@ def test_workflow_version_lifecycle():
     )
 
     workflow = authoring_service.save_workflow(
+        current_user=current_user,
         workflow_id="wf-version",
         project_id="project-version",
         name="Versioned Workflow",
@@ -59,6 +60,7 @@ def test_workflow_version_lifecycle():
     )
 
     version = authoring_service.create_workflow_version(
+        current_user=current_user,
         workflow_id="wf-version",
         version="2.0",
         plan=v2_plan,
@@ -69,13 +71,15 @@ def test_workflow_version_lifecycle():
     # Creating a new version must NOT automatically
     # change the active version.
     workflow = authoring_service.get_workflow(
-        "wf-version"
+        current_user=current_user,
+        workflow_id="wf-version",
     )
 
     assert workflow.active_version == "1.0"
 
     versions = authoring_service.list_workflow_versions(
-        "wf-version"
+        current_user=current_user,
+        workflow_id="wf-version",
     )
 
     assert [v.version for v in versions] == [
@@ -84,12 +88,14 @@ def test_workflow_version_lifecycle():
     ]
 
     authoring_service.activate_workflow_version(
-        "wf-version",
-        "2.0",
+        current_user=current_user,
+        workflow_id="wf-version",
+        version="2.0",
     )
 
     workflow = authoring_service.get_workflow(
-        "wf-version"
+        current_user=current_user,
+        workflow_id="wf-version",
     )
 
     assert workflow.active_version == "2.0"

@@ -4,10 +4,13 @@ from __future__ import annotations
 import json
 
 from api.dependencies import (
+    get_current_user,
     get_workflow_history,
     get_workflow_runtime,
     get_workflow_authoring_service,
 )
+
+from domain.identity import CurrentUser
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -48,19 +51,27 @@ def _execution_plan_from_payload(payload: dict):
 )
 def create_workflow(
     payload: WorkflowCreateRequest,
+    current_user: CurrentUser = Depends(get_current_user),
     authoring_service: WorkflowAuthoringService = Depends(
         get_workflow_authoring_service
     ),
 ) -> WorkflowResponse:
     plan = _execution_plan_from_payload(payload.plan)
 
-    workflow = authoring_service.save_workflow(
-        workflow_id=payload.id,
-        project_id=payload.project_id,
-        name=payload.name,
-        version=payload.version,
-        plan=plan,
-    )
+    try:
+        workflow = authoring_service.save_workflow(
+            current_user=current_user,
+            workflow_id=payload.id,
+            project_id=payload.project_id,
+            name=payload.name,
+            version=payload.version,
+            plan=plan,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
 
     return WorkflowResponse(
         id=workflow.id,
@@ -78,11 +89,15 @@ def create_workflow(
 )
 def get_workflow(
     workflow_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
     authoring_service: WorkflowAuthoringService = Depends(
         get_workflow_authoring_service
     ),
 ) -> WorkflowResponse:
-    workflow = authoring_service.get_workflow(workflow_id)
+    workflow = authoring_service.get_workflow(
+        current_user=current_user,
+        workflow_id=workflow_id,
+    )
 
     if workflow is None:
         raise HTTPException(
@@ -106,11 +121,15 @@ def get_workflow(
 )
 def list_workflows(
     project_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
     authoring_service: WorkflowAuthoringService = Depends(
         get_workflow_authoring_service
     ),
 ) -> list[WorkflowResponse]:
-    workflows = authoring_service.list_workflows(project_id)
+    workflows = authoring_service.list_workflows(
+        current_user=current_user,
+        project_id=project_id,
+    )
 
     return [
         WorkflowResponse(
@@ -132,6 +151,7 @@ def list_workflows(
 def create_workflow_version(
     workflow_id: str,
     payload: WorkflowVersionCreateRequest,
+    current_user: CurrentUser = Depends(get_current_user),
     authoring_service: WorkflowAuthoringService = Depends(
         get_workflow_authoring_service
     ),
@@ -140,6 +160,7 @@ def create_workflow_version(
 
     try:
         version = authoring_service.create_workflow_version(
+            current_user=current_user,
             workflow_id=workflow_id,
             version=payload.version,
             plan=plan,
@@ -165,11 +186,15 @@ def create_workflow_version(
 )
 def list_workflow_versions(
     workflow_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
     authoring_service: WorkflowAuthoringService = Depends(
         get_workflow_authoring_service
     ),
 ) -> list[WorkflowVersionResponse]:
-    versions = authoring_service.get_workflow_version(workflow_id)
+    versions = authoring_service.list_workflow_versions(
+        current_user=current_user,
+        workflow_id=workflow_id,
+    )
 
     return [
         WorkflowVersionResponse(
@@ -190,11 +215,13 @@ def list_workflow_versions(
 def get_workflow_version(
     workflow_id: str,
     version: str,
+    current_user: CurrentUser = Depends(get_current_user),
     authoring_service: WorkflowAuthoringService = Depends(
         get_workflow_authoring_service
     ),
 ) -> WorkflowVersionResponse:
     record = authoring_service.get_workflow_version(
+        current_user=current_user,
         workflow_id=workflow_id,
         version=version,
     )
@@ -221,14 +248,16 @@ def get_workflow_version(
 def activate_workflow_version(
     workflow_id: str,
     version: str,
+    current_user: CurrentUser = Depends(get_current_user),
     authoring_service: WorkflowAuthoringService = Depends(
         get_workflow_authoring_service
     ),
 ) -> WorkflowResponse:
     try:
         workflow = authoring_service.activate_workflow_version(
-            workflow_id,
-            version,
+            current_user=current_user,
+            workflow_id=workflow_id,
+            version=version,
         )
     except ValueError as exc:
         raise HTTPException(

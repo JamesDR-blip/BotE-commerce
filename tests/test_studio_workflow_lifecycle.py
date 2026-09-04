@@ -35,6 +35,7 @@ def build_services():
 
     authoring_service = WorkflowAuthoringService(
         workflows=workflows,
+        projects=projects,
     )
 
     return workspace_projects, authoring_service
@@ -65,6 +66,7 @@ def test_studio_workflow_lifecycle():
     )
 
     workflow = authoring_service.save_workflow(
+        current_user=current_user,
         workflow_id="wf-1",
         project_id="p-1",
         name="Validation",
@@ -74,13 +76,19 @@ def test_studio_workflow_lifecycle():
 
     assert workflow.id == "wf-1"
 
-    loaded = authoring_service.get_workflow("wf-1")
+    loaded = authoring_service.get_workflow(
+        current_user=CurrentUser(user_id="test-user"),
+        workflow_id="wf-1",
+    )
 
     assert loaded is not None
     assert loaded.name == "Validation"
     assert loaded.active_version == "1.0"
 
-    workflows = authoring_service.list_workflows("p-1")
+    workflows = authoring_service.list_workflows(
+        current_user=current_user,
+        project_id="p-1",
+    )
 
     assert len(workflows) == 1
     assert workflows[0].id == "wf-1"
@@ -94,6 +102,7 @@ def test_studio_workflow_lifecycle():
     )
 
     version = authoring_service.create_workflow_version(
+        current_user=current_user,
         workflow_id="wf-1",
         version="2.0",
         plan=plan_v2,
@@ -101,11 +110,15 @@ def test_studio_workflow_lifecycle():
 
     assert version.version == "2.0"
 
-    versions = authoring_service.list_workflow_versions("wf-1")
+    versions = authoring_service.list_workflow_versions(
+        current_user=current_user,
+        workflow_id="wf-1",
+    )
 
     assert len(versions) == 2
 
     loaded_v2 = authoring_service.get_workflow_version(
+        current_user=current_user,
         workflow_id="wf-1",
         version="2.0",
     )
@@ -114,8 +127,9 @@ def test_studio_workflow_lifecycle():
     assert loaded_v2.version == "2.0"
 
     activated = authoring_service.activate_workflow_version(
-        "wf-1",
-        "2.0",
+        current_user=current_user,
+        workflow_id="wf-1",
+        version="2.0",
     )
 
     assert activated.active_version == "2.0"

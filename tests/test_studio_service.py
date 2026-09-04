@@ -1,3 +1,5 @@
+import pytest
+
 from database.models import Base
 
 from domain.identity import CurrentUser
@@ -43,6 +45,7 @@ def build_services():
 
     workflow_authoring = WorkflowAuthoringService(
         workflows=workflows,
+        projects=projects,
     )
 
     workspace_projects = WorkspaceProjectService(
@@ -83,6 +86,7 @@ def test_create_workspace_project_dataset():
     )
 
     dataset = dataset_service.create_dataset(
+        current_user=current_user,
         dataset_id="d-1",
         project_id=project.id,
         name="catalog.csv",
@@ -98,8 +102,22 @@ def test_create_workspace_project_dataset():
 
 def test_save_workflow():
 
-    authoring_service, _, _ = build_services()
+    authoring_service, workspace_projects, _ = build_services()
 
+    user = CurrentUser(user_id="test-user")
+
+    workspace_projects.create_workspace(
+        current_user=user,
+        workspace_id="ws-1",
+        name="Test Workspace",
+    )
+
+    workspace_projects.create_project(
+        current_user=user,
+        project_id="p-1",
+        workspace_id="ws-1",
+        name="Test Project",
+    )
 
     plan = ExecutionPlan(
         steps=(),
@@ -109,6 +127,7 @@ def test_save_workflow():
 
 
     workflow = authoring_service.save_workflow(
+        current_user=user,
         workflow_id="wf-1",
         project_id="p-1",
         name="Validation",
@@ -118,3 +137,70 @@ def test_save_workflow():
 
 
     assert workflow.active_version == "1"
+
+def test_dataset_cannot_be_created_for_other_users_project():
+    service, workspace_projects, dataset_service = build_services()
+
+    owner = CurrentUser(user_id="owner")
+    other_user = CurrentUser(user_id="other")
+
+    workspace_projects.create_workspace(
+        current_user=owner,
+        workspace_id="ws-owner",
+        name="Owner Workspace",
+    )
+
+    project = workspace_projects.create_project(
+        current_user=owner,
+        project_id="p-owner",
+        workspace_id="ws-owner",
+        name="Owner Project",
+    )
+
+    with pytest.raises(ValueError, match="Project not found"):
+        dataset_service.create_dataset(
+            current_user=other_user,
+            dataset_id="d-forbidden",
+            project_id=project.id,
+            name="forbidden.csv",
+            source_type="upload",
+            metadata={},
+        )
+
+def test_workflow_cannot_be_created_for_other_users_project():
+    authoring_service, workspace_projects, _ = build_services()
+
+    owner = CurrentUser(user_id="owner")
+    other_user = CurrentUser(user_id="other")
+
+    workspace_projects.create_workspace(
+        current_user=owner,
+        workspace_id="ws-owner",
+        name="Owner Workspace",
+    )
+
+    project = workspace_projects.create_project(
+        current_user=owner,
+        project_id="p-owner",
+        workspace_id="ws-owner",
+        name="Owner Project",
+    )
+
+    plan = ExecutionPlan(
+        steps=(),
+        version="1.0",
+        metadata={},
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Project not found",
+    ):
+        authoring_service.save_workflow(
+            current_user=other_user,
+            workflow_id="wf-forbidden",
+            project_id=project.id,
+            name="Forbidden Workflow",
+            version="1",
+            plan=plan,
+        )
