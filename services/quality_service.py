@@ -25,6 +25,7 @@ class QualityService:
         self,
         *,
         requirements: RequirementAgent,
+        planner,
         capability_execution: CapabilityExecutionService,
         executions,
         trace_persistence,
@@ -34,6 +35,7 @@ class QualityService:
         llm=None,
     ) -> None:
         self._requirements = requirements
+        self._planner = planner
         self._capability_execution = capability_execution
         self._executions = executions
         self._trace_persistence = trace_persistence
@@ -68,8 +70,10 @@ class QualityService:
                 requested_capabilities=("data.qa",),
             )
 
-            execution_result = self._capability_execution.execute(
-                requirement=requirement,
+            plan = self._planner.plan(requirement)
+
+            execution_result = self._capability_execution.execute_plan(
+                plan=plan,
                 inputs={
                     "frame": frame,
                     "requested_category": requested_category,
@@ -78,7 +82,6 @@ class QualityService:
             )
 
             outputs = execution_result.outputs
-            plan = execution_result.plan
             trace = execution_result.trace
 
             self._executions.save_execution_context(

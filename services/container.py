@@ -158,7 +158,6 @@ class Container:
             self.workflow_capability_traces
         )
         self.capability_execution = CapabilityExecutionService(
-            planner=self.planner,
             executor=self.capability_executor,
         )
         
@@ -190,6 +189,7 @@ class Container:
 
         self.quality_service = QualityService(
             requirements=self.agents.requirements,
+            planner=self.planner,
             capability_execution=self.capability_execution,
             executions=self.executions,
             trace_persistence=self.execution_trace_persistence,

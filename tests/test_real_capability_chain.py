@@ -25,8 +25,10 @@ def test_real_validation_capability_chain():
         }
     )
 
-    outputs = container.capability_execution.execute(
-        requirement=requirement,
+    plan = container.planner.plan(requirement)
+
+    outputs = container.capability_execution.execute_plan(
+        plan=plan,
         inputs={
             "frame": frame,
             "requested_category": "Fashion",
@@ -69,8 +71,8 @@ def test_real_capability_chain_clean_then_validate():
         "data.validate",
     ]
 
-    outputs = container.capability_execution.execute(
-        requirement=requirement,
+    outputs = container.capability_execution.execute_plan(
+        plan=plan,
         inputs={
             "frame": frame,
             "requested_category": None,
@@ -135,8 +137,10 @@ def test_real_capability_chain_passes_cleaned_frame_to_validation():
         requested_capabilities=("data.validate",),
     )
 
-    outputs = container.capability_execution.execute(
-        requirement=requirement,
+    plan = container.planner.plan(requirement)
+
+    outputs = container.capability_execution.execute_plan(
+        plan=plan,
         inputs={
             "frame": original_frame,
             "requested_category": "Fashion",
@@ -181,8 +185,10 @@ def test_real_capability_chain_passes_extraction_parameters():
         },
     )
 
-    outputs = container.capability_execution.execute(
-        requirement=requirement,
+    plan = container.planner.plan(requirement)
+
+    outputs = container.capability_execution.execute_plan(
+        plan=plan,
         inputs={
             "frame": frame,
         },

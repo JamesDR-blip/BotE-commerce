@@ -138,8 +138,8 @@ def test_real_composed_pipeline_executes_clean_normalize_extract():
         "data.extract",
     ]
 
-    outputs = container.capability_execution.execute(
-        requirement=requirement,
+    outputs = container.capability_execution.execute_plan(
+        plan=plan,
         inputs={
             "frame": frame,
             "requested_category": "Fashion",

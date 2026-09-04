@@ -26,8 +26,10 @@ def test_validation_capability_executes_real_workflow():
         ),
     )
 
-    outputs = container.capability_execution.execute(
-        requirement=requirement,
+    plan = container.planner.plan(requirement)
+
+    outputs = container.capability_execution.execute_plan(
+        plan=plan,
         inputs={
             "frame": frame,
             "requested_category": None,

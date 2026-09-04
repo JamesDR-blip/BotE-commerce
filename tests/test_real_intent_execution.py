@@ -33,8 +33,10 @@ def test_real_intent_executes_quality_pipeline():
         )
     )
 
-    result = container.capability_execution.execute(
-        requirement=requirement,
+    plan = container.planner.plan(requirement)
+
+    result = container.capability_execution.execute_plan(
+        plan=plan,
         inputs={
             "frame": frame,
             "requested_category": "Fashion",
@@ -72,16 +74,19 @@ def test_real_intent_executes_capabilities_in_dependency_order():
         )
     )
 
-    result, trace = (
-        container.capability_execution.execute_with_trace(
-            requirement=requirement,
-            inputs={
-                "frame": frame,
-                "requested_category": "Fashion",
-            },
-            execution_id="test-intent-execution-order",
-        )
+    plan = container.planner.plan(requirement)
+
+    execution_result = container.capability_execution.execute_plan(
+        plan=plan,
+        inputs={
+            "frame": frame,
+            "requested_category": "Fashion",
+        },
+        execution_id="test-intent-execution-order",
     )
+
+    result = execution_result.outputs
+    trace = execution_result.trace
 
     assert "validation_result" in result
 

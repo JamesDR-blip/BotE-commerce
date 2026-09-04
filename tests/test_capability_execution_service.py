@@ -31,7 +31,7 @@ class EchoCapability:
         )
 
 
-def test_execution_service_plans_then_executes():
+def test_execution_service_executes_plan():
     registry = CapabilityRegistry()
     registry.register(EchoCapability())
 
@@ -45,7 +45,6 @@ def test_execution_service_plans_then_executes():
     executor = CapabilityExecutor(registry)
 
     service = CapabilityExecutionService(
-        planner=planner,
         executor=executor,
     )
 
@@ -53,8 +52,10 @@ def test_execution_service_plans_then_executes():
         requested_capabilities=("test.echo",),
     )
 
-    result = service.execute(
-        requirement=requirement,
+    plan = planner.plan(requirement)
+
+    result = service.execute_plan(
+        plan=plan,
         inputs={"value": "hello"},
         execution_id="execution-123",
     )
@@ -98,7 +99,7 @@ class ValidateCapability:
         )
 
 
-def test_execution_service_executes_multiple_capabilities_in_plan():
+def test_capability_execution_service_executes_multiple_capabilities_in_plan():
     registry = CapabilityRegistry()
 
     clean = CleanCapability()
@@ -118,7 +119,6 @@ def test_execution_service_executes_multiple_capabilities_in_plan():
     executor = CapabilityExecutor(registry)
 
     service = CapabilityExecutionService(
-        planner=planner,
         executor=executor,
     )
 
@@ -128,9 +128,11 @@ def test_execution_service_executes_multiple_capabilities_in_plan():
         ),
     )
 
-    result = service.execute(
-        requirement=requirement,
-        inputs={"value": " hello "},
+    plan = planner.plan(requirement)
+
+    result = service.execute_plan(
+        plan=plan,
+        inputs={"value": "hello"},
         execution_id="execution-123",
     )
 
@@ -138,7 +140,7 @@ def test_execution_service_executes_multiple_capabilities_in_plan():
     assert result.outputs["valid"] is True
 
 
-def test_execution_service_resolves_capability_dependencies():
+def test_capability_execution_service_resolves_capability_dependencies():
     registry = CapabilityRegistry()
 
     registry.register(CleanCapability())
@@ -155,7 +157,6 @@ def test_execution_service_resolves_capability_dependencies():
     executor = CapabilityExecutor(registry)
 
     service = CapabilityExecutionService(
-        planner=planner,
         executor=executor,
     )
 
@@ -163,9 +164,11 @@ def test_execution_service_resolves_capability_dependencies():
         requested_capabilities=("test.validate",),
     )
 
-    result = service.execute(
-        requirement=requirement,
-        inputs={"value": "  hello  "},
+    plan = planner.plan(requirement)
+
+    result = service.execute_plan(
+        plan=plan,
+        inputs={"value": "hello"},
         execution_id="execution-123",
     )
 
@@ -173,7 +176,7 @@ def test_execution_service_resolves_capability_dependencies():
     assert result.outputs["valid"] is True
 
 
-def test_execution_service_executes_dependencies_before_requested_capability():
+def test_capability_execution_service_executes_dependencies_before_requested_capability():
     registry = CapabilityRegistry()
 
     clean = CleanCapability()
@@ -193,7 +196,6 @@ def test_execution_service_executes_dependencies_before_requested_capability():
     executor = CapabilityExecutor(registry)
 
     service = CapabilityExecutionService(
-        planner=planner,
         executor=executor,
     )
 
@@ -201,9 +203,11 @@ def test_execution_service_executes_dependencies_before_requested_capability():
         requested_capabilities=("test.validate",),
     )
 
-    result = service.execute(
-        requirement=requirement,
-        inputs={"value": " hello "},
+    plan = planner.plan(requirement)
+
+    result = service.execute_plan(
+        plan=plan,
+        inputs={"value": "hello"},
         execution_id="execution-123",
     )
 
@@ -251,7 +255,7 @@ class RenameValidateCapability:
         )
 
 
-def test_execution_service_uses_explicit_mapping_between_renamed_outputs_and_inputs():
+def test_capability_execution_service_uses_explicit_mapping_between_renamed_outputs_and_inputs():
     registry = CapabilityRegistry()
 
     clean = RenameCleanCapability()
@@ -271,7 +275,6 @@ def test_execution_service_uses_explicit_mapping_between_renamed_outputs_and_inp
     executor = CapabilityExecutor(registry)
 
     service = CapabilityExecutionService(
-        planner=planner,
         executor=executor,
     )
 
@@ -293,10 +296,11 @@ def test_execution_service_uses_explicit_mapping_between_renamed_outputs_and_inp
         "value": "cleaned_value",
     }
 
-    result = service.execute(
-        requirement=requirement,
-        inputs={"value": " hello "},
-        execution_id="explicit-mapping-test",
+
+    result = service.execute_plan(
+        plan=plan,
+        inputs={"value": "hello"},
+        execution_id="execution-123",
     )
 
     assert result.outputs["cleaned_value"] == "hello"
@@ -342,7 +346,6 @@ def test_new_capability_is_plannable_and_executable_without_core_changes():
     executor = CapabilityExecutor(registry)
 
     service = CapabilityExecutionService(
-        planner=planner,
         executor=executor,
     )
 
@@ -364,10 +367,10 @@ def test_new_capability_is_plannable_and_executable_without_core_changes():
         "prefix": "SKU-",
     }
 
-    result = service.execute(
-        requirement=requirement,
-        inputs={"value": "12345"},
-        execution_id="extensibility-test",
+    result = service.execute_plan(
+        plan=plan,
+        inputs={"value": "hello"},
+        execution_id="execution-123",
     )
 
-    assert result.outputs["formatted"] == "SKU-12345"
+    assert result.outputs["formatted"] == "SKU-hello"

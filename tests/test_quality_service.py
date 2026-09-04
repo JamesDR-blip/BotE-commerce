@@ -64,6 +64,18 @@ class FakeRequirements:
             requested_capabilities=requested_capabilities,
         )
 
+class FakePlanner:
+    def __init__(self):
+        self.calls = []
+
+    def plan(self, requirement):
+        self.calls.append(requirement)
+
+        return ExecutionPlan(
+            steps=(),
+            version="1.0",
+            metadata={"source": "test"},
+        )
 
 class FakeAgents:
     def __init__(self):
@@ -86,6 +98,7 @@ class FakeContainer:
         self.executions = FakeExecutions()
         self.trace_persistence = FakeTracePersistence()
         self.agents = FakeAgents()
+        self.planner = FakePlanner()
         self.cache = FakeCache()
         self.settings = FakeSettings()
         self.reporter = FakeReporter()
@@ -96,10 +109,16 @@ class FakeCapabilityExecution:
         self.error = error
         self.calls = []
 
-    def execute(self, requirement, inputs, execution_id):
+    def execute_plan(
+        self,
+        *,
+        plan,
+        inputs,
+        execution_id,
+    ):
         self.calls.append(
             {
-                "requirement": requirement,
+                "plan": plan,
                 "inputs": inputs,
                 "execution_id": execution_id,
             }
@@ -107,12 +126,6 @@ class FakeCapabilityExecution:
 
         if self.error is not None:
             raise self.error
-
-        plan = ExecutionPlan(
-            steps=(),
-            version="1.0",
-            metadata={},
-        )
 
         trace = ExecutionTrace(
             execution_id=execution_id,
@@ -130,6 +143,7 @@ class FakeCapabilityExecution:
 def make_service(container):
     return QualityService(
         requirements=container.agents.requirements,
+        planner=container.planner,
         capability_execution=container.capability_execution,
         executions=container.executions,
         cache=container.cache,
@@ -271,4 +285,10 @@ def test_quality_service_uses_capability_execution_service():
     assert call["inputs"]["frame"] is frame
     assert call["inputs"]["requested_category"] == "Fashion"
     assert call["execution_id"]
+    assert len(container.planner.calls) == 1
+    assert container.planner.calls[0].requested_capabilities == (
+        "data.qa",
+    )
+
+    assert isinstance(call["plan"], ExecutionPlan)
 
