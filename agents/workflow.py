@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import pandas as pd
-from services.validation_service import ValidationService
+from typing import Protocol
 from domain.models import ValidationIssue
 from rule_engine.models import RuleSet
 from .category import CategoryAgent
@@ -20,9 +20,22 @@ class AutoFixAgent:
     def fix(self, frame: pd.DataFrame, validator) -> pd.DataFrame: return validator.autofix(frame)
 
 
+class ValidationProvider(Protocol):
+    def validate(
+        self,
+        frame: pd.DataFrame,
+        validator,
+        rules: RuleSet,
+    ) -> list[ValidationIssue]:
+        ...
+
+
 class ValidatorAgent:
-    def __init__(self, service: ValidationService | None = None) -> None:
-        self._service = service
+    def __init__(
+        self,
+        provider: ValidationProvider | None = None,
+    ) -> None:
+        self._provider = provider
 
     def validate(
         self,
@@ -30,12 +43,12 @@ class ValidatorAgent:
         validator,
         rules: RuleSet,
     ) -> list[ValidationIssue]:
-        if self._service is None:
+        if self._provider is None:
             raise RuntimeError(
-                "ValidatorAgent requires a ValidationService"
+                "ValidatorAgent requires a validation provider"
             )
 
-        return self._service.validate(
+        return self._provider.validate(
             frame,
             validator,
             rules,

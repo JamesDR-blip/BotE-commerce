@@ -5,6 +5,8 @@ import pandas as pd
 from agents.category import CategoryAgent
 from agents.llm import LLMAssistantAgent
 from agents.qa import QAAgent
+from services.anomalies import detect_anomalies
+from services.health_score_service import HealthScoreService
 from agents.requirement import RequirementAgent, ValidationRequirement
 from agents.rule_retriever import RuleRetrieverAgent
 from domain.models import ValidationIssue, ValidationResult
@@ -20,7 +22,16 @@ def test_requirement_and_category_agents_produce_typed_intent() -> None:
 
 def test_rule_retriever_and_qa_keep_existing_contracts() -> None:
     rules, version = RuleRetrieverAgent(RuleRepository(Path("rules_library.yaml"))).retrieve("Fashion")
-    result = QAAgent().result(pd.DataFrame({"Size": ["M"]}), [ValidationIssue(2, "Color", "missing", "Missing")], "Fashion", version)
+    result = QAAgent(
+        anomaly_detector=detect_anomalies,
+        health_scores=HealthScoreService(),
+    ).result(
+        pd.DataFrame(
+            {"Size": ["M"]}
+        ), [ValidationIssue(
+            2, "Color", "missing", "Missing"
+        )], "Fashion", version
+    )
     assert rules.category == "Fashion"
     assert result.quarantine.shape[0] == 1
 

@@ -37,6 +37,7 @@ from repositories.workflows import WorkflowRepository
 from repositories.workflow_executions import WorkflowExecutionRepository
 from repositories.workspaces import WorkspaceRepository
 
+from services.anomalies import detect_anomalies
 from services.authentication import AuthenticationService
 from services.authorization import AuthorizationService
 from services.cache import TTLCache
@@ -79,7 +80,10 @@ class Container:
             ),
             AutoFixAgent(),
             ValidatorAgent(self.validation),
-            QAAgent(self.health_scores),
+            QAAgent(
+                anomaly_detector=detect_anomalies,
+                health_scores=self.health_scores,
+            ),
         )
         self.capabilities = CapabilityRegistry()
 
