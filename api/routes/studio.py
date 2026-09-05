@@ -17,7 +17,7 @@ from schemas.responses import (
     ProjectResponse,
     WorkspaceResponse,
 )
-from services.workspace_project_service import WorkspaceProjectService
+from application.workspace.project_service import WorkspaceProjectService
 
 router = APIRouter()
 

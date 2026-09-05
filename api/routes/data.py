@@ -21,7 +21,7 @@ from schemas.responses import (
 )
 from services.data_operations import DataOperationsService
 from services.mapping_service import MappingService
-from services.quality_service import QualityService
+from application.quality.quality_service import QualityService
 from services.upload_reader import TabularUploadReader
 
 from domain.exceptions import ValidationRequestError

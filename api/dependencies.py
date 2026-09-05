@@ -6,10 +6,10 @@ from fastapi import Depends, Header, HTTPException, Request
 from services.authentication import AuthenticationService
 from services.authorization import AuthorizationService
 from services.data_operations import DataOperationsService
-from services.dataset_service import DatasetService
+from application.datasets.dataset_service import DatasetService
 from services.mapping_service import MappingService
-from services.quality_service import QualityService
-from services.workspace_project_service import WorkspaceProjectService
+from application.quality.quality_service import QualityService
+from application.workspace.project_service import WorkspaceProjectService
 from services.upload_reader import TabularUploadReader
 from services.workflow_authoring_service import WorkflowAuthoringService
 from services.workflow_history_service import WorkflowHistoryService

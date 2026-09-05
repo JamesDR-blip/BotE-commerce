@@ -10,7 +10,7 @@ from api.dependencies import (
     get_dataset_service, 
     get_current_user,
 )
-from services.dataset_service import DatasetService
+from application.datasets.dataset_service import DatasetService
 from schemas.requests import DatasetCreateRequest
 from schemas.responses import DatasetResponse
 from domain.identity import CurrentUser
