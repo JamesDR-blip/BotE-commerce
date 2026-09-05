@@ -18,3 +18,24 @@ def test_json_formatter_includes_structured_extra_fields() -> None:
     payload = json.loads(JsonFormatter().format(record))
     assert payload["event"] == "validation_completed"
     assert payload["execution_id"] == "abc"
+
+def test_production_rejects_sqlite_database() -> None:
+    try:
+        Settings(
+            _env_file=None,
+            environment="production",
+            database_url="sqlite:///./data_quality.db",
+        )
+    except ValueError as exc:
+        assert "SQLite database is not allowed in production" in str(exc)
+    else:
+        raise AssertionError("Expected production SQLite configuration to fail")
+
+
+def test_production_accepts_non_sqlite_database() -> None:
+    settings = Settings(
+        _env_file=None,
+        environment="production",
+        database_url="postgresql://user:pass@localhost/app",
+    )
+    assert settings.environment == "production"

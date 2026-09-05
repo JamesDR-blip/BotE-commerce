@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -29,3 +29,15 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = Field(default=8000, ge=1, le=65535)
     api_base_url: str = "http://127.0.0.1:8000"
+
+    @model_validator(mode="after")
+    def validate_production_configuration(self) -> "Settings":
+        if (
+            self.environment == "production"
+            and self.database_url.startswith("sqlite:")
+        ):
+            raise ValueError(
+                "SQLite database is not allowed in production"
+            )
+
+        return self
