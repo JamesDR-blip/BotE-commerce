@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 
-from services.title_extraction import COLORS, KNOWN_BRANDS, MATERIALS
+from domain.catalog.title_extraction import COLORS, KNOWN_BRANDS, MATERIALS
 
 from .base import ExtractedAttributes
 

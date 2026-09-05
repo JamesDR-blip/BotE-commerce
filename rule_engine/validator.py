@@ -7,7 +7,7 @@ import pandas as pd
 
 from domain.models import ValidationIssue
 from rule_engine.models import RuleSet
-from services.business_rule_validation import BusinessRuleValidation
+from rule_engine.evaluator import BusinessRuleValidation
 
 
 class RuleValidator:

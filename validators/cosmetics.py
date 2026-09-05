@@ -2,8 +2,8 @@
 from __future__ import annotations
 import pandas as pd
 from domain.models import ValidationIssue
-from services.format_validation import FormatValidation
-from services.missing_value_validation import MissingValueValidation
+from domain.validation.format import FormatValidation
+from domain.validation.missing_values import MissingValueValidation
 from validators.base import CategoryValidator
 
 

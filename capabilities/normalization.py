@@ -9,7 +9,7 @@ from domain.capabilities import (
     CapabilityResult,
     CapabilitySpec,
 )
-from services.normalization_service import NormalizationService
+from domain.catalog.normalization import NormalizationService
 
 
 NORMALIZATION_CAPABILITY_SPEC = CapabilitySpec(

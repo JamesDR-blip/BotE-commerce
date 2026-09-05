@@ -2,10 +2,10 @@
 from __future__ import annotations
 import pandas as pd
 from domain.models import ValidationIssue
-from services.duplicate_detection import DuplicateDetection
-from services.format_validation import FormatValidation
-from services.missing_value_validation import MissingValueValidation
-from services.title_extraction import extract_product_attributes
+from domain.validation.duplicates import DuplicateDetection
+from domain.validation.format import FormatValidation
+from domain.validation.missing_values import MissingValueValidation
+from domain.catalog.title_extraction import extract_product_attributes
 from validators.base import CategoryValidator
 
 
