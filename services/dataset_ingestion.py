@@ -7,7 +7,7 @@ from pathlib import PurePath
 from typing import Any
 
 from services.upload_reader import TabularUploadReader
-from services.dataset_profile import DatasetProfileService
+from domain.studio.profiling import DatasetProfileService
 
 
 class DatasetIngestionService:
