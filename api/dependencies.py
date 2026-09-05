@@ -11,7 +11,7 @@ from services.mapping_service import MappingService
 from application.quality.quality_service import QualityService
 from application.workspace.project_service import WorkspaceProjectService
 from services.upload_reader import TabularUploadReader
-from services.workflow_authoring_service import WorkflowAuthoringService
+from application.workflows.authoring_service import WorkflowAuthoringService
 from services.workflow_history_service import WorkflowHistoryService
 from services.workflow_runtime_service import WorkflowRuntimeService
 
