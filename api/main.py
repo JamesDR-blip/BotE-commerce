@@ -16,7 +16,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from services.container import Container
-from services.logging import configure_logging, instrument_fastapi
+from infrastructure.observability.logging import configure_logging, instrument_fastapi
 
 logger = logging.getLogger(__name__)
 
@@ -64,3 +64,4 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.categories = container.registry.categories()
     instrument_fastapi(app)
     return app
+
