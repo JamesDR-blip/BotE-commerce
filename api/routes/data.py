@@ -20,7 +20,7 @@ from schemas.responses import (
     ValidationResponse,
 )
 from services.data_operations import DataOperationsService
-from services.mapping_service import MappingService
+from domain.catalog.mapping import MappingService
 from application.quality.quality_service import QualityService
 from infrastructure.upload.tabular_reader import TabularUploadReader
 

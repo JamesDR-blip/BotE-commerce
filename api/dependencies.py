@@ -7,7 +7,7 @@ from services.authentication import AuthenticationService
 from services.authorization import AuthorizationService
 from services.data_operations import DataOperationsService
 from application.datasets.dataset_service import DatasetService
-from services.mapping_service import MappingService
+from domain.catalog.mapping import MappingService
 from application.quality.quality_service import QualityService
 from application.workspace.project_service import WorkspaceProjectService
 from infrastructure.upload.tabular_reader import TabularUploadReader
