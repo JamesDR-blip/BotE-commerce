@@ -6,7 +6,7 @@ from typing import Any
 
 from repositories.datasets import DatasetRepository
 from repositories.projects import ProjectRepository
-from services.dataset_ingestion import DatasetIngestionService
+from application.datasets.dataset_ingestion import DatasetIngestionService
 from domain.identity import CurrentUser
 
 class DatasetService:
