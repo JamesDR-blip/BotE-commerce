@@ -10,7 +10,7 @@ import json
 
 from infrastructure.serialization.execution_plan import ExecutionPlanSerializer
 from infrastructure.serialization.requirement import RequirementSerializer
-from services.cache import TTLCache
+from infrastructure.cache.ttl import TTLCache
 from execution.capabilities.capability_execution_service import CapabilityExecutionService
 
 from agents.requirement import RequirementAgent
@@ -171,3 +171,4 @@ class QualityService:
         )
 
         return summary
+
