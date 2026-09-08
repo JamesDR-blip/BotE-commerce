@@ -1,17 +1,4 @@
-"""Application-level execution context."""
+"""Backward-compatible import for the execution context domain contract."""
+from domain.execution_context import ExecutionContext
 
-from __future__ import annotations
-
-from dataclasses import dataclass
-
-from domain.requirement import ValidationRequirement
-from domain.plans import ExecutionPlan
-
-
-@dataclass(frozen=True)
-class ExecutionContext:
-    """Persisted inputs required to understand or replay an execution."""
-
-    requirement: ValidationRequirement
-    plan: ExecutionPlan
-    planner_version: str | None
+__all__ = ["ExecutionContext"]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from services.execution_context import ExecutionContext
+from domain.execution_context import ExecutionContext
 from services.execution_plan_serializer import ExecutionPlanSerializer
 from services.requirement_serializer import RequirementSerializer
 

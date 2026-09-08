@@ -11,7 +11,7 @@ import json
 from services.execution_plan_serializer import ExecutionPlanSerializer
 from services.requirement_serializer import RequirementSerializer
 from services.cache import TTLCache
-from services.capability_execution_service import CapabilityExecutionService
+from execution.capabilities.capability_execution_service import CapabilityExecutionService
 
 from agents.requirement import RequirementAgent
 from agents.reporter import ReporterAgent
