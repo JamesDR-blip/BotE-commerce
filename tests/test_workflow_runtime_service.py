@@ -1,4 +1,4 @@
-from services.workflow_runtime_service import WorkflowRuntimeService
+from application.workflows.runtime_service import WorkflowRuntimeService
 
 
 class FakeEngine:
@@ -42,3 +42,4 @@ def test_runtime_service_delegates_history_lookup():
     assert service.get_execution_detail("execution-1") == {
         "execution_id": "execution-1"
     }
+

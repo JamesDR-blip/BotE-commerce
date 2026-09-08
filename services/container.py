@@ -40,25 +40,25 @@ from repositories.workspaces import WorkspaceRepository
 from services.anomalies import detect_anomalies
 from services.authentication import AuthenticationService
 from services.authorization import AuthorizationService
-from services.cache import TTLCache
-from services.capability_executor import CapabilityExecutor
-from services.capability_execution_service import CapabilityExecutionService
-from services.dataset_ingestion import DatasetIngestionService
+from infrastructure.cache.ttl import TTLCache
+from execution.capabilities.capability_executor import CapabilityExecutor
+from execution.capabilities.capability_execution_service import CapabilityExecutionService
+from application.datasets.dataset_ingestion import DatasetIngestionService
 from services.data_operations import DataOperationsService
-from services.dataset_profile import DatasetProfileService
-from services.dataset_service import DatasetService
-from services.execution_trace_persistence import ExecutionTracePersistence
-from services.health_score_service import HealthScoreService
-from services.mapping_service import MappingService
-from services.normalization_service import NormalizationService
-from services.quality_service import QualityService
-from services.upload_reader import TabularUploadReader
+from domain.studio.profiling import DatasetProfileService
+from application.datasets.dataset_service import DatasetService
+from infrastructure.persistence.execution_trace import ExecutionTracePersistence
+from domain.quality.health_score import HealthScoreService
+from domain.catalog.mapping import MappingService
+from domain.catalog.normalization import NormalizationService
+from application.quality.quality_service import QualityService
+from infrastructure.upload.tabular_reader import TabularUploadReader
 from services.validation_service import ValidationService
-from services.workflow_authoring_service import WorkflowAuthoringService
-from services.workflow_engine import WorkflowEngine
-from services.workflow_history_service import WorkflowHistoryService
-from services.workflow_runtime_service import WorkflowRuntimeService
-from services.workspace_project_service import WorkspaceProjectService
+from application.workflows.authoring_service import WorkflowAuthoringService
+from execution.workflow.engine import WorkflowEngine
+from application.workflows.history_service import WorkflowHistoryService
+from application.workflows.runtime_service import WorkflowRuntimeService
+from application.workspace.project_service import WorkspaceProjectService
 
 class Container:
     def __init__(self, settings: Settings) -> None:
@@ -238,3 +238,4 @@ def build_container(
         app_settings = Settings()
 
     return Container(app_settings)
+
