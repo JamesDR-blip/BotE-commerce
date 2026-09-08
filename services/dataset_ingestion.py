@@ -6,7 +6,7 @@ import hashlib
 from pathlib import PurePath
 from typing import Any
 
-from services.upload_reader import TabularUploadReader
+from infrastructure.upload.tabular_reader import TabularUploadReader
 from domain.studio.profiling import DatasetProfileService
 
 
@@ -71,3 +71,4 @@ class DatasetIngestionService:
             column_count=len(frame.columns),
             status="READY",
         )
+

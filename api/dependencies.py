@@ -10,7 +10,7 @@ from application.datasets.dataset_service import DatasetService
 from services.mapping_service import MappingService
 from application.quality.quality_service import QualityService
 from application.workspace.project_service import WorkspaceProjectService
-from services.upload_reader import TabularUploadReader
+from infrastructure.upload.tabular_reader import TabularUploadReader
 from application.workflows.authoring_service import WorkflowAuthoringService
 from application.workflows.history_service import WorkflowHistoryService
 from services.workflow_runtime_service import WorkflowRuntimeService
@@ -111,3 +111,4 @@ def get_authorization_service(
     request: Request,
 ) -> AuthorizationService:
     return request.app.state.authorization
+

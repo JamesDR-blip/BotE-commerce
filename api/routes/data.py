@@ -22,7 +22,7 @@ from schemas.responses import (
 from services.data_operations import DataOperationsService
 from services.mapping_service import MappingService
 from application.quality.quality_service import QualityService
-from services.upload_reader import TabularUploadReader
+from infrastructure.upload.tabular_reader import TabularUploadReader
 
 from domain.exceptions import ValidationRequestError
 
@@ -118,3 +118,4 @@ async def _validate_upload(
 
 def _preview(category: str, frame) -> TabularPreviewResponse:
     return TabularPreviewResponse(category=category, rows=len(frame), columns=[str(column) for column in frame.columns], records=frame.head(100).to_dict(orient="records"))
+
