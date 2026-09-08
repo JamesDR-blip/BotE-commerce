@@ -13,7 +13,7 @@ from application.workspace.project_service import WorkspaceProjectService
 from infrastructure.upload.tabular_reader import TabularUploadReader
 from application.workflows.authoring_service import WorkflowAuthoringService
 from application.workflows.history_service import WorkflowHistoryService
-from services.workflow_runtime_service import WorkflowRuntimeService
+from application.workflows.runtime_service import WorkflowRuntimeService
 
 from repositories.executions import ExecutionRepository
 from repositories.execution_traces import ExecutionTraceRepository

@@ -29,7 +29,7 @@ from schemas.responses import (
 from infrastructure.serialization.execution_plan import ExecutionPlanSerializer
 from application.workflows.authoring_service import WorkflowAuthoringService
 from application.workflows.history_service import WorkflowHistoryService
-from services.workflow_runtime_service import WorkflowRuntimeService
+from application.workflows.runtime_service import WorkflowRuntimeService
 
 
 router = APIRouter()
