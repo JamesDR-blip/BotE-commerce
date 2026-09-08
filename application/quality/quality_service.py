@@ -8,8 +8,8 @@ from uuid import uuid4
 import pandas as pd
 import json
 
-from services.execution_plan_serializer import ExecutionPlanSerializer
-from services.requirement_serializer import RequirementSerializer
+from infrastructure.serialization.execution_plan import ExecutionPlanSerializer
+from infrastructure.serialization.requirement import RequirementSerializer
 from services.cache import TTLCache
 from execution.capabilities.capability_execution_service import CapabilityExecutionService
 

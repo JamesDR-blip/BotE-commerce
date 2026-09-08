@@ -8,7 +8,7 @@ from domain.identity import CurrentUser
 from domain.plans import ExecutionPlan
 from repositories.projects import ProjectRepository
 from repositories.workflows import WorkflowRepository
-from services.execution_plan_serializer import ExecutionPlanSerializer
+from infrastructure.serialization.execution_plan import ExecutionPlanSerializer
 
 class WorkflowAuthoringService:
     def __init__(

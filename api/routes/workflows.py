@@ -26,7 +26,7 @@ from schemas.responses import (
     WorkflowResponse,
     WorkflowVersionResponse,
 )
-from services.execution_plan_serializer import ExecutionPlanSerializer
+from infrastructure.serialization.execution_plan import ExecutionPlanSerializer
 from application.workflows.authoring_service import WorkflowAuthoringService
 from application.workflows.history_service import WorkflowHistoryService
 from services.workflow_runtime_service import WorkflowRuntimeService
