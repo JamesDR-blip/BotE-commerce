@@ -13,7 +13,7 @@ from repositories.projects import ProjectRepository
 from repositories.datasets import DatasetRepository
 from repositories.workflows import WorkflowRepository
 
-from services.dataset_service import DatasetService
+from application.datasets.dataset_service import DatasetService
 from services.workflow_authoring_service import WorkflowAuthoringService
 from services.workspace_project_service import WorkspaceProjectService
 
