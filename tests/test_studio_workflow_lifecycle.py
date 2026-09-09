@@ -8,7 +8,7 @@ from repositories.projects import ProjectRepository
 from repositories.workflows import WorkflowRepository
 
 from services.workflow_authoring_service import WorkflowAuthoringService
-from services.workspace_project_service import WorkspaceProjectService
+from application.workspace.project_service import WorkspaceProjectService
 
 from domain.plans import ExecutionPlan
 from domain.identity import CurrentUser

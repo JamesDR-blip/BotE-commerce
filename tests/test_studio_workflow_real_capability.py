@@ -3,7 +3,7 @@ from domain.identity import CurrentUser
 from configs.settings import Settings
 from services.container import build_container
 import pandas as pd
-from services.workspace_project_service import WorkspaceProjectService
+from application.workspace.project_service import WorkspaceProjectService
 
 def test_studio_workflow_executes_real_capability():
     container = build_container(

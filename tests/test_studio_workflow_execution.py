@@ -2,7 +2,7 @@ from domain.plans import ExecutionPlan
 from services.container import build_container
 from configs.settings import Settings
 from domain.identity import CurrentUser
-from services.workspace_project_service import WorkspaceProjectService
+from application.workspace.project_service import WorkspaceProjectService
 
 
 class FakeCapabilityExecution:

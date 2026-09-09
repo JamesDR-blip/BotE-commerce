@@ -1,7 +1,7 @@
 from domain.identity import CurrentUser
 from repositories.projects import ProjectRepository
 from repositories.workspaces import WorkspaceRepository
-from services.workspace_project_service import WorkspaceProjectService
+from application.workspace.project_service import WorkspaceProjectService
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

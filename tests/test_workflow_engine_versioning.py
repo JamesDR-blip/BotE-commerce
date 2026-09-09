@@ -4,7 +4,7 @@ from configs.settings import Settings
 from domain.plans import ExecutionPlan, PlanStep
 from services.container import build_container
 from domain.identity import CurrentUser
-from services.workspace_project_service import WorkspaceProjectService
+from application.workspace.project_service import WorkspaceProjectService
 
 def test_workflow_engine_executes_active_version():
     container = build_container(

@@ -15,7 +15,7 @@ from repositories.workflows import WorkflowRepository
 
 from application.datasets.dataset_service import DatasetService
 from services.workflow_authoring_service import WorkflowAuthoringService
-from services.workspace_project_service import WorkspaceProjectService
+from application.workspace.project_service import WorkspaceProjectService
 
 
 def build_services():
@@ -204,3 +204,4 @@ def test_workflow_cannot_be_created_for_other_users_project():
             version="1",
             plan=plan,
         )
+

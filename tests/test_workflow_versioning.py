@@ -1,7 +1,7 @@
 from configs.settings import Settings
 from services.container import build_container
 from domain.identity import CurrentUser
-from services.workspace_project_service import WorkspaceProjectService
+from application.workspace.project_service import WorkspaceProjectService
 
 
 def test_workflow_version_lifecycle():
