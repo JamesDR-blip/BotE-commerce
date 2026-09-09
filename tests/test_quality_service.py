@@ -6,7 +6,7 @@ from domain.plans import ExecutionPlan, PlanStep
 from domain.capability_execution import CapabilityExecutionResult
 from domain.execution_trace import ExecutionTrace
 
-from services.quality_service import QualityService
+from application.quality.quality_service import QualityService
 from agents.requirement import ValidationRequirement
 from .conftest import FakeExecutions
 
@@ -291,4 +291,5 @@ def test_quality_service_uses_capability_execution_service():
     )
 
     assert isinstance(call["plan"], ExecutionPlan)
+
 
