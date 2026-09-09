@@ -6,7 +6,7 @@ from agents.category import CategoryAgent
 from agents.llm import LLMAssistantAgent
 from agents.qa import QAAgent
 from services.anomalies import detect_anomalies
-from services.health_score_service import HealthScoreService
+from domain.quality.health_score import HealthScoreService
 from agents.requirement import RequirementAgent, ValidationRequirement
 from agents.rule_retriever import RuleRetrieverAgent
 from domain.models import ValidationIssue, ValidationResult
@@ -50,3 +50,4 @@ def test_reporter_delegates_to_existing_report_generator() -> None:
 
 def test_llm_adapter_is_text_only_when_disabled() -> None:
     assert LLMAssistantAgent(False, None, "test").explain_errors([]) == "LLM mode is disabled."
+

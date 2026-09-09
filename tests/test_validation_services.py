@@ -2,7 +2,7 @@ import pandas as pd
 
 from services.duplicate_detection import DuplicateDetection
 from services.format_validation import FormatValidation
-from services.health_score_service import HealthScoreService
+from domain.quality.health_score import HealthScoreService
 from services.missing_value_validation import MissingValueValidation
 
 
