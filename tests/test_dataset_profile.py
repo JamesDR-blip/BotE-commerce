@@ -1,6 +1,6 @@
 import pandas as pd
 
-from services.dataset_profile import DatasetProfileService
+from domain.studio.profiling import DatasetProfileService
 
 
 def test_profiles_dataset_structure() -> None:

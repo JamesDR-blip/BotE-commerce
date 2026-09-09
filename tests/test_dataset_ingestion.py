@@ -1,7 +1,7 @@
 import hashlib
 
 from services.dataset_ingestion import DatasetIngestionService
-from services.dataset_profile import DatasetProfileService
+from domain.studio.profiling import DatasetProfileService
 
 
 class FakeReader:
