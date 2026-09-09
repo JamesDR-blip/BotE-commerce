@@ -1,6 +1,6 @@
 from configs.settings import Settings
 from services.container import Container
-from services.dataset_ingestion import DatasetIngestionService
+from application.datasets.dataset_ingestion import DatasetIngestionService
 
 
 def test_container_exposes_workflow_authoring_service():

@@ -1,6 +1,6 @@
 import hashlib
 
-from services.dataset_ingestion import DatasetIngestionService
+from application.datasets.dataset_ingestion import DatasetIngestionService
 from domain.studio.profiling import DatasetProfileService
 
 
@@ -66,3 +66,4 @@ def test_ingest_persists_dataset_metadata():
     assert len(profile["columns"]) == 2
 
     assert result == repository.kwargs
+
