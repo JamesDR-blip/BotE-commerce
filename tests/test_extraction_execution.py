@@ -7,7 +7,7 @@ from extractors.deterministic import DeterministicProductExtractor
 from domain.capability_registry import CapabilityRegistry
 from domain.capabilities import CapabilityContext
 from domain.dependency_resolver import DependencyResolver
-from services.capability_executor import CapabilityExecutor
+from execution.capabilities.capability_executor import CapabilityExecutor
 from capabilities.extraction import ExtractionCapability
 
 

@@ -12,7 +12,7 @@ from repositories.workspaces import WorkspaceRepository
 from repositories.projects import ProjectRepository
 from repositories.workflows import WorkflowRepository
 
-from services.workflow_authoring_service import WorkflowAuthoringService
+from application.workflows.authoring_service import WorkflowAuthoringService
 from application.workspace.project_service import WorkspaceProjectService
 
 def build_services():

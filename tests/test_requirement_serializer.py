@@ -1,5 +1,5 @@
 from agents.requirement import WorkflowRequirement
-from services.requirement_serializer import RequirementSerializer
+from infrastructure.serialization.requirement import RequirementSerializer
 
 
 def test_requirement_round_trip() -> None:

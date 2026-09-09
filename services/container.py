@@ -37,7 +37,7 @@ from repositories.workflows import WorkflowRepository
 from repositories.workflow_executions import WorkflowExecutionRepository
 from repositories.workspaces import WorkspaceRepository
 
-from services.anomalies import detect_anomalies
+from domain.quality.anomalies import detect_anomalies
 from services.authentication import AuthenticationService
 from services.authorization import AuthorizationService
 from infrastructure.cache.ttl import TTLCache

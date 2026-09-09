@@ -5,7 +5,7 @@ import pandas as pd
 from agents.category import CategoryAgent
 from agents.llm import LLMAssistantAgent
 from agents.qa import QAAgent
-from services.anomalies import detect_anomalies
+from domain.quality.anomalies import detect_anomalies
 from domain.quality.health_score import HealthScoreService
 from agents.requirement import RequirementAgent, ValidationRequirement
 from agents.rule_retriever import RuleRetrieverAgent

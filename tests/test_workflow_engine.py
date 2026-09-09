@@ -2,7 +2,7 @@ import json
 
 from domain.plans import ExecutionPlan
 
-from services.workflow_engine import WorkflowEngine
+from execution.workflow.engine import WorkflowEngine
 
 from domain.execution_trace import ExecutionTrace
 from domain.capability_execution import CapabilityExecutionResult

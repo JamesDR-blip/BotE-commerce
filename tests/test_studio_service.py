@@ -14,7 +14,7 @@ from repositories.datasets import DatasetRepository
 from repositories.workflows import WorkflowRepository
 
 from application.datasets.dataset_service import DatasetService
-from services.workflow_authoring_service import WorkflowAuthoringService
+from application.workflows.authoring_service import WorkflowAuthoringService
 from application.workspace.project_service import WorkspaceProjectService
 
 

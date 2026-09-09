@@ -8,8 +8,8 @@ from domain.plans import (
     ExecutionPlan,
     PlanStep,
 )
-from services.capability_executor import CapabilityExecutor
-from services.execution_trace_collector import (
+from execution.capabilities.capability_executor import CapabilityExecutor
+from execution.tracing.trace_collector import (
     ExecutionTraceCollector,
 )
 

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from services.execution_trace_persistence import (
+from infrastructure.persistence.execution_trace import (
     ExecutionTracePersistence,
 )
 

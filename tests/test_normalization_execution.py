@@ -9,9 +9,9 @@ from capabilities.normalization import NormalizationCapability
 from domain.capability_registry import CapabilityRegistry
 from domain.plans import ExecutionPlan, PlanStep
 from extractors.deterministic import DeterministicProductExtractor
-from services.capability_executor import CapabilityExecutor
+from execution.capabilities.capability_executor import CapabilityExecutor
 from services.data_operations import DataOperationsService
-from services.normalization_service import NormalizationService
+from domain.catalog.normalization import NormalizationService
 
 
 class FakeClassifier:
@@ -126,3 +126,5 @@ def test_clean_normalize_extract_capability_chain():
     assert frame["product_title"].tolist() == [
         "  Nike   Air   Max   Black   XL  "
     ]
+
+

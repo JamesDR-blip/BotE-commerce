@@ -2,7 +2,7 @@ import json
 import logging
 
 from configs.settings import Settings
-from services.logging import JsonFormatter
+from infrastructure.observability.logging import JsonFormatter
 
 
 def test_settings_reads_environment_values(monkeypatch) -> None:

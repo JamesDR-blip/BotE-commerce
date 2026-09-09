@@ -8,7 +8,7 @@ from capabilities.extraction import ExtractionCapability
 from domain.capability_registry import CapabilityRegistry
 from domain.plans import ExecutionPlan, PlanStep
 from extractors.deterministic import DeterministicProductExtractor
-from services.capability_executor import CapabilityExecutor
+from execution.capabilities.capability_executor import CapabilityExecutor
 
 
 class FakeClassifier:

@@ -7,8 +7,8 @@ from repositories.capability_execution_traces import (
     CapabilityExecutionTraceRepository,
 )
 
-from services.workflow_engine import WorkflowEngine
-from services.execution_trace_persistence import (
+from execution.workflow.engine import WorkflowEngine
+from infrastructure.persistence.execution_trace import (
     ExecutionTracePersistence,
 )
 

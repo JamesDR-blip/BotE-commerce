@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from services.normalization_service import NormalizationService
+from domain.catalog.normalization import NormalizationService
 
 
 def test_normalize_returns_new_frame_without_mutating_input():

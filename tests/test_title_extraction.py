@@ -1,5 +1,5 @@
 import pandas as pd
-from services.title_extraction import extract_product_attributes
+from domain.catalog.title_extraction import extract_product_attributes
 from validators.home_appliances import HomeAppliancesValidator
 
 
@@ -24,3 +24,4 @@ def test_distinct_source_titles_are_not_merged_by_same_canonical_title() -> None
     frame = pd.DataFrame({"product_title": ["Portable Mini Fan with lanyard", "Portable Mini Fan with desk stand"]})
     validator = HomeAppliancesValidator()
     assert validator.validate(validator.autofix(frame), {}) == []
+

@@ -9,7 +9,7 @@ from domain.capabilities import (
 )
 from domain.capability_registry import CapabilityRegistry
 from domain.plans import ExecutionPlan, PlanStep
-from services.capability_executor import CapabilityExecutor
+from execution.capabilities.capability_executor import CapabilityExecutor
 
 
 class TypedEchoCapability:

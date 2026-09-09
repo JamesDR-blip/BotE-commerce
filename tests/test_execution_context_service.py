@@ -5,10 +5,10 @@ from domain.plans import ExecutionPlan, PlanStep
 from services.execution_context_service import (
     ExecutionContextService,
 )
-from services.execution_plan_serializer import (
+from infrastructure.serialization.execution_plan import (
     ExecutionPlanSerializer,
 )
-from services.requirement_serializer import (
+from infrastructure.serialization.requirement import (
     RequirementSerializer,
 )
 from .conftest import FakeExecutions
@@ -63,3 +63,5 @@ def test_execution_context_service_returns_none_for_missing_execution():
     service = ExecutionContextService(repository)
 
     assert service.get("missing") is None
+
+

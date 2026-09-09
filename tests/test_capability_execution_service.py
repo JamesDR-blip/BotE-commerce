@@ -9,8 +9,8 @@ from domain.capabilities import (
 )
 from domain.capability_registry import CapabilityRegistry
 from domain.dependency_resolver import DependencyResolver
-from services.capability_execution_service import CapabilityExecutionService
-from services.capability_executor import CapabilityExecutor
+from execution.capabilities.capability_execution_service import CapabilityExecutionService
+from execution.capabilities.capability_executor import CapabilityExecutor
 
 
 @dataclass
@@ -374,3 +374,4 @@ def test_new_capability_is_plannable_and_executable_without_core_changes():
     )
 
     assert result.outputs["formatted"] == "SKU-hello"
+

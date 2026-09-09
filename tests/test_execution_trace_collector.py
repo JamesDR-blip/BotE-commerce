@@ -1,4 +1,4 @@
-from services.execution_trace_collector import (
+from execution.tracing.trace_collector import (
     ExecutionTraceCollector,
 )
 from domain.execution_status import ExecutionStatus

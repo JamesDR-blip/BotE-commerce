@@ -5,7 +5,7 @@ import pytest
 
 from capabilities.normalization import NormalizationCapability
 from domain.capabilities import CapabilityContext
-from services.normalization_service import NormalizationService
+from domain.catalog.normalization import NormalizationService
 
 
 def test_normalization_capability_normalizes_requested_fields():

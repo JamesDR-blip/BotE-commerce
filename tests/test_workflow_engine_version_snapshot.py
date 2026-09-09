@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from database.models import Base
 from repositories.workflows import WorkflowRepository
 from repositories.workflow_executions import WorkflowExecutionRepository
-from services.workflow_engine import WorkflowEngine
+from execution.workflow.engine import WorkflowEngine
 
 
 class FakeCapabilityExecution:

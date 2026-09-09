@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from services.upload_reader import TabularUploadReader, UploadValidationError
+from infrastructure.upload.tabular_reader import TabularUploadReader, UploadValidationError
 
 
 def test_reads_csv_and_escapes_spreadsheet_formulas() -> None:
@@ -18,3 +18,4 @@ def test_rejects_unsupported_or_unsafe_filenames(filename: str | None) -> None:
 def test_rejects_oversized_upload() -> None:
     with pytest.raises(UploadValidationError, match="exceeds"):
         TabularUploadReader(3).read("products.csv", b"name\nshirt\n")
+

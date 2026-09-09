@@ -1,4 +1,4 @@
-from services.workflow_history_service import (
+from application.workflows.history_service import (
     WorkflowHistoryService,
 )
 

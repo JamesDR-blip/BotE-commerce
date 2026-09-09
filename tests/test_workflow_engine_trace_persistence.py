@@ -1,4 +1,4 @@
-from services.workflow_engine import WorkflowEngine
+from execution.workflow.engine import WorkflowEngine
 
 
 class FakeWorkflow:

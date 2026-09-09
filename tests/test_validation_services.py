@@ -3,7 +3,7 @@ import pandas as pd
 from domain.validation.duplicates import DuplicateDetection
 from domain.validation.format import FormatValidation
 from domain.quality.health_score import HealthScoreService
-from services.missing_value_validation import MissingValueValidation
+from domain.validation.missing_values import MissingValueValidation
 
 
 def test_health_score_preserves_existing_formula() -> None:
@@ -22,5 +22,6 @@ def test_missing_and_format_services_keep_issue_shapes() -> None:
     invalid = FormatValidation().positive_number(frame["value"], "Price", "invalid_price", "Price must be a positive number")
     assert [issue.row for issue in missing] == [2, 3]
     assert [issue.code for issue in invalid] == ["invalid_price", "invalid_price"]
+
 
 

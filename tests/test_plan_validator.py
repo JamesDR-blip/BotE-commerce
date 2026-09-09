@@ -6,7 +6,7 @@ import pandas as pd
 
 from domain.capability_registry import CapabilityRegistry
 from domain.plans import ExecutionPlan, PlanStep
-from services.plan_validator import PlanValidator
+from execution.planning.plan_validator import PlanValidator
 
 class TypedEchoCapability:
     @property

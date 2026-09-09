@@ -245,7 +245,7 @@ def test_planned_dependency_mapping_executes_end_to_end():
         )
     )
 
-    from services.capability_executor import CapabilityExecutor
+    from execution.capabilities.capability_executor import CapabilityExecutor
 
     executor = CapabilityExecutor(registry)
 
