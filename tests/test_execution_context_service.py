@@ -2,7 +2,7 @@ import json
 
 from agents.requirement import WorkflowRequirement
 from domain.plans import ExecutionPlan, PlanStep
-from services.execution_context_service import (
+from execution.context.service import (
     ExecutionContextService,
 )
 from infrastructure.serialization.execution_plan import (
@@ -63,5 +63,6 @@ def test_execution_context_service_returns_none_for_missing_execution():
     service = ExecutionContextService(repository)
 
     assert service.get("missing") is None
+
 
 
