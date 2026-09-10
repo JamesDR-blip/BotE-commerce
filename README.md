@@ -4,28 +4,51 @@ An AI Studio for ecommerce data workflows. Workspaces, projects, datasets, versi
 
 ## Current architecture
 
-`FastAPI route -> Container -> StudioService / WorkflowEngine -> CapabilityExecutionService -> capability family -> repositories and reports`
+`FastAPI Route / Streamlit -> Application Services (Workspace, Datasets, Quality, Workflows) / WorkflowEngine -> Execution Engine -> CapabilityExecutionService -> Capability Family -> Repositories / Infrastructure`
 
-The HTTP layer is an adapter only: Studio resource operations go through `StudioService`, while workflow run and execution-history use cases go through `WorkflowRuntimeService`. Repositories remain behind application services; capability execution remains behind the workflow engine.
+The HTTP layer is an adapter only: Studio resource operations go through `WorkspaceProjectService` and `DatasetService`, quality execution goes through `QualityService`, while workflow run and execution-history use cases go through `WorkflowRuntimeService` and `WorkflowHistoryService`. Repositories remain behind application services; capability execution remains behind the workflow engine.
 
 ## Project structure
 
-The project is organised by responsibility. Application entry points are in `app/`; framework-independent value objects are in `domain/`; SQLAlchemy persistence models are in `database/`; and transport contracts are in `schemas/`. Existing `main.py`, `dashboard.py`, `models.domain`, `models.database`, and `api.schemas` modules remain as compatibility imports for current users and integrations.
+The project is organized by responsibility following **Clean Architecture and Domain-Driven Design (DDD)**. Domain logic resides in `domain/`; application use cases in `application/`; execution coordination in `execution/`; external adapters and technical implementations in `infrastructure/`; HTTP routers in `api/`; and presentation/entry points in `app/`. Existing `main.py`, `dashboard.py`, `models.domain`, `models.database`, and `api.schemas` modules remain as compatibility entry points and imports.
 
 ```text
-app/            API and Streamlit entry points
-agents/         Workflow collaborators and LLM adapter
-api/            FastAPI HTTP adapter
-configs/        Runtime settings
-database/       SQLAlchemy persistence models
-domain/         Framework-independent value objects
-repositories/   Persistence and rule repositories
-reports/        Report rendering
-schemas/        HTTP request/response contracts
-services/       Application services and dependency container
+domain/         Core business domain entities, contracts, and services (framework-independent)
+  ├── studio/       Workspace, Project, Dataset, Workflow entities, runtime models, and profiling
+  ├── catalog/      Mapping, normalization, and product title extraction
+  ├── quality/      HealthScoreService and anomaly detection
+  ├── validation/   Missing values, format, and duplicate detection
+  └── serialization/ Execution plan and requirement serializers
+application/    Application use-case services
+  ├── workspace/    Workspace and project management with ownership scoping
+  ├── datasets/     Dataset management and tabular ingestion services
+  ├── workflows/    Workflow authoring, runtime, and history services
+  ├── quality/      Quality orchestration pipeline service
+  └── cache.py      Application caching protocol
+execution/      Execution engine and runtime orchestration
+  ├── workflow/     WorkflowEngine state machine and step runner
+  ├── capabilities/ Capability execution service and executor
+  ├── context/      Execution context service
+  ├── planning/     Execution plan validation
+  └── tracing/      Execution trace collection
+infrastructure/ Technical implementations and external adapters
+  ├── cache/        In-memory TTLCache implementation
+  ├── observability/ Structured JSON logging formatter
+  ├── persistence/  Execution trace persistence adapter
+  └── upload/       Secure TabularUploadReader (CSV/Excel)
+capabilities/   Executable capability implementations (cleaning, extraction, normalization, qa, validation)
+agents/         Workflow collaborators and optional LLM assistant (intent, requirement, planner, rules, extraction, qa, reporter, llm)
+api/            FastAPI HTTP adapter and presentation routes (data, datasets, executions, studio, system, workflows)
+app/            Application entry points (FastAPI, Streamlit dashboard, API client)
+database/       SQLAlchemy persistence models and Alembic database migrations
+repositories/   Persistence repositories for all aggregate roots
+rule_engine/    Typed declarative YAML rule parser, evaluator, and validator
+plugins/        Validator plugin registry and category plugins
+extractors/     Deterministic product attribute extraction
+reports/        Report rendering (Excel, CSV, JSON, PDF)
+schemas/        HTTP request and response Pydantic contracts
+configs/        Runtime configuration and environment settings
 validators/     Dynamically discovered category validators
-plugins/        Reserved package for future plugin implementations
-rule_engine/    Typed YAML rule parsing, loading, and validation
 ```
 
 ## Validator plugins
@@ -58,7 +81,11 @@ The workflow has dedicated Requirement, Category, Rule Retriever, QA, and Report
 
 ## FastAPI backend
 
-The backend is dependency-injected through the application composition root. `POST /upload`, `/validate`, `/clean`, `/extract`, and `/mapping` accept safe CSV/XLS/XLSX uploads. `GET /history` and `GET /report/{execution_id}/{format}` expose execution records and generated reports. `/validations`, `/executions`, and `/executions/{id}/reports/{format}` remain compatible routes. Mapping returns non-mutating column suggestions; there is no frontend in this sprint.
+The backend is dependency-injected through the application composition root. 
+- Studio APIs: `POST /workspaces`, `POST /projects`, `POST /datasets`, `POST /workflows`, `POST /workflows/{id}/execute`, `GET /workflow-executions/{execution_id}`.
+- Data Quality APIs: `POST /upload`, `/validate`, `/clean`, `/extract`, and `/mapping` accept safe CSV/XLS/XLSX uploads.
+- History & Reports: `GET /history`, `GET /executions`, and `GET /report/{execution_id}/{format}` expose execution records and generated reports.
+- `/validations`, `/executions`, and `/executions/{id}/reports/{format}` remain compatible routes.
 
 ## Streamlit dashboard
 
@@ -66,7 +93,7 @@ Run FastAPI first, then run `streamlit run dashboard.py`. The dashboard uses `AP
 
 ## Persistence and migrations
 
-SQLAlchemy persists users, executions (including health scores), report paths, and validation logs. Executions may have a nullable user owner so existing integrations remain compatible. Repositories provide the application boundary for each persisted aggregate. For deployment, install dependencies and run `alembic upgrade head`; the legacy schema auto-create path remains for local/test compatibility.
+SQLAlchemy persists users, workspaces, projects, datasets, workflows, workflow versions, workflow executions, execution traces, report paths, and validation logs. Executions may have a nullable user owner so existing integrations remain compatible. Repositories provide the application boundary for each persisted aggregate. For deployment, install dependencies and run `alembic upgrade head` (current migration head: `b05fd7d45c87`); the legacy schema auto-create path remains for local/test compatibility.
 
 ## Run
 

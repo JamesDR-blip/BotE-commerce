@@ -147,3 +147,34 @@ Container (composition root)
 ## Recommended next implementation slice
 
 Start with **unified ingestion and protected artifact access**: move Streamlit to the shared reader, add a report-artifact resolver that validates the reports root, and write regression tests. Do not add new agents or endpoints until this common boundary is stable.
+
+---
+
+## Post-Audit Implementation Status (September 2026 Addendum)
+
+The recommendations and phased roadmap from this audit have been systematically addressed across subsequent sprints:
+
+1. **Unified Secure Ingestion (Phase 0 - P0 resolved):**
+   - `TabularUploadReader` (`infrastructure/upload/tabular_reader.py`) serves as the single safe boundary for CSV, XLS, and XLSX file ingestion.
+   - Enforces `MAX_UPLOAD_BYTES`, rejects path-like filenames, and escapes spreadsheet formulas (`=`, `+`, `-`, `@`) to prevent CSV injection.
+   - Streamlit dashboard (`app/dashboard.py`) communicates strictly over HTTP via `app/api_client.py` and no longer parses raw uploads or constructs database sessions directly.
+
+2. **Persistence & Migrations (Phase 1 - P1 resolved):**
+   - Introduced Alembic migrations (`database/migrations/`).
+   - Current migration head: `b05fd7d45c87` (`b05fd7d45c87_enforce_workspace_ownership.py`).
+   - Full persistence for Workspaces, Projects, Datasets, Workflows, WorkflowVersions, Executions, and Traces behind repository boundaries.
+
+3. **Clean Architecture & DDD Decomposition (Phase 2 - P1 resolved):**
+   - **`domain/`**: Pure business models, contracts, and validation/catalog/quality domain services.
+   - **`application/`**: Use-case orchestration services (`WorkspaceProjectService`, `DatasetService`, `DatasetIngestionService`, `QualityService`, `WorkflowRuntimeService`).
+   - **`execution/`**: `WorkflowEngine`, `CapabilityExecutionService`, and `ExecutionTraceCollector` for reliable pipeline execution.
+   - **`infrastructure/`**: Isolated cache (`TTLCache`), logging, persistence, and ingestion adapters.
+
+4. **Extensible Capabilities & Safe Rule Engine (Phase 2 - P1 resolved):**
+   - `CapabilityRegistry` allows dynamic discovery and dependency-ordered execution of capabilities (`Cleaning`, `Normalization`, `Extraction`, `Validation`, `QA`).
+   - `rule_engine` parses and evaluates declarative YAML rules without arbitrary code execution.
+   - `plugins.registry.ValidatorRegistry` supports dynamic plugin discovery.
+
+5. **Test Harness & Operational Stability:**
+   - 396 automated unit and integration tests passing (`396 passed in ~4.4s`).
+   - Structured JSON logging implemented via `StructuredJsonFormatter`.

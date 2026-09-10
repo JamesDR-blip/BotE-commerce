@@ -1,76 +1,54 @@
-\# CHANGELOG
+# CHANGELOG
 
+## ADR-001
 
+**Decision:**
+Use Clean Architecture + Domain-Driven Design (DDD).
 
-\## ADR-001
+**Reason:**
+Prevent framework and infrastructure coupling. Keep business rules and domain logic pure and independent from web frameworks (FastAPI/Streamlit) and ORMs (SQLAlchemy).
 
-
-
-Decision:
-
-Use Clean Architecture + DDD.
-
-
-
-Reason:
-
-Prevent framework and infrastructure coupling.
-
-
-
-Status:
-
+**Status:**
 Accepted.
 
+---
 
+## ADR-002
 
-\---
-
-
-
-\## ADR-002
-
-
-
-Decision:
-
+**Decision:**
 ChangeSet is the only production mutation boundary.
 
+**Reason:**
+Required for rollback, audit trails, data lineage, and human-in-the-loop approval gates.
 
-
-Reason:
-
-Required for rollback, audit, lineage and approval.
-
-
-
-Status:
-
+**Status:**
 Accepted.
 
+---
 
+## ADR-003
 
-\---
+**Decision:**
+Risk and Confidence are modeled as separate concepts.
 
+**Reason:**
+A highly confident automated action can still carry a high blast radius or business risk. Decoupling them allows nuanced approval policies.
 
-
-\## ADR-003
-
-
-
-Decision:
-
-Risk and Confidence are separate concepts.
-
-
-
-Reason:
-
-A highly confident action can still be high risk.
-
-
-
-Status:
-
+**Status:**
 Accepted.
 
+---
+
+## ADR-004
+
+**Decision:**
+Formalize package layering into `domain/`, `application/`, `execution/`, and `infrastructure/`, and extract domain serialization helpers.
+
+**Reason:**
+1. Group use-case services under `application/` (`workspace`, `datasets`, `workflows`, `quality`).
+2. Centralize workflow runtime, state transitions, and capability dispatch under `execution/`.
+3. Isolate caching behind an `application.cache.Cache` protocol with an infrastructure `TTLCache` implementation.
+4. Provide pure domain serialization for `ExecutionPlan` and `WorkflowRequirement` under `domain/serialization/`.
+
+**Status:**
+Accepted and Implemented.
