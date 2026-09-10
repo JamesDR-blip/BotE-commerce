@@ -23,5 +23,6 @@ Sau đó, lập báo cáo bàn giao sprint bao gồm:
 Đồng thời, cung cấp nội dung cập nhật chính xác cần thực hiện cho:
 - AI_CONTEXT/06_PROJECT_STATE.md
 - AI_CONTEXT/07_CHANGELOG.md
+- 05_ROADMAP.md
 - HANDOFF/CURRENT_STATE.md
 - HANDOFF/SPRINT_HANDOFF.md
