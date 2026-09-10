@@ -1,28 +1,27 @@
-The sprint work is now complete.
+Công việc của sprint hiện đã hoàn tất.
 
-Perform a final review.
+Hãy thực hiện rà soát lần cuối.
 
-Verify:
-1. Tests (`python -m pytest`)
-2. Architecture & Layer boundaries
-3. Security & Safety rules
-4. Database & Alembic migrations
-5. Backward compatibility
-6. Documentation consistency
+Kiểm tra:
+1. Các bài kiểm thử (`python -m pytest`)
+2. Kiến trúc & ranh giới các lớp (layer boundaries)
+3. Các quy tắc bảo mật & an toàn
+4. Cơ sở dữ liệu & các migration của Alembic
+5. Khả năng tương thích ngược
+6. Tính nhất quán của tài liệu
 
-Then produce a sprint handoff containing:
-- completed work
-- changed files
-- tests
-- migrations
-- architectural decisions
-- known issues
-- remaining work
-- recommended next action
+Sau đó, lập báo cáo bàn giao sprint bao gồm:
+- công việc đã hoàn thành
+- các tệp đã thay đổi
+- các bài kiểm thử
+- các migration
+- các quyết định về kiến ​​trúc
+- các vấn đề đã biết
+- công việc còn lại
+- các bước tiếp theo được đề xuất
 
-Also provide the exact updates that should be made to:
+Đồng thời, cung cấp nội dung cập nhật chính xác cần thực hiện cho:
 - AI_CONTEXT/06_PROJECT_STATE.md
 - AI_CONTEXT/07_CHANGELOG.md
 - HANDOFF/CURRENT_STATE.md
 - HANDOFF/SPRINT_HANDOFF.md
-
