@@ -37,3 +37,5 @@ Báo cáo ban đầu bao gồm:
 Không thiết kế lại kiến ​​trúc trừ khi có lý do kỹ thuật xác đáng.
 Không tạo lại các lớp trừu tượng (abstractions) đã tồn tại.
 Trạng thái của kho mã nguồn được ưu tiên hơn so với các giả định từ cuộc trò chuyện trước đó.
+Không sử dụng Work mode
+Bạn đưa PowerShell → tôi chạy → gửi nguyên output → bạn phân tích
