@@ -97,3 +97,21 @@ Semantic retrieval may return business guidance or descriptive rules that are us
 
 **Status:**
 Accepted and Implemented.
+
+---
+
+## ADR-008
+
+**Decision:**
+Introduce tenant-scoped persistent agent memory behind an application service and repository boundary, with memory-derived corrections validated against capability contracts before affecting agent parameters.
+
+**Reason:**
+1. Enable agents to use prior user corrections and execution learning across sessions.
+2. Enforce strict workspace/user tenant isolation at the persistence boundary.
+3. Keep persistence concerns outside agents and the domain layer.
+4. Prevent invalid or unknown memory values from introducing undeclared capability parameters.
+5. Redact explicitly sensitive customer PII before memory persistence.
+6. Preserve backward compatibility by making memory and tenant scope optional at existing agent interfaces.
+
+**Status:**
+Accepted and Implemented.

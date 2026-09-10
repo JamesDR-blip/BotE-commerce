@@ -2,7 +2,7 @@
 
 ## Sprint
 
-S12 RAG & Semantic Rule Intelligence
+S13 Agent Memory & Execution Context
 
 ## Status
 
@@ -10,145 +10,157 @@ Completed
 
 ## Objective
 
-Enable semantic search and intelligent retrieval of category validation rules and business policies using vector embeddings while preserving the existing deterministic validation path.
+Enable multi-session agent memory so prior user corrections and workflow execution learning can influence future agent decisions while preserving strict tenant isolation and safety boundaries.
 
 ## Implemented
 
-- **Domain Rule Retrieval:**
-  - Added `RuleRetriever` protocol.
-  - Added `RuleQuery`.
-  - Added `RetrievedRuleMatch`.
-  - Added `SemanticRulePack`.
+- **Domain Memory:**
+  - Added `AgentMemory`.
+  - Added `CorrectionEvent`.
+  - Added `ExecutionLearning`.
+  - Added domain validation for required memory scope and identifiers.
 
-- **Vector Retrieval Infrastructure:**
-  - Added persistent `ChromaRuleRetriever`.
-  - Added multilingual embedding support using `paraphrase-multilingual-MiniLM-L12-v2`.
-  - Added cosine similarity score normalization.
-  - Added explicit index synchronization with stale-entry removal.
-
-- **Rule Source Integration:**
-  - Extended `RuleLoader` and `RuleRepository` with `all()`.
-  - Preserved safe YAML loading and SHA-256-based rule versioning.
-  - Kept YAML as the authoritative rule source.
+- **Persistence:**
+  - Added `AgentMemoryRecord`.
+  - Added `AgentMemoryRepository`.
+  - Memory is strictly scoped by `workspace_id` and `user_id`.
+  - Added expiration filtering.
+  - Added explicit expired-memory eviction.
+  - Added composite scope/type/key indexing.
 
 - **Application Layer:**
-  - Added `RuleIntelligenceService`.
-  - Added semantic search.
-  - Added score-based recommendation filtering.
-  - Added explicit semantic-index synchronization.
+  - Added `AgentMemoryService`.
+  - Added correction recording.
+  - Added execution-learning recording.
+  - Added memory querying.
+  - Added recursive PII redaction before persistence.
 
 - **Agents:**
-  - Extended `RuleRetrieverAgent` with semantic `search(RuleQuery)`.
-  - Preserved `retrieve(category)` for deterministic executable validation.
-  - Semantic retrieval depends on the domain `RuleRetriever` port rather than infrastructure directly.
+  - Extended `ParameterResolver` with optional tenant-scoped memory retrieval.
+  - Prior corrections can override declared capability parameters.
+  - Memory values are validated against `CapabilitySpec.parameter_keywords`.
+  - Invalid, unknown, or unrelated memory is ignored.
+  - Extended `RequirementInterpreter` and `RequirementAgent` to propagate optional tenant scope.
+  - Existing deterministic behavior remains unchanged without memory/scope.
 
-- **API:**
-  - Added `POST /rules/search`.
-  - Added `POST /rules/recommend`.
-  - Added request and response schemas.
-  - Added dependency and application-state wiring.
+- **Composition:**
+  - Added `AgentMemoryRepository` and `AgentMemoryService` to `services/container.py`.
+  - Injected memory service into `ParameterResolver`.
 
-- **Configuration:**
-  - Added configurable `rule_index_path`.
-  - Added Chroma and sentence-transformers dependencies.
-  - Added `chroma/` to `.gitignore`.
+- **Verification:**
+  - Added repository persistence/isolation/expiry tests.
+  - Added application-service and redaction tests.
+  - Added parameter-resolver memory tests.
+  - Added end-to-end requirement-agent integration tests.
+  - Verified persisted corrections affect subsequent interpretation.
+  - Verified strict workspace/user isolation.
 
 ## Files Changed
 
 ### Tracked
 
-- `.gitignore`
-- `agents/rule_retriever.py`
-- `api/dependencies.py`
-- `api/main.py`
-- `api/routes/__init__.py`
-- `configs/settings.py`
-- `repositories/rules.py`
-- `requirements.txt`
-- `rule_engine/loader.py`
-- `schemas/requests.py`
-- `schemas/responses.py`
+- `agents/parameter_resolver.py`
+- `agents/requirement.py`
+- `agents/requirement_interpreter.py`
+- `database/models.py`
 - `services/container.py`
 
 ### Added
 
-- `api/routes/rules.py`
-- `application/rules/rule_intelligence_service.py`
-- `domain/rule_retriever.py`
-- `infrastructure/rules/chroma_rule_retriever.py`
-- `infrastructure/rules/__init__.py`
-- `tests/test_chroma_rule_retriever.py`
-- `tests/test_rule_intelligence_container.py`
-- `tests/test_rule_intelligence_service.py`
-- `tests/test_rule_intelligence_sync.py`
-- `tests/test_rule_repository_all.py`
-- `tests/test_rule_retriever_agent_semantic.py`
-- `tests/test_rule_retriever_domain.py`
-- `tests/test_s12_rule_api.py`
-- `tests/test_s12_rule_index_sync.py`
-- `tests/test_s12_semantic_retrieval.py`
+- `domain/agent_memory.py`
+- `domain/memory.py`
+- `repositories/agent_memory.py`
+- `application/memory/redaction.py`
+- `application/memory/memory_service.py`
+- `database/migrations/versions/c13a7e91d204_add_agent_memory.py`
+- `tests/test_agent_memory_repository.py`
+- `tests/test_agent_memory_service.py`
+- `tests/test_parameter_resolver_memory.py`
+- `tests/test_agent_memory_integration.py`
 
 ## Tests
 
-- **Full suite:** 428 / 428 passed.
-- **S12 focused suite:** 31 / 31 passed.
-- **Semantic agent tests:** 7 / 7 passed.
+- **Full suite:** 446 / 446 passed.
+- **Integration acceptance:** 2 / 2 passed.
+- **Repository tests:** 5 / 5 passed.
+- **Memory service tests:** 6 / 6 passed.
+- **Parameter / requirement focused tests:** 21 / 21 passed.
+- **Warnings:** 1 non-blocking Starlette/AnyIO TestClient deprecation warning.
 - `git diff --check`: no whitespace errors; only expected LF/CRLF conversion warnings.
 
 ## Migration
 
-No database migration was required.
+Added:
 
-Alembic head remains:
+`c13a7e91d204_add_agent_memory.py`
 
-`b05fd7d45c87` (`b05fd7d45c87_enforce_workspace_ownership.py`)
+Revision:
 
-Semantic vector data is stored separately under the ignored `chroma/` path.
+`c13a7e91d204`
+
+Down revision:
+
+`b05fd7d45c87`
+
+Verified:
+
+- `alembic current` → `c13a7e91d204 (head)`
+- `alembic heads` → `c13a7e91d204 (head)`
+- `agent_memory` table exists.
+- Required columns and indexes exist.
 
 ## Architectural Decisions
 
-- **ADR-005:** Semantic rule retrieval is exposed through a framework-independent domain port and implemented by a Chroma infrastructure adapter.
-- **ADR-006:** Semantic index synchronization is explicit and not performed automatically at application startup.
-- **ADR-007:** Descriptive and executable rule knowledge are explicitly distinguished; descriptive rules cannot become executable implicitly.
-- Existing ADR-001 through ADR-004 remain unchanged.
+- **ADR-008:** Persistent agent memory is exposed through application/repository boundaries and is strictly tenant-scoped.
+- Memory-derived parameters must conform to existing `CapabilitySpec` contracts.
+- Existing agent interfaces remain backward compatible through optional tenant scope.
+- `QualityService` is intentionally not wired to memory because its current contract lacks tenant scope.
+- Existing ADR-001 through ADR-007 remain unchanged.
 
 ## Security & Safety Review
 
-- Domain has no dependency on Chroma, FAISS, sentence-transformers, or other embedding infrastructure.
-- Vector-store operations are isolated under `infrastructure/rules/`.
-- Retrieved rule content is treated as knowledge, not executable code.
-- Executable validation continues through registered declarative rule primitives.
-- Existing ChangeSet mutation boundary remains unaffected.
+- Domain remains framework-independent.
+- Agents do not access SQLAlchemy or persistence directly.
+- Repository queries require both workspace and user scope.
+- Cross-workspace and cross-user memory access is prevented by repository filtering.
+- Explicit sensitive customer PII keys are recursively redacted before persistence.
+- Memory cannot introduce undeclared capabilities or parameters.
+- Invalid memory values are ignored.
 - No arbitrary shell, SQL, or code execution was introduced.
-- Existing backward-compatible deterministic rule retrieval remains intact.
+- Existing ChangeSet mutation boundary remains unaffected.
+- Existing deterministic validation and rule execution paths remain unchanged.
 
 ## Backward Compatibility
 
-- `RuleRetrieverAgent.retrieve(category)` remains available.
-- Existing `RuleRepository.get(category)` remains unchanged.
-- Existing validation capability continues to retrieve executable `RuleSet` objects deterministically.
-- Existing API routes remain unchanged.
-- No database schema changes were introduced.
+- `RequirementAgent.interpret()` remains compatible with previous callers.
+- `RequirementInterpreter.interpret()` remains compatible with previous callers.
+- `ParameterResolver.resolve()` remains compatible with previous callers.
+- Memory is only queried when a memory service and complete tenant scope are supplied.
+- Existing deterministic parameter inference remains the fallback behavior.
+- No existing API route was changed.
 
 ## Known Issues
 
 None blocking.
 
-Non-blocking consideration:
+Non-blocking considerations:
 
-- Semantic retrieval quality depends on the embedding model and indexed rule corpus.
-- The semantic index requires explicit synchronization after YAML rule changes.
+- Memory retrieval currently uses persisted corrections directly without a more advanced relevance/ranking strategy.
+- Execution learning is persisted but is not yet used by `ParameterResolver`.
+- `QualityService` is not memory-aware because its current interface does not carry tenant scope.
+- Future work may introduce richer ranking, deduplication, TTL, and execution-learning consumption.
 
 ## Work Remaining
 
-- Future sprints may build richer dataset-profile-aware rule recommendation workflows.
-- Future autonomous execution must continue to respect ChangeSet, risk, confidence, and approval boundaries.
-- S13 will address Memory according to the roadmap.
+- Broaden memory consumption to additional agents/use cases where explicit tenant scope exists.
+- Add more sophisticated memory ranking/relevance policies when required by the roadmap.
+- Expand execution-learning feedback loops.
+- Continue preserving ChangeSet, risk, confidence, approval, and audit boundaries.
 
 ## Next Sprint
 
-S13 Memory
+Next roadmap sprint after S13 Memory.
 
 ## Recommended First Task
 
-Read `SPRINTS/sprint-13-memory.md` and inspect the current persistence/application architecture before introducing any memory model or storage boundary.
+Read the next sprint specification and inspect the relevant existing architecture before introducing new abstractions or persistence boundaries.

@@ -12,6 +12,7 @@ from sqlalchemy import (
     DateTime,
     Text,
     JSON,
+    Index,
     ForeignKey,
     create_engine,
 )
@@ -19,7 +20,7 @@ from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
     mapped_column,
-    relationship, 
+    relationship,
     sessionmaker,
 )
 from sqlalchemy.pool import StaticPool
@@ -412,6 +413,54 @@ class ExecutionRecord(Base):
         cascade="all, delete-orphan",
     )
 
+
+class AgentMemoryRecord(Base):
+    __tablename__ = "agent_memory"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("workspaces.id"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+    memory_type: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+    )
+    memory_key: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+    value_json: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_agent_memory_scope_type_key",
+            "workspace_id",
+            "user_id",
+            "memory_type",
+            "memory_key",
+        ),
+    )
 
 class ValidationLogRecord(Base):
     __tablename__ = "validation_logs"

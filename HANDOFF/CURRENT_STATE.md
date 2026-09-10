@@ -7,10 +7,10 @@ AI Studio E-commerce Platform
 Autonomous E-commerce Data Operations Platform
 
 **Current Sprint:**
-S12 (RAG / Rule Intelligence) — Completed
+S13 (Agent Memory & Execution Context) — Completed
 
 **Last Completed:**
-S12 RAG / Semantic Rule Intelligence
+S13 Agent Memory & Execution Context
 
 **Architecture:**
 Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presentation)
@@ -19,28 +19,32 @@ Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presen
 `services/container.py`
 
 **Tests:**
-428 / 428 passing (verified via `python -m pytest -q`)
+446 / 446 passing (verified via `python -m pytest -q`)
 
 **Database:**
-Alembic head: `b05fd7d45c87` (`b05fd7d45c87_enforce_workspace_ownership.py`)
+Alembic head: `c13a7e91d204` (`add_agent_memory`)
 
 **Current Work:**
-S12 semantic rule intelligence is implemented and tested. The platform now provides a framework-independent `RuleRetriever` domain port, persistent Chroma-backed semantic retrieval, application-level rule intelligence, semantic agent integration, explicit rule-index synchronization, and FastAPI search/recommend endpoints.
+S13 introduces persistent tenant-scoped agent memory for corrections and execution learning. Memory is persisted through `AgentMemoryRepository`, orchestrated through `AgentMemoryService`, and consumed by the requirement interpretation path through `ParameterResolver`. Prior corrections can adjust declared capability parameters only after validation against the capability contract.
 
 **Key Safety Properties:**
-- YAML remains the source of truth for rule parsing and versioning.
-- Deterministic executable validation remains backed by `RuleRepository` and `RuleSet`.
-- Semantic retrieval is isolated behind the domain port and infrastructure adapter.
-- Descriptive semantic rules are marked non-executable.
-- Retrieved rules cannot directly execute code.
-- Chroma synchronization is explicit and does not occur automatically at startup.
+- Memory is strictly scoped by both `workspace_id` and `user_id`.
+- Agents do not access persistence directly.
+- Sensitive customer PII is redacted before persistence using an explicit sensitive-key allowlist.
+- Memory-derived parameter values are validated against declared capability options.
+- Unknown capabilities and parameters cannot be introduced through memory.
+- Expired memory is excluded from queries and can be explicitly evicted.
+- Existing deterministic parameter resolution remains intact when memory is unavailable or tenant scope is absent.
+- Existing ChangeSet, approval, risk, and confidence boundaries remain unaffected.
 
 **Blocking Issues:**
 None.
 
 **Known Considerations:**
-- Semantic retrieval quality depends on the embedding model and indexed corpus.
-- The semantic index should be explicitly synchronized after source rule changes.
+- Current memory consumption is integrated into the requirement/parameter resolution path.
+- `QualityService` is not memory-aware because its current contract does not carry tenant scope.
+- Memory quality depends on the relevance and correctness of recorded corrections.
+- Future iterations may require ranking, deduplication, TTL policies, and broader execution-learning integration.
 
 **Next Action:**
-Begin S13 Memory according to `SPRINTS/sprint-13-memory.md`.
+Proceed to the next roadmap sprint after S13.

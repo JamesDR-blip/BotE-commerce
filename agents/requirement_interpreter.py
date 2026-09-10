@@ -32,6 +32,8 @@ class RequirementInterpreter:
         requested_capabilities: tuple[str, ...] = (),
         requested_intents: tuple[str, ...] = (),
         parameters: dict[str, dict[str, object]] | None = None,
+        workspace_id: str | None = None,
+        user_id: str | None = None,
     ) -> tuple[
         tuple[str, ...],
         tuple[str, ...],
@@ -69,6 +71,8 @@ class RequirementInterpreter:
                     text=user_request,
                     capabilities=requested_capabilities,
                     catalog=self._catalog,
+                    workspace_id=workspace_id,
+                    user_id=user_id,
                 )
             )
 

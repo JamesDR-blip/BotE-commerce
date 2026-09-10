@@ -44,6 +44,8 @@ class RequirementAgent:
         input_mappings: dict[str, dict[str, str]] | None = None,
         parameters: dict[str, dict[str, object]] | None = None,
         user_request: str | None = None,
+        workspace_id: str | None = None,
+        user_id: str | None = None,
     ) -> WorkflowRequirement:
 
         if self._interpreter:
@@ -56,6 +58,8 @@ class RequirementAgent:
                 requested_capabilities=requested_capabilities,
                 requested_intents=requested_intents,
                 parameters=parameters,
+                workspace_id=workspace_id,
+                user_id=user_id,
             )
 
         return WorkflowRequirement(

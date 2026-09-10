@@ -27,6 +27,7 @@ from domain.dependency_resolver import DependencyResolver
 from domain.intent_resolver import IntentResolver
 
 from repositories.capability_execution_traces import CapabilityExecutionTraceRepository
+from repositories.agent_memory import AgentMemoryRepository
 from repositories.datasets import DatasetRepository
 from repositories.executions import ExecutionRepository
 from repositories.execution_traces import ExecutionTraceRepository
@@ -45,6 +46,7 @@ from infrastructure.rules.chroma_rule_retriever import ChromaRuleRetriever
 from execution.capabilities.capability_executor import CapabilityExecutor
 from execution.capabilities.capability_execution_service import CapabilityExecutionService
 from application.datasets.dataset_ingestion import DatasetIngestionService
+from application.memory.memory_service import AgentMemoryService
 from application.rules.rule_intelligence_service import RuleIntelligenceService
 from services.data_operations import DataOperationsService
 from domain.studio.profiling import DatasetProfileService
@@ -135,7 +137,12 @@ class Container:
             self.capabilities
         )
 
-        parameter_resolver = ParameterResolver()
+        self.memories = AgentMemoryRepository(sessions)
+        self.agent_memory = AgentMemoryService(memories=self.memories)
+
+        parameter_resolver = ParameterResolver(
+            memory_service=self.agent_memory,
+        )
 
         self.agents.requirements = RequirementAgent(
             classifier=intent_classifier,
@@ -246,4 +253,3 @@ def build_container(
         app_settings = Settings()
 
     return Container(app_settings)
-
