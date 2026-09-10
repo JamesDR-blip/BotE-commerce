@@ -139,3 +139,23 @@ class WorkflowExecutionDetailResponse(BaseModel):
     started_at: datetime | None = None
     finished_at: datetime | None = None
     traces: list[CapabilityTraceResponse]
+
+
+class RuleSearchRequestEcho(BaseModel):
+    query: str
+    category: str | None = None
+    fields: list[str]
+    top_k: int
+
+
+class RetrievedRuleMatchResponse(BaseModel):
+    rule_id: str
+    content: str
+    score: float
+    category: str | None = None
+    metadata: dict[str, Any]
+
+
+class RuleSearchResponse(BaseModel):
+    query: RuleSearchRequestEcho
+    matches: list[RetrievedRuleMatchResponse]

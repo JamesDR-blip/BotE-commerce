@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     environment: Literal["development", "test", "production"] = "development"
     database_url: str = "sqlite:///./data_quality.db"
     rules_path: Path = Path("rules_library.yaml")
+    rule_index_path: Path = Path("chroma/rules")
     validators_path: Path = Path("validators")
     reports_path: Path = Path("artifacts/reports")
     cache_ttl_seconds: int = Field(default=3600, ge=0)

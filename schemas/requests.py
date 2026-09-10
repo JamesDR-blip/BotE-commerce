@@ -38,3 +38,18 @@ class WorkflowVersionCreateRequest(BaseModel):
 
 class WorkflowExecutionRequest(BaseModel):
     inputs: dict[str, Any] = Field(default_factory=dict)
+
+
+class RuleSearchRequest(BaseModel):
+    query: str
+    category: str | None = None
+    fields: list[str] = Field(default_factory=list)
+    top_k: int = Field(default=5, ge=1, le=50)
+
+
+class RuleRecommendRequest(BaseModel):
+    query: str
+    category: str | None = None
+    fields: list[str] = Field(default_factory=list)
+    top_k: int = Field(default=5, ge=1, le=50)
+    min_score: float = Field(default=0.0, ge=0.0, le=1.0)

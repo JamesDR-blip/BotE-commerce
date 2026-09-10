@@ -19,3 +19,5 @@ quarantine_records.csv
 .vscode/
 .DS_Store
 Thumbs.db
+
+chroma/

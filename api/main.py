@@ -6,6 +6,7 @@ from api.routes import (
     data_router,
     datasets_router,
     executions_router,
+    rules_router,
     studio_router,
     system_router,
     workflows_router,
@@ -44,6 +45,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(data_router)
     app.include_router(datasets_router)
     app.include_router(executions_router)
+    app.include_router(rules_router)
     app.include_router(studio_router)
     app.include_router(system_router)
     app.include_router(workflows_router)
@@ -61,6 +63,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.execution_repository = container.executions
     app.state.execution_trace_repository = container.execution_traces
     app.state.upload_reader = container.uploads
+    app.state.rule_intelligence = container.rule_intelligence
     app.state.categories = container.registry.categories()
     instrument_fastapi(app)
     return app

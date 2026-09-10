@@ -41,9 +41,11 @@ from domain.quality.anomalies import detect_anomalies
 from services.authentication import AuthenticationService
 from services.authorization import AuthorizationService
 from infrastructure.cache.ttl import TTLCache
+from infrastructure.rules.chroma_rule_retriever import ChromaRuleRetriever
 from execution.capabilities.capability_executor import CapabilityExecutor
 from execution.capabilities.capability_execution_service import CapabilityExecutionService
 from application.datasets.dataset_ingestion import DatasetIngestionService
+from application.rules.rule_intelligence_service import RuleIntelligenceService
 from services.data_operations import DataOperationsService
 from domain.studio.profiling import DatasetProfileService
 from application.datasets.dataset_service import DatasetService
@@ -69,12 +71,18 @@ class Container:
         sessions = make_session_factory(settings.database_url)
         self.registry = ValidatorRegistry()
         self.rules = RuleRepository(settings.rules_path)
+        self.rule_retriever = ChromaRuleRetriever(
+            path=settings.rule_index_path,
+        )
+        self.rule_intelligence = RuleIntelligenceService(
+            retriever=self.rule_retriever,
+        )
         self.validation = ValidationService()
         self.health_scores = HealthScoreService()
         self.agents = Agents(
             RequirementAgent(),
             ClassifierAgent(),
-            RuleRetrieverAgent(self.rules),
+            RuleRetrieverAgent(self.rules, self.rule_retriever),
             ExtractionAgent(
                 DeterministicProductExtractor()
             ),

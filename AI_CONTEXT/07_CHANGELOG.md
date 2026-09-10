@@ -52,3 +52,48 @@ Formalize package layering into `domain/`, `application/`, `execution/`, and `in
 
 **Status:**
 Accepted and Implemented.
+
+---
+
+## ADR-005
+
+**Decision:**
+Introduce semantic rule retrieval behind a framework-independent `RuleRetriever` domain port, with Chroma isolated in the infrastructure layer.
+
+**Reason:**
+1. Enable context-aware rule discovery beyond static category lookup.
+2. Keep Chroma, embeddings, and vector-store concerns outside the domain layer.
+3. Preserve the existing deterministic `RuleRetrieverAgent.retrieve(category)` contract for executable validation.
+4. Allow semantic retrieval to return typed, non-executable `SemanticRulePack` results.
+
+**Status:**
+Accepted and Implemented.
+
+---
+
+## ADR-006
+
+**Decision:**
+Keep semantic rule indexing explicit rather than synchronizing automatically during application startup.
+
+**Reason:**
+1. Avoid embedding-model loading and vector-store synchronization as startup side effects.
+2. Keep YAML rule definitions as the authoritative source for parsing and versioning.
+3. Make index synchronization an explicit application operation.
+4. Allow stale vector-index entries to be removed during synchronization.
+
+**Status:**
+Accepted and Implemented.
+
+---
+
+## ADR-007
+
+**Decision:**
+Distinguish descriptive rule knowledge from executable validation rules in the semantic index.
+
+**Reason:**
+Semantic retrieval may return business guidance or descriptive rules that are useful for recommendation but must never become executable validation logic implicitly. Executable validation remains constrained to registered declarative primitives.
+
+**Status:**
+Accepted and Implemented.

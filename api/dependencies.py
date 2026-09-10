@@ -7,6 +7,7 @@ from services.authentication import AuthenticationService
 from services.authorization import AuthorizationService
 from services.data_operations import DataOperationsService
 from application.datasets.dataset_service import DatasetService
+from application.rules.rule_intelligence_service import RuleIntelligenceService
 from domain.catalog.mapping import MappingService
 from application.quality.quality_service import QualityService
 from application.workspace.project_service import WorkspaceProjectService
@@ -111,4 +112,10 @@ def get_authorization_service(
     request: Request,
 ) -> AuthorizationService:
     return request.app.state.authorization
+
+
+def get_rule_intelligence_service(
+    request: Request,
+) -> RuleIntelligenceService:
+    return request.app.state.rule_intelligence
 
