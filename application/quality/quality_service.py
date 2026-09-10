@@ -8,9 +8,9 @@ from uuid import uuid4
 import pandas as pd
 import json
 
-from infrastructure.serialization.execution_plan import ExecutionPlanSerializer
-from infrastructure.serialization.requirement import RequirementSerializer
-from infrastructure.cache.ttl import TTLCache
+from domain.serialization.execution_plan import ExecutionPlanSerializer
+from domain.serialization.requirement import RequirementSerializer
+from application.cache import Cache
 from execution.capabilities.capability_execution_service import CapabilityExecutionService
 
 from agents.requirement import RequirementAgent
@@ -29,7 +29,7 @@ class QualityService:
         capability_execution: CapabilityExecutionService,
         executions,
         trace_persistence,
-        cache: TTLCache,
+        cache: Cache[object],
         reporter: ReporterAgent,
         enable_llm: bool = False,
         llm=None,

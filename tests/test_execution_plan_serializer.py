@@ -1,5 +1,5 @@
 from domain.plans import ExecutionPlan, PlanStep
-from infrastructure.serialization.execution_plan import ExecutionPlanSerializer
+from domain.serialization.execution_plan import ExecutionPlanSerializer
 
 
 def test_execution_plan_round_trip() -> None:

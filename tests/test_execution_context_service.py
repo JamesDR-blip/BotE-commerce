@@ -5,10 +5,10 @@ from domain.plans import ExecutionPlan, PlanStep
 from execution.context.service import (
     ExecutionContextService,
 )
-from infrastructure.serialization.execution_plan import (
+from domain.serialization.execution_plan import (
     ExecutionPlanSerializer,
 )
-from infrastructure.serialization.requirement import (
+from domain.serialization.requirement import (
     RequirementSerializer,
 )
 from .conftest import FakeExecutions

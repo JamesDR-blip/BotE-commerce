@@ -4,10 +4,16 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import PurePath
-from typing import Any
+from typing import Any, Protocol
 
-from infrastructure.upload.tabular_reader import TabularUploadReader
+import pandas as pd
+
 from domain.studio.profiling import DatasetProfileService
+
+
+class TabularReader(Protocol):
+    def read(self, filename: str | None, content: bytes) -> pd.DataFrame:
+        ...
 
 
 class DatasetIngestionService:
@@ -16,7 +22,7 @@ class DatasetIngestionService:
     def __init__(
         self,
         *,
-        reader: TabularUploadReader,
+        reader: TabularReader,
         datasets: Any,
         profiler: DatasetProfileService,
     ) -> None:
@@ -71,4 +77,3 @@ class DatasetIngestionService:
             column_count=len(frame.columns),
             status="READY",
         )
-

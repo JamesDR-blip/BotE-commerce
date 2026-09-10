@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 
 from domain.execution_context import ExecutionContext
-from infrastructure.serialization.execution_plan import ExecutionPlanSerializer
-from infrastructure.serialization.requirement import RequirementSerializer
+from domain.serialization.execution_plan import ExecutionPlanSerializer
+from domain.serialization.requirement import RequirementSerializer
 
 
 class ExecutionContextService:

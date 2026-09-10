@@ -8,7 +8,7 @@ import inspect
 
 from domain.studio.runtime import WorkflowExecution
 
-from infrastructure.serialization.execution_plan import (
+from domain.serialization.execution_plan import (
     ExecutionPlanSerializer,
 )
 from execution.tracing.trace_collector import (
