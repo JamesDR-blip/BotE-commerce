@@ -55,9 +55,32 @@ Phase 4: Enterprise Production & Hardening (S24 - S28)
 - [Sprint 11: Streamlit Dashboard & Client](sprint-11-dashboard.md)
 
 ### Upgrade Path to Autonomous Platform (S12 - S28)
-- [Sprint 12: RAG & Semantic Rule Intelligence](sprint-12-rag-rule-intelligence.md) *(Current Sprint)*
+- [Sprint 12: RAG & Semantic Rule Intelligence](sprint-12-rag-rule-intelligence.md)
 - [Sprint 13: Agent Memory & Execution Context](sprint-13-memory.md)
-- [Sprint 14: Performance, Streaming & Asynchronous Workers](sprint-14-performance-workers.md)
+- [Sprint 14: Performance, Streaming & Asynchronous Workers](sprint-14-performance-workers.md) *(Current Sprint)*
+### S14-A — Asynchronous Workflow Execution
+
+Status: COMPLETE
+
+Delivered:
+- QUEUED workflow execution state
+- Application queue port
+- In-process FIFO queue adapter
+- Atomic QUEUED -> RUNNING claim
+- Background workflow execution worker
+- Async execution endpoint
+- Execution status endpoint
+- Persisted execution ID queue payloads
+- Reuse of existing WorkflowEngine
+- Full regression verification
+
+Verification:
+- 32 S14-A targeted tests passed
+- 484 full regression tests passed
+- 1 existing Starlette/AnyIO deprecation warning
+
+Next:
+- S14-B streaming/chunked/batch execution
 - [Sprint 15: Data Health Command Center](sprint-15-data-health.md)
 - [Sprint 16: Risk & Approval Engine](sprint-16-risk-approval.md)
 - [Sprint 17: Shadow Mode & Simulation](sprint-17-shadow-mode.md)

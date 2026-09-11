@@ -176,6 +176,11 @@ class DatasetRecord(Base):
         index=True,
     )
 
+    storage_key: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     row_count: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,

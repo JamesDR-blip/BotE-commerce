@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     rule_index_path: Path = Path("chroma/rules")
     validators_path: Path = Path("validators")
     reports_path: Path = Path("artifacts/reports")
+    dataset_storage_path: Path = Path("artifacts/datasets")
     cache_ttl_seconds: int = Field(default=3600, ge=0)
     max_upload_bytes: int = Field(default=25 * 1024 * 1024, gt=0)
     enable_llm: bool = False

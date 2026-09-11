@@ -1,4 +1,4 @@
-"""HTTP response contracts."""
+﻿"""HTTP response contracts."""
 from typing import Any
 
 from pydantic import BaseModel
@@ -124,8 +124,20 @@ class WorkflowExecutionResponse(BaseModel):
     success: bool
     outputs: dict[str, Any]
     error: str | None = None
-    started_at: datetime
+    started_at: datetime | None = None
     finished_at: datetime | None = None
+
+
+class WorkflowExecutionStatusResponse(BaseModel):
+    execution_id: str
+    workflow_id: str
+    workflow_version: str
+    status: str
+    success: bool
+    error: str | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+
 
 class WorkflowExecutionDetailResponse(BaseModel):
     execution_id: str
@@ -159,3 +171,6 @@ class RetrievedRuleMatchResponse(BaseModel):
 class RuleSearchResponse(BaseModel):
     query: RuleSearchRequestEcho
     matches: list[RetrievedRuleMatchResponse]
+
+
+

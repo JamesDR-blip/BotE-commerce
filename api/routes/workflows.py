@@ -1,4 +1,4 @@
-"""Workflow API routes."""
+﻿"""Workflow API routes."""
 
 from __future__ import annotations
 import json
@@ -23,6 +23,7 @@ from schemas.responses import (
     CapabilityTraceResponse,
     WorkflowExecutionDetailResponse,
     WorkflowExecutionResponse,
+    WorkflowExecutionStatusResponse,
     WorkflowResponse,
     WorkflowVersionResponse,
 )
@@ -310,6 +311,73 @@ def execute_workflow(
     )
 
 
+@router.post(
+    "/workflows/{workflow_id}/execute-async",
+    response_model=WorkflowExecutionResponse,
+)
+def execute_workflow_async(
+    workflow_id: str,
+    payload: WorkflowExecutionRequest,
+    runtime_service: WorkflowRuntimeService = Depends(
+        get_workflow_runtime
+    ),
+) -> WorkflowExecutionResponse:
+    try:
+        runtime = runtime_service.execute_async(
+            workflow_id=workflow_id,
+            inputs=payload.inputs,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    return WorkflowExecutionResponse(
+        execution_id=runtime.execution_id,
+        workflow_id=runtime.workflow_id,
+        workflow_version=runtime.workflow_version,
+        status=runtime.status.value,
+        success=runtime.success,
+        outputs=runtime.outputs,
+        error=runtime.error,
+        started_at=runtime.started_at,
+        finished_at=runtime.finished_at,
+    )
+
+
+@router.get(
+    "/workflow-executions/{execution_id}/status",
+    response_model=WorkflowExecutionStatusResponse,
+)
+def workflow_execution_status(
+    execution_id: str,
+    history_service: WorkflowHistoryService = Depends(
+        get_workflow_history
+    ),
+) -> WorkflowExecutionStatusResponse:
+    try:
+        data = history_service.get_workflow_execution_detail(
+            execution_id
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    return WorkflowExecutionStatusResponse(
+        execution_id=data["execution_id"],
+        workflow_id=data["workflow_id"],
+        workflow_version=data["workflow_version"],
+        status=data["status"],
+        success=data["status"] == "COMPLETED",
+        error=data["error"],
+        started_at=data["started_at"],
+        finished_at=data["finished_at"],
+    )
+
+
 @router.get(
     "/workflow-executions/{execution_id}",
     response_model=WorkflowExecutionDetailResponse,
@@ -352,3 +420,8 @@ def workflow_execution_detail(
             for trace in data["traces"]
         ],
     )
+
+
+
+
+

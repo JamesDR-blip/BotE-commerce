@@ -22,6 +22,7 @@ class Dataset:
     file_format: str | None = None
     size_bytes: int | None = None
     content_hash: str | None = None
+    storage_key: str | None = None
 
     row_count: int | None = None
     column_count: int | None = None

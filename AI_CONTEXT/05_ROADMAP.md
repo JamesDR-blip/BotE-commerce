@@ -24,6 +24,39 @@
 
 - **S14 Performance**: Streaming tabular ingestion, chunked processing, async execution workers.
 
+### S14 — Performance / Scalable Tabular Processing
+
+S14 is being implemented incrementally.
+
+#### S14-A — Asynchronous Workflow Execution — COMPLETE
+
+Completed:
+- Added QUEUED workflow execution state.
+- Added application-level workflow execution queue port.
+- Added minimal in-process FIFO queue adapter.
+- Added asynchronous workflow execution through persisted execution IDs.
+- Added atomic QUEUED -> RUNNING execution claim to prevent duplicate delivery.
+- Added worker execution that reloads persisted execution state and workflow version.
+- Reused the existing WorkflowEngine; no separate AsyncWorkflowEngine was introduced.
+- Added POST /workflows/{workflow_id}/execute-async.
+- Added GET /workflow-executions/{execution_id}/status.
+- Preserved the existing synchronous workflow execution endpoint.
+- Queue payloads contain execution_id only; raw DataFrame/upload bytes are not queued.
+- No database migration was required specifically for asynchronous execution.
+
+Verification:
+- Targeted S14-A regression: 32 passed.
+- Full regression: 484 passed, 1 warning.
+
+#### S14-B — Streaming / Chunked / Batch Execution — NEXT
+
+Remaining S14 work:
+- Chunk-oriented workflow execution.
+- Batch capability execution over large tabular datasets.
+- Streaming execution without materializing the full dataset in worker memory.
+- Benchmark and verification against 100k+ row datasets.
+- Production-grade durable/distributed queue evaluation if required by deployment scale.
+
 ---
 
 ## Future Roadmap

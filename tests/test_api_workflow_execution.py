@@ -1,4 +1,5 @@
-import json
+﻿import json
+import time
 from fastapi.testclient import TestClient
 from api.main import create_app
 from configs.settings import Settings
@@ -529,4 +530,177 @@ def test_workflow_execution_detail_returns_404_for_missing_execution():
     assert response.json()["detail"] == (
         "Workflow execution not found: "
         "missing-workflow-execution"
+    )
+def test_workflow_async_execution_endpoint_returns_execution_id() -> None:
+    client = _client()
+
+    workspace_response = client.post(
+        "/workspaces",
+        json={
+            "id": "ws-async",
+            "name": "Async Demo",
+        },
+    )
+    assert workspace_response.status_code == 200
+
+    project_response = client.post(
+        "/projects",
+        json={
+            "id": "p-async",
+            "workspace_id": "ws-async",
+            "name": "Async Catalog",
+            "description": "Async workflow test",
+        },
+    )
+    assert project_response.status_code == 200
+
+    workflow_response = client.post(
+        "/workflows",
+        json={
+            "id": "wf-async",
+            "project_id": "p-async",
+            "name": "Async Validation",
+            "version": "1.0",
+            "plan": {
+                "version": "1.0",
+                "steps": [],
+                "metadata": {},
+            },
+        },
+    )
+    assert workflow_response.status_code == 200
+
+    response = client.post(
+        "/workflows/wf-async/execute-async",
+        json={
+            "inputs": {
+                "file": "products.csv",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+
+    payload = response.json()
+
+    assert payload["execution_id"]
+    assert payload["workflow_id"] == "wf-async"
+    assert payload["workflow_version"] == "1.0"
+    assert payload["status"] in {
+        "QUEUED",
+        "RUNNING",
+        "COMPLETED",
+    }
+    assert payload["outputs"] in ({}, {"file": "products.csv"})
+
+    execution = (
+        client.app.state.container
+        .workflow_executions
+        .get(payload["execution_id"])
+    )
+
+    assert execution is not None
+    assert execution.workflow_id == "wf-async"
+    assert execution.workflow_version == "1.0"
+
+
+def test_workflow_async_status_endpoint_reads_persisted_execution() -> None:
+    client = _client()
+
+    workspace_response = client.post(
+        "/workspaces",
+        json={
+            "id": "ws-status",
+            "name": "Async Status Demo",
+        },
+    )
+    assert workspace_response.status_code == 200
+
+    project_response = client.post(
+        "/projects",
+        json={
+            "id": "p-status",
+            "workspace_id": "ws-status",
+            "name": "Async Status Catalog",
+            "description": "Async status test",
+        },
+    )
+    assert project_response.status_code == 200
+
+    workflow_response = client.post(
+        "/workflows",
+        json={
+            "id": "wf-status",
+            "project_id": "p-status",
+            "name": "Async Status Validation",
+            "version": "1.0",
+            "plan": {
+                "version": "1.0",
+                "steps": [],
+                "metadata": {},
+            },
+        },
+    )
+    assert workflow_response.status_code == 200
+
+    execute_response = client.post(
+        "/workflows/wf-status/execute-async",
+        json={
+            "inputs": {
+                "file": "products.csv",
+            },
+        },
+    )
+
+    assert execute_response.status_code == 200
+
+    execution_id = execute_response.json()["execution_id"]
+
+    terminal_statuses = {"COMPLETED", "FAILED"}
+    status_payload = None
+
+    for _ in range(40):
+        status_response = client.get(
+            f"/workflow-executions/{execution_id}/status"
+        )
+
+        assert status_response.status_code == 200
+
+        status_payload = status_response.json()
+
+        if status_payload["status"] in terminal_statuses:
+            break
+
+        time.sleep(0.025)
+
+    assert status_payload is not None
+    assert status_payload["execution_id"] == execution_id
+    assert status_payload["workflow_id"] == "wf-status"
+    assert status_payload["workflow_version"] == "1.0"
+    assert status_payload["status"] in terminal_statuses
+    assert status_payload["success"] is (
+        status_payload["status"] == "COMPLETED"
+    )
+
+    execution = (
+        client.app.state.container
+        .workflow_executions
+        .get(execution_id)
+    )
+
+    assert execution is not None
+    assert execution.status == status_payload["status"]
+
+
+def test_workflow_async_status_returns_404_for_missing_execution() -> None:
+    client = _client()
+
+    response = client.get(
+        "/workflow-executions/missing-async-execution/status"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Workflow execution not found: "
+        "missing-async-execution"
     )

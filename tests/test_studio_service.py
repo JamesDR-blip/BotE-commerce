@@ -1,4 +1,5 @@
 import pytest
+from io import BytesIO
 
 from database.models import Base
 
@@ -205,3 +206,68 @@ def test_workflow_cannot_be_created_for_other_users_project():
             plan=plan,
         )
 
+def test_ingest_dataset_stream_delegates_after_project_ownership_check():
+    class FakeProjects:
+        def get_for_owner(self, *, project_id, owner_id):
+            assert project_id == "p-1"
+            assert owner_id == "user-1"
+            return object()
+
+    class FakeIngestion:
+        def __init__(self):
+            self.kwargs = None
+
+        def ingest_streaming(self, **kwargs):
+            self.kwargs = kwargs
+            return {"status": "READY"}
+
+    ingestion = FakeIngestion()
+
+    dataset_service = DatasetService(
+        datasets=None,
+        projects=FakeProjects(),
+        ingestion=ingestion,
+    )
+
+    source = BytesIO(b"id,value\n1,100\n")
+
+    result = dataset_service.ingest_dataset_stream(
+        dataset_id="d-1",
+        project_id="p-1",
+        name="catalog",
+        current_user=CurrentUser(user_id="user-1"),
+        filename="catalog.csv",
+        source=source,
+    )
+
+    assert result == {"status": "READY"}
+    assert ingestion.kwargs["dataset_id"] == "d-1"
+    assert ingestion.kwargs["project_id"] == "p-1"
+    assert ingestion.kwargs["name"] == "catalog"
+    assert ingestion.kwargs["filename"] == "catalog.csv"
+    assert ingestion.kwargs["source"] is source
+
+def test_ingest_dataset_stream_rejects_other_users_project():
+    class FakeProjects:
+        def get_for_owner(self, *, project_id, owner_id):
+            return None
+
+    class FakeIngestion:
+        def ingest_streaming(self, **kwargs):
+            raise AssertionError("ingestion must not be called")
+
+    dataset_service = DatasetService(
+        datasets=None,
+        projects=FakeProjects(),
+        ingestion=FakeIngestion(),
+    )
+
+    with pytest.raises(ValueError, match="Project not found"):
+        dataset_service.ingest_dataset_stream(
+            dataset_id="d-1",
+            project_id="p-1",
+            name="catalog",
+            current_user=CurrentUser(user_id="other-user"),
+            filename="catalog.csv",
+            source=BytesIO(b"id,value\n1,100\n"),
+        )

@@ -81,6 +81,39 @@ class DatasetService:
             source_type=source_type,
         )
 
+    def ingest_dataset_stream(
+        self,
+        *,
+        dataset_id: str,
+        project_id: str,
+        name: str,
+        current_user: CurrentUser,
+        filename: str,
+        source,
+        source_type: str = "upload",
+    ):
+        if self.projects.get_for_owner(
+            project_id=project_id,
+            owner_id=current_user.user_id,
+        ) is None:
+            raise ValueError(
+                f"Project not found: {project_id}"
+            )
+
+        if self.ingestion is None:
+            raise RuntimeError(
+                "Dataset ingestion service is not configured"
+            )
+
+        return self.ingestion.ingest_streaming(
+            dataset_id=dataset_id,
+            project_id=project_id,
+            name=name,
+            filename=filename,
+            source=source,
+            source_type=source_type,
+        )
+
     def get_dataset(
         self,
         *,

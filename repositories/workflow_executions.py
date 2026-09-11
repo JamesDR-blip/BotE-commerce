@@ -1,4 +1,4 @@
-"""Repository for workflow execution persistence."""
+﻿"""Repository for workflow execution persistence."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import json
 from datetime import datetime, timezone
 from typing import Callable
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from database.models import WorkflowExecutionRecord
@@ -20,7 +20,6 @@ class WorkflowExecutionRepository:
         sessions: Callable[[], Session],
     ) -> None:
         self._sessions = sessions
-
 
     def create(
         self,
@@ -52,7 +51,6 @@ class WorkflowExecutionRepository:
 
             return record
 
-
     def mark_running(
         self,
         execution_id: str,
@@ -73,6 +71,49 @@ class WorkflowExecutionRepository:
 
             return record
 
+    def claim_running(
+        self,
+        execution_id: str,
+    ) -> WorkflowExecutionRecord | None:
+        """
+        Atomically claim a queued execution for worker execution.
+
+        Returns the running record when this worker successfully claims it.
+        Returns None when another worker already claimed it or the execution
+        is no longer queued.
+        """
+
+        with self._sessions() as session:
+
+            now = datetime.now(timezone.utc)
+
+            result = session.execute(
+                update(WorkflowExecutionRecord)
+                .where(
+                    WorkflowExecutionRecord.id == execution_id,
+                    WorkflowExecutionRecord.status == "QUEUED",
+                )
+                .values(
+                    status="RUNNING",
+                    started_at=now,
+                )
+            )
+
+            if result.rowcount != 1:
+                session.rollback()
+                return None
+
+            session.commit()
+
+            record = session.get(
+                WorkflowExecutionRecord,
+                execution_id,
+            )
+
+            if record is None:
+                return None
+
+            return record
 
     def complete(
         self,
@@ -97,7 +138,6 @@ class WorkflowExecutionRepository:
 
             return record
 
-
     def fail(
         self,
         *,
@@ -121,7 +161,6 @@ class WorkflowExecutionRepository:
 
             return record
 
-
     def get(
         self,
         execution_id: str,
@@ -133,7 +172,6 @@ class WorkflowExecutionRepository:
                 WorkflowExecutionRecord,
                 execution_id,
             )
-
 
     def list_by_workflow(
         self,
@@ -156,6 +194,7 @@ class WorkflowExecutionRepository:
                     )
                 )
             )
+
     def _get_mutable(
         self,
         session: Session,

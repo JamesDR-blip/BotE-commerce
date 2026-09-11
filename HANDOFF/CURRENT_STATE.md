@@ -7,10 +7,10 @@ AI Studio E-commerce Platform
 Autonomous E-commerce Data Operations Platform
 
 **Current Sprint:**
-S13 (Agent Memory & Execution Context) — Completed
+S14-A — Asynchronous Workflow Execution: COMPLETE.
 
 **Last Completed:**
-S13 Agent Memory & Execution Context
+S14-A — Asynchronous Workflow Execution.
 
 **Architecture:**
 Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presentation)
@@ -19,32 +19,54 @@ Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presen
 `services/container.py`
 
 **Tests:**
-446 / 446 passing (verified via `python -m pytest -q`)
+484 / 484 passing (verified via `python -m pytest -q`)
+
+**S14-A Targeted Regression:**
+32 / 32 passing.
 
 **Database:**
-Alembic head: `c13a7e91d204` (`add_agent_memory`)
+- Current database revision: `c13a7e91d204`.
+- Repository Alembic head: `d14c1f2a9b31`.
+- The database is one migration behind the repository head.
+- `d14c1f2a9b31` is the existing dataset storage migration and was not required by S14-A.
+- No database migration was required for S14-A because `QUEUED` uses the existing workflow execution status column.
 
 **Current Work:**
-S13 introduces persistent tenant-scoped agent memory for corrections and execution learning. Memory is persisted through `AgentMemoryRepository`, orchestrated through `AgentMemoryService`, and consumed by the requirement interpretation path through `ParameterResolver`. Prior corrections can adjust declared capability parameters only after validation against the capability contract.
+S14-A introduces asynchronous workflow execution while preserving the existing synchronous execution path. Workflow executions can be persisted as `QUEUED`, dispatched through an application-level queue port, atomically claimed by a background worker, and resumed through the existing `WorkflowEngine`.
+
+The async worker receives only the persisted `execution_id`. It reloads the persisted workflow execution and workflow version before execution, preventing raw DataFrame/upload payloads from being placed on the queue and ensuring execution uses the version that was persisted when the execution was created.
+
+**Key S14-A Properties:**
+- `QUEUED` is a persisted workflow execution state.
+- Queue access is defined through an application `WorkflowExecutionQueue` port.
+- The current infrastructure adapter is an in-process background queue.
+- Queue payloads contain only `execution_id`.
+- `QUEUED -> RUNNING` is claimed atomically to prevent duplicate execution.
+- The worker reuses the existing `WorkflowEngine`; no separate async engine was introduced.
+- The persisted workflow version is used instead of resolving the current active version at worker execution time.
+- Existing synchronous workflow execution remains backward compatible.
+- Async execution is exposed through `POST /workflows/{workflow_id}/execute-async`.
+- Execution status is exposed through `GET /workflow-executions/{execution_id}/status`.
+- No progress percentage, retry policy, worker metadata, or durable external queue was introduced in S14-A.
 
 **Key Safety Properties:**
-- Memory is strictly scoped by both `workspace_id` and `user_id`.
-- Agents do not access persistence directly.
-- Sensitive customer PII is redacted before persistence using an explicit sensitive-key allowlist.
-- Memory-derived parameter values are validated against declared capability options.
-- Unknown capabilities and parameters cannot be introduced through memory.
-- Expired memory is excluded from queries and can be explicitly evicted.
-- Existing deterministic parameter resolution remains intact when memory is unavailable or tenant scope is absent.
+- Queue payloads do not contain raw DataFrame or upload bytes.
+- Workflow execution remains behind the existing application/execution boundaries.
+- The domain layer remains framework-independent.
+- The worker cannot bypass persisted workflow execution state.
+- Atomic execution claiming prevents the same queued execution from being claimed twice.
 - Existing ChangeSet, approval, risk, and confidence boundaries remain unaffected.
+- No `eval`, `exec`, `pickle`, or unsafe YAML loading was introduced by S14-A.
 
 **Blocking Issues:**
 None.
 
 **Known Considerations:**
-- Current memory consumption is integrated into the requirement/parameter resolution path.
-- `QualityService` is not memory-aware because its current contract does not carry tenant scope.
-- Memory quality depends on the relevance and correctness of recorded corrections.
-- Future iterations may require ranking, deduplication, TTL policies, and broader execution-learning integration.
+- The current in-process queue is not durable across process restarts.
+- S14-A does not define retry or dead-letter handling; execution failures are persisted as `FAILED`.
+- No reliable semantic progress unit currently exists, so progress percentage is intentionally not exposed.
+- Streaming/chunked workflow execution and batch processing for large tabular datasets remain S14-B scope.
+- The existing Starlette/AnyIO TestClient deprecation warning remains.
 
 **Next Action:**
-Proceed to the next roadmap sprint after S13.
+Proceed to S14-B — streaming/chunked workflow execution and batch processing for large tabular datasets, while preserving the S14-A `execution_id` queue boundary.

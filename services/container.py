@@ -1,4 +1,4 @@
-"""Composition root: dependency injection without mutable module globals."""
+﻿"""Composition root: dependency injection without mutable module globals."""
 from __future__ import annotations
 from database.models import make_session_factory
 from extractors.deterministic import DeterministicProductExtractor
@@ -57,9 +57,12 @@ from domain.catalog.mapping import MappingService
 from domain.catalog.normalization import NormalizationService
 from application.quality.quality_service import QualityService
 from infrastructure.upload.tabular_reader import TabularUploadReader
+from infrastructure.upload.streaming_reader import StreamingTabularReader
+from infrastructure.storage.dataset_storage import DatasetStorage
 from services.validation_service import ValidationService
 from application.workflows.authoring_service import WorkflowAuthoringService
-from execution.workflow.engine import WorkflowEngine
+from execution.workflow.engine import WorkflowEngine, WorkflowExecutionWorker
+from infrastructure.queue.workflow_execution_queue import InProcessWorkflowExecutionQueue
 from application.workflows.history_service import WorkflowHistoryService
 from application.workflows.runtime_service import WorkflowRuntimeService
 from application.workspace.project_service import WorkspaceProjectService
@@ -198,11 +201,17 @@ class Container:
         self.datasets = DatasetRepository(sessions)
         self.cache = TTLCache(settings.cache_ttl_seconds)
         self.uploads = TabularUploadReader(settings.max_upload_bytes)
+        self.streaming_uploads = StreamingTabularReader(
+            settings.max_upload_bytes,
+        )
+        self.dataset_storage = DatasetStorage(settings.dataset_storage_path)
         self.dataset_profile = DatasetProfileService()
         self.dataset_ingestion = DatasetIngestionService(
             reader=self.uploads,
+            streaming_reader=self.streaming_uploads,
             datasets=self.datasets,
             profiler=self.dataset_profile,
+            storage=self.dataset_storage,
         )
         self.mapping = MappingService()
 
@@ -241,10 +250,19 @@ class Container:
                         traces=self.workflow_capability_traces,
                     )
                 )
+        self.workflow_worker = WorkflowExecutionWorker(
+            executions=self.workflow_executions,
+            workflow_engine=self.workflow_engine,
+        )
+        self.workflow_queue = InProcessWorkflowExecutionQueue(
+            worker=self.workflow_worker.run,
+        )
         self.workflow_runtime = WorkflowRuntimeService(
             workflow_engine=lambda: self.workflow_engine,
             workflow_history=lambda: self.workflow_history,
+            workflow_queue=lambda: self.workflow_queue,
         )
+
 def build_container(
     app_settings: Settings | None = None,
 ) -> Container:
@@ -253,3 +271,8 @@ def build_container(
         app_settings = Settings()
 
     return Container(app_settings)
+
+
+
+
+

@@ -1,9 +1,12 @@
 from fastapi.testclient import TestClient
+from types import SimpleNamespace
+from datetime import datetime, timezone
 
 from api.main import create_app
 from configs.settings import Settings
 from domain.identity import CurrentUser
-from api.dependencies import get_current_user
+from api.dependencies import get_current_user, get_dataset_service
+
 
 
 def build_client():
@@ -894,3 +897,117 @@ def test_user_cannot_list_other_users_workflows():
 
     assert response.status_code == 200
     assert response.json() == []
+
+def test_upload_dataset():
+    client = build_client()
+
+    client.post(
+        "/workspaces",
+        json={
+            "id": "ws-1",
+            "name": "Demo Workspace",
+        },
+    )
+
+    client.post(
+        "/projects",
+        json={
+            "id": "p-1",
+            "workspace_id": "ws-1",
+            "name": "Catalog",
+        },
+    )
+
+    response = client.post(
+        "/projects/p-1/datasets/upload",
+        data={"name": "catalog.csv"},
+        files={
+            "file": (
+                "catalog.csv",
+                b"id,name,price\n1,Shirt,100\n2,Pants,200\n",
+                "text/csv",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["project_id"] == "p-1"
+    assert data["name"] == "catalog.csv"
+    assert data["filename"] == "catalog.csv"
+    assert data["file_format"] == "csv"
+    assert data["row_count"] == 2
+    assert data["column_count"] == 3
+    assert data["status"] == "READY"
+
+def test_upload_dataset_uses_streaming_ingestion():
+    client = build_client()
+
+    client.post(
+        "/workspaces",
+        json={
+            "id": "ws-1",
+            "name": "Demo Workspace",
+        },
+    )
+
+    client.post(
+        "/projects",
+        json={
+            "id": "p-1",
+            "workspace_id": "ws-1",
+            "name": "Catalog",
+        },
+    )
+
+    dataset_service = client.app.state.dataset_service
+    captured = {}
+
+    def fake_ingest_dataset_stream(**kwargs):
+        captured.update(kwargs)
+
+        return SimpleNamespace(
+            id="d-1",
+            project_id="p-1",
+            name="catalog.csv",
+            source_type="upload",
+            filename="catalog.csv",
+            file_format="csv",
+            size_bytes=35,
+            content_hash="abc123",
+            row_count=2,
+            column_count=3,
+            status="READY",
+            metadata={},
+            created_at=datetime.now(timezone.utc),
+        )
+
+    dataset_service.ingest_dataset_stream = fake_ingest_dataset_stream
+
+    content = b"id,name,price\n1,Shirt,100\n2,Pants,200\n"
+
+    response = client.post(
+        "/projects/p-1/datasets/upload",
+        data={"name": "catalog.csv"},
+        files={
+            "file": (
+                "catalog.csv",
+                content,
+                "text/csv",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert captured["dataset_id"].startswith("dataset-")
+    assert captured["project_id"] == "p-1"
+    assert captured["name"] == "catalog.csv"
+    assert captured["filename"] == "catalog.csv"
+    assert captured["source_type"] == "upload"
+
+    source = captured["source"]
+    assert hasattr(source, "read")
+    assert not isinstance(source, bytes)

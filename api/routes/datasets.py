@@ -72,16 +72,16 @@ async def upload_dataset(
     name: str = Form(...),
     file: UploadFile = File(...),
     dataset_service: DatasetService = Depends(get_dataset_service),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> DatasetResponse:
-    content = await file.read()
-
     try:
-        dataset = dataset_service.ingest_dataset(
+        dataset = dataset_service.ingest_dataset_stream(
+            current_user=current_user,
             dataset_id=f"dataset-{uuid.uuid4().hex}",
             project_id=project_id,
             name=name,
             filename=file.filename or "",
-            content=content,
+            source=file.file,
             source_type="upload",
         )
     except ValueError as exc:

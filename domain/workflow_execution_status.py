@@ -1,9 +1,11 @@
-from enum import Enum
+﻿from enum import Enum
 
 
 class WorkflowExecutionStatus(str, Enum):
 
     CREATED = "CREATED"
+
+    QUEUED = "QUEUED"
 
     RUNNING = "RUNNING"
 

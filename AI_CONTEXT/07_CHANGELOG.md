@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## S14-A — Asynchronous Workflow Execution
+
+Added asynchronous workflow execution using a minimal in-process queue.
+
+Changes:
+- Added QUEUED workflow execution state.
+- Added atomic workflow execution claiming.
+- Added workflow execution queue application port.
+- Added in-process FIFO queue infrastructure adapter.
+- Added WorkflowExecutionWorker.
+- Added persisted-execution async execution path.
+- Added async execution and status API endpoints.
+- Added API, worker, queue, repository, runtime, and state contract tests.
+
+Architecture:
+- Queue payloads contain execution_id only.
+- Worker reloads persisted execution state.
+- Persisted workflow version is used for deterministic execution.
+- Existing WorkflowEngine is reused.
+- No separate async engine or external queue dependency was introduced.
+
+Verification:
+- 32 targeted S14-A tests passed.
+- 484 full-suite tests passed.
+- 1 existing Starlette/AnyIO deprecation warning remains.
+
 ## ADR-001
 
 **Decision:**
