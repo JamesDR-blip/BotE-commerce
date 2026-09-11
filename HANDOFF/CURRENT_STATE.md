@@ -7,10 +7,10 @@ AI Studio E-commerce Platform
 Autonomous E-commerce Data Operations Platform
 
 **Current Sprint:**
-S14-A — Asynchronous Workflow Execution: COMPLETE.
+S14 — Performance, Streaming & Asynchronous Workers: COMPLETE at code/test level.
 
 **Last Completed:**
-S14-A — Asynchronous Workflow Execution.
+S14-B — Streaming / Chunked / Batch Workflow Execution.
 
 **Architecture:**
 Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presentation)
@@ -19,17 +19,15 @@ Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presen
 `services/container.py`
 
 **Tests:**
-484 / 484 passing (verified via `python -m pytest -q`)
+495 / 495 passing via `python -m pytest`.
 
-**S14-A Targeted Regression:**
-32 / 32 passing.
+**Targeted S14-B Regression:**
+47 / 47 passing.
 
 **Database:**
-- Current database revision: `c13a7e91d204`.
-- Repository Alembic head: `d14c1f2a9b31`.
-- The database is one migration behind the repository head.
-- `d14c1f2a9b31` is the existing dataset storage migration and was not required by S14-A.
-- No database migration was required for S14-A because `QUEUED` uses the existing workflow execution status column.
+- Current database revision: `e2f3a4b5c6d7`.
+- Repository Alembic head: `e2f3a4b5c6d7`.
+- Database is synchronized with repository head.
 
 **Current Work:**
 S14-A introduces asynchronous workflow execution while preserving the existing synchronous execution path. Workflow executions can be persisted as `QUEUED`, dispatched through an application-level queue port, atomically claimed by a background worker, and resumed through the existing `WorkflowEngine`.
@@ -49,6 +47,17 @@ The async worker receives only the persisted `execution_id`. It reloads the pers
 - Execution status is exposed through `GET /workflow-executions/{execution_id}/status`.
 - No progress percentage, retry policy, worker metadata, or durable external queue was introduced in S14-A.
 
+## S14-B Completed Work
+
+- Workflow executions can persist an optional dataset reference.
+- Dataset ownership and workflow-project scope are validated before execution.
+- `WorkflowEngine` supports opt-in streaming execution using persisted datasets.
+- CSV/XLSX sources are read chunk-by-chunk.
+- Existing capability execution is reused per chunk.
+- The complete dataset is not accumulated by the streaming workflow execution loop.
+- S14-A's execution-ID-only queue contract is preserved.
+- 100k-row benchmark coverage was added.
+
 **Key Safety Properties:**
 - Queue payloads do not contain raw DataFrame or upload bytes.
 - Workflow execution remains behind the existing application/execution boundaries.
@@ -61,12 +70,17 @@ The async worker receives only the persisted `execution_id`. It reloads the pers
 **Blocking Issues:**
 None.
 
-**Known Considerations:**
-- The current in-process queue is not durable across process restarts.
-- S14-A does not define retry or dead-letter handling; execution failures are persisted as `FAILED`.
-- No reliable semantic progress unit currently exists, so progress percentage is intentionally not exposed.
-- Streaming/chunked workflow execution and batch processing for large tabular datasets remain S14-B scope.
+## Known Considerations
+
+- The in-process queue is not durable across process restarts.
+- Retry and dead-letter handling are not implemented.
+- A generic semantic progress percentage is not exposed.
+- Streaming mode is opt-in through execution-plan metadata.
+- Individual capabilities may have their own memory characteristics.
+- The 100k-row memory test uses `tracemalloc`, not OS RSS.
+- Durable/distributed queue infrastructure remains a production deployment evaluation rather than S14-B implementation scope.
 - The existing Starlette/AnyIO TestClient deprecation warning remains.
 
-**Next Action:**
-Proceed to S14-B — streaming/chunked workflow execution and batch processing for large tabular datasets, while preserving the S14-A `execution_id` queue boundary.
+## Next Action
+
+Evaluate production deployment requirements for queue durability, retry, dead-letter handling, worker lifecycle, and progress semantics before introducing additional infrastructure.

@@ -1,5 +1,47 @@
 # CHANGELOG
 
+## S14-B — Streaming / Chunked Workflow Execution — COMPLETE
+
+Implemented scalable tabular workflow execution on top of the existing S14-A asynchronous execution foundation.
+
+### Added
+
+- Added optional persisted `dataset_id` to workflow executions.
+- Added dataset ownership and workflow-project scope validation.
+- Added Alembic migration `e2f3a4b5c6d7`.
+- Extended `WorkflowEngine` with opt-in streaming execution.
+- Reused the existing `DatasetStorage` and `StreamingTabularReader`.
+- Processed persisted CSV/XLSX sources chunk-by-chunk.
+- Reused the existing capability execution pipeline for each chunk.
+- Preserved the existing synchronous execution path.
+- Preserved the S14-A execution-ID-only queue contract.
+- Added 100k-row streaming benchmark coverage.
+
+### Architectural Decisions
+
+- Reuse `WorkflowEngine`; no separate streaming execution engine.
+- Reuse existing capability execution instead of introducing a parallel batch-capability framework.
+- Persist dataset identity before asynchronous dispatch rather than placing file/data payloads on the queue.
+- Keep `dataset_id` nullable for backward compatibility.
+- Use existing execution-plan metadata as the opt-in streaming mode boundary.
+- Do not introduce a durable/distributed queue as part of S14-B.
+
+### Verification
+
+- S14-B targeted regression: `47 passed`.
+- Full regression: `495 passed`.
+- Full suite runtime: approximately `24.8 seconds`.
+- 1 existing Starlette/AnyIO deprecation warning remains.
+- 100k-row benchmark: 100,000 rows processed in 10 chunks of 10,000 rows.
+- Memory assertion uses `tracemalloc` Python-allocation measurements rather than OS RSS.
+
+### Migration
+
+- `e2f3a4b5c6d7_add_workflow_execution_dataset.py`
+- Adds nullable `workflow_executions.dataset_id`.
+- Adds foreign key to `datasets.id`.
+- Adds index `ix_workflow_executions_dataset_id`.
+
 ## S14-A — Asynchronous Workflow Execution
 
 Added asynchronous workflow execution using a minimal in-process queue.

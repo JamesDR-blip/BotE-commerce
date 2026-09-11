@@ -318,6 +318,12 @@ class WorkflowExecutionRecord(Base):
         index=True,
     )
 
+    dataset_id: Mapped[str | None] = mapped_column(
+        ForeignKey("datasets.id"),
+        nullable=True,
+        index=True,
+    )
+
     workflow_version: Mapped[str] = mapped_column(
         String(50),
         nullable=False,

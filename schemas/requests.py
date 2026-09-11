@@ -38,6 +38,7 @@ class WorkflowVersionCreateRequest(BaseModel):
 
 class WorkflowExecutionRequest(BaseModel):
     inputs: dict[str, Any] = Field(default_factory=dict)
+    dataset_id: str | None = None
 
 
 class RuleSearchRequest(BaseModel):

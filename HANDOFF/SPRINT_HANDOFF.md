@@ -1,104 +1,113 @@
-# S14-A Sprint Handoff
+# S14 Sprint Handoff
 
 ## Status
 
-S14-A — Asynchronous Workflow Execution: COMPLETE at code/test level.
+S14 — Performance, Streaming & Asynchronous Workers: COMPLETE at code/test level.
+
+S14-A asynchronous execution and S14-B streaming/chunked execution are both implemented and verified.
 
 ## Completed Work
 
-- Added QUEUED workflow execution state.
-- Added atomic QUEUED -> RUNNING repository claim.
-- Added WorkflowExecutionQueue application port.
-- Added InProcessWorkflowExecutionQueue infrastructure adapter.
-- Added WorkflowExecutionWorker.
-- Added persisted asynchronous execution path.
-- Added asynchronous execution endpoint.
-- Added asynchronous execution status endpoint.
-- Preserved synchronous execution behavior.
-- Queue messages contain execution_id only.
-- Persisted workflow version is used when worker executes queued work.
-- Existing WorkflowEngine is reused.
+### S14-A
 
-## Changed S14-A Files
+- Persisted `QUEUED` workflow execution state.
+- Application-level queue port.
+- In-process worker.
+- Execution-ID-only queue payload.
+- Persisted workflow-version execution.
+- Async execution and status APIs.
+- Atomic execution claiming.
 
-- domain/workflow_execution_status.py
-- repositories/workflow_executions.py
-- execution/workflow/engine.py
-- application/workflows/queue.py
-- application/workflows/runtime_service.py
-- infrastructure/queue/__init__.py
-- infrastructure/queue/workflow_execution_queue.py
-- api/routes/workflows.py
-- schemas/responses.py
-- services/container.py
-- tests/test_workflow_execution_async_state.py
-- tests/test_workflow_execution_queue.py
-- tests/test_workflow_execution_worker.py
-- tests/test_api_workflow_execution.py
+### S14-B
+
+- Added nullable `workflow_executions.dataset_id`.
+- Added dataset ownership validation.
+- Added workflow/dataset project-scope validation.
+- Added opt-in streaming execution in the existing `WorkflowEngine`.
+- Reused persisted dataset storage and `StreamingTabularReader`.
+- Processed tabular datasets chunk-by-chunk.
+- Reused existing capability execution per chunk.
+- Preserved synchronous workflow execution.
+- Preserved the S14-A queue boundary.
+- Added 100k-row benchmark coverage.
+
+## Changed Files
+
+- `api/routes/workflows.py`
+- `application/workflows/runtime_service.py`
+- `database/models.py`
+- `database/migrations/versions/e2f3a4b5c6d7_add_workflow_execution_dataset.py`
+- `execution/workflow/engine.py`
+- `repositories/workflow_executions.py`
+- `schemas/requests.py`
+- `services/container.py`
+- `tests/test_api_workflow_execution.py`
+- `tests/test_streaming_reader.py`
+- `tests/test_workflow_engine.py`
+- `tests/test_workflow_execution_async_state.py`
+- `tests/test_workflow_runtime_service.py`
+- `data_quality.db`
 
 ## Tests
 
-Targeted S14-A:
-32 passed, 1 warning.
+- S14-B targeted regression: 47 passed.
+- Full regression: 495 passed.
+- Runtime: approximately 24.8 seconds.
+- 1 existing Starlette/AnyIO deprecation warning.
 
-Full regression:
-484 passed, 1 warning, 25.94s.
+## Migration
 
-The warning is the existing Starlette TestClient / AnyIO BlockingPortal deprecation warning.
+`e2f3a4b5c6d7_add_workflow_execution_dataset.py`
 
-## Database / Migrations
+Revision:
 
-No migration was introduced specifically for asynchronous workflow execution because the existing workflow execution status column already supports the new QUEUED value.
+`d14c1f2a9b31 -> e2f3a4b5c6d7`
 
-Repository Alembic head:
-d14c1f2a9b31
+Changes:
 
-Database revision observed:
-c13a7e91d204
+- nullable `workflow_executions.dataset_id`
+- foreign key to `datasets.id`
+- index `ix_workflow_executions_dataset_id`
 
-Therefore migration d14c1f2a9b31 remains pending and must be applied before considering the database fully synchronized with repository head.
+Current database and repository are both at `e2f3a4b5c6d7`.
 
 ## Architecture Decisions
 
-- Keep queue abstraction in Application.
-- Keep queue implementation in Infrastructure.
-- Keep execution worker and runtime orchestration in Execution.
-- Keep FastAPI concerns in Presentation.
-- Queue only persisted execution_id values.
-- Use atomic database claiming to prevent duplicate execution.
-- Persist workflow version before dispatch and execute that persisted version.
-- Reuse WorkflowEngine instead of introducing a second execution engine.
-- Use an in-process queue for the initial S14-A implementation; evaluate durable/distributed infrastructure separately when deployment requirements justify it.
+1. Reuse `WorkflowEngine`; do not create a second streaming engine.
+2. Reuse existing dataset storage and streaming reader abstractions.
+3. Reuse existing capability execution for each chunk.
+4. Persist dataset identity rather than queueing raw data.
+5. Preserve execution-ID-only async queue payloads.
+6. Keep `dataset_id` nullable for backward compatibility.
+7. Make streaming execution opt-in through existing execution-plan metadata.
+8. Do not introduce a durable/distributed queue without deployment-driven justification.
 
 ## Security / Safety
 
-No eval(), exec(), pickle, or unsafe yaml.load() usage was introduced.
-
-No raw DataFrame/upload bytes are placed in queue messages.
-
-Worker execution is based on persisted execution state and validated workflow versions.
+- No `eval`, `exec`, unsafe YAML, pickle, or arbitrary SQL introduced.
+- Queue payloads do not contain raw data.
+- Dataset/workflow ownership is enforced.
+- Dataset and workflow must belong to the same project.
+- Existing risk, approval, ChangeSet, and confidence boundaries are unaffected.
 
 ## Known Issues
 
-- In-process queue is not durable across process restarts.
-- No retry policy or job metadata yet.
-- No progress percentage yet.
-- Existing Starlette/AnyIO deprecation warning.
-- Database is currently one migration behind repository head.
+- In-process queue is not durable.
+- No retry/dead-letter infrastructure.
+- No generic semantic progress percentage.
+- Individual capabilities may have capability-specific memory behavior.
+- `tracemalloc` benchmark is not an OS RSS measurement.
+- Existing Starlette/AnyIO deprecation warning remains.
 
 ## Remaining Work
 
-S14-B:
-- streaming/chunked workflow execution;
-- batch capability execution;
-- large-dataset memory-bounded execution;
-- 100k+ row end-to-end benchmark;
-- evaluate durable/distributed queue infrastructure if required.
+- Evaluate durable/distributed queue infrastructure for production deployment.
+- Define retry/dead-letter semantics if durable workers are introduced.
+- Define reliable progress semantics before exposing progress percentage.
 
 ## Recommended Next Steps
 
-1. Apply migration d14c1f2a9b31 in the target database environment.
-2. Keep S14-A behavior stable.
-3. Implement S14-B chunk/batch execution separately from the async queue foundation.
-4. Re-run the full regression suite after S14-B changes.
-5. Reassess queue durability/retry semantics before production-scale deployment.
+1. Keep S14-A/S14-B behavior stable.
+2. Monitor large-dataset execution characteristics.
+3. Evaluate production queue requirements based on actual deployment topology.
+4. Address the Starlette/AnyIO dependency warning through dependency maintenance.

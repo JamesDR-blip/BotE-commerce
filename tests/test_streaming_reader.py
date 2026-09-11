@@ -111,3 +111,64 @@ def test_streaming_reader_rejects_empty_csv() -> None:
             ).stream("products.csv", b"")
         )
 
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+import csv
+import tracemalloc
+
+from infrastructure.upload.streaming_reader import StreamingTabularReader
+
+
+def test_streaming_reader_processes_100k_rows_with_bounded_python_memory() -> None:
+    row_count = 100_000
+    chunk_size = 10_000
+
+    with NamedTemporaryFile(
+        mode="w",
+        suffix=".csv",
+        newline="",
+        encoding="utf-8",
+        delete=False,
+    ) as handle:
+        path = Path(handle.name)
+        writer = csv.writer(handle)
+        writer.writerow(["id", "name", "price"])
+
+        for index in range(row_count):
+            writer.writerow([
+                index,
+                f"product-{index}",
+                index % 1000,
+            ])
+
+    try:
+        reader = StreamingTabularReader(
+            max_bytes=64 * 1024 * 1024,
+            chunk_size=chunk_size,
+        )
+
+        chunks = 0
+        rows = 0
+        max_chunk_rows = 0
+
+        tracemalloc.start()
+
+        with path.open("rb") as source:
+            for chunk in reader.stream(path.name, source):
+                chunks += 1
+                chunk_rows = len(chunk)
+                rows += chunk_rows
+                max_chunk_rows = max(max_chunk_rows, chunk_rows)
+
+                assert chunk_rows <= chunk_size
+
+        _, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+
+        assert rows == row_count
+        assert chunks == 10
+        assert max_chunk_rows == chunk_size
+        assert peak < 512 * 1024 * 1024
+
+    finally:
+        path.unlink(missing_ok=True)

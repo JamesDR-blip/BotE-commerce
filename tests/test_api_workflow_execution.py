@@ -13,6 +13,7 @@ class FailingWorkflowEngine:
         workflow_id,
         execution_id,
         inputs,
+        dataset_id=None,
     ):
         from domain.studio.runtime import WorkflowExecution
         from domain.plans import ExecutionPlan
@@ -704,3 +705,212 @@ def test_workflow_async_status_returns_404_for_missing_execution() -> None:
         "Workflow execution not found: "
         "missing-async-execution"
     )
+
+def test_workflow_async_execution_persists_dataset_reference():
+    client = _client()
+
+    workspace_response = client.post(
+        "/workspaces",
+        json={
+            "id": "ws-dataset",
+            "name": "Dataset Execution Demo",
+        },
+    )
+    assert workspace_response.status_code == 200
+
+    project_response = client.post(
+        "/projects",
+        json={
+            "id": "p-dataset",
+            "workspace_id": "ws-dataset",
+            "name": "Dataset Catalog",
+            "description": "Dataset execution test",
+        },
+    )
+    assert project_response.status_code == 200
+
+    workflow_response = client.post(
+        "/workflows",
+        json={
+            "id": "wf-dataset",
+            "project_id": "p-dataset",
+            "name": "Dataset Validation",
+            "version": "1.0",
+            "plan": {
+                "version": "1.0",
+                "steps": [],
+                "metadata": {},
+            },
+        },
+    )
+    assert workflow_response.status_code == 200
+
+    dataset_response = client.post(
+        "/datasets",
+        json={
+            "id": "dataset-1",
+            "project_id": "p-dataset",
+            "name": "Products",
+            "source_type": "upload",
+            "metadata": {},
+        },
+    )
+    assert dataset_response.status_code == 200
+
+    response = client.post(
+        "/workflows/wf-dataset/execute-async",
+        json={
+            "dataset_id": "dataset-1",
+            "inputs": {
+                "file": "products.csv",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+
+    execution_id = response.json()["execution_id"]
+    execution = (
+        client.app.state.container
+        .workflow_executions
+        .get(execution_id)
+    )
+
+    assert execution is not None
+    assert execution.dataset_id == "dataset-1"
+    assert json.loads(execution.inputs_json) == {
+        "file": "products.csv",
+    }
+
+def test_workflow_execution_rejects_dataset_from_different_project() -> None:
+    client = _client()
+
+    workspace_response = client.post(
+        "/workspaces",
+        json={"id": "ws-scope", "name": "Scope Test"},
+    )
+    assert workspace_response.status_code == 200
+
+    project_response = client.post(
+        "/projects",
+        json={
+            "id": "p-scope-a",
+            "workspace_id": "ws-scope",
+            "name": "Workflow Project",
+            "description": "Scope test",
+        },
+    )
+    assert project_response.status_code == 200
+
+    other_project_response = client.post(
+        "/projects",
+        json={
+            "id": "p-scope-b",
+            "workspace_id": "ws-scope",
+            "name": "Dataset Project",
+            "description": "Scope test",
+        },
+    )
+    assert other_project_response.status_code == 200
+
+    workflow_response = client.post(
+        "/workflows",
+        json={
+            "id": "wf-scope",
+            "project_id": "p-scope-a",
+            "name": "Scope Workflow",
+            "version": "1.0",
+            "plan": {"steps": []},
+        },
+    )
+    assert workflow_response.status_code == 200
+
+    dataset_response = client.post(
+        "/datasets",
+        json={
+            "id": "dataset-other-project",
+            "project_id": "p-scope-b",
+            "name": "Other Project Dataset",
+            "source_type": "upload",
+            "metadata": {},
+        },
+    )
+    assert dataset_response.status_code == 200
+
+    response = client.post(
+        "/workflows/wf-scope/execute",
+        json={
+            "dataset_id": "dataset-other-project",
+            "inputs": {},
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Dataset does not belong to workflow project: "
+        "dataset-other-project"
+    )
+
+
+def test_workflow_execution_accepts_dataset_in_same_project() -> None:
+    client = _client()
+
+    workspace_response = client.post(
+        "/workspaces",
+        json={"id": "ws-valid", "name": "Valid Scope Test"},
+    )
+    assert workspace_response.status_code == 200
+
+    project_response = client.post(
+        "/projects",
+        json={
+            "id": "p-valid",
+            "workspace_id": "ws-valid",
+            "name": "Valid Project",
+            "description": "Valid scope test",
+        },
+    )
+    assert project_response.status_code == 200
+
+    workflow_response = client.post(
+        "/workflows",
+        json={
+            "id": "wf-valid",
+            "project_id": "p-valid",
+            "name": "Valid Workflow",
+            "version": "1.0",
+            "plan": {"steps": []},
+        },
+    )
+    assert workflow_response.status_code == 200
+
+    dataset_response = client.post(
+        "/datasets",
+        json={
+            "id": "dataset-valid",
+            "project_id": "p-valid",
+            "name": "Valid Dataset",
+            "source_type": "upload",
+            "metadata": {},
+        },
+    )
+    assert dataset_response.status_code == 200
+
+    response = client.post(
+        "/workflows/wf-valid/execute",
+        json={
+            "dataset_id": "dataset-valid",
+            "inputs": {},
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["workflow_id"] == "wf-valid"
+
+    execution_id = response.json()["execution_id"]
+    execution = client.app.state.container.workflow_executions.get(
+        execution_id
+    )
+
+    assert execution is not None
+    assert execution.dataset_id == "dataset-valid"

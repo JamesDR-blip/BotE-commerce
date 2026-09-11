@@ -48,14 +48,28 @@ Verification:
 - Targeted S14-A regression: 32 passed.
 - Full regression: 484 passed, 1 warning.
 
-#### S14-B — Streaming / Chunked / Batch Execution — NEXT
+#### S14-B — Streaming / Chunked / Batch Execution — COMPLETE
 
-Remaining S14 work:
-- Chunk-oriented workflow execution.
-- Batch capability execution over large tabular datasets.
-- Streaming execution without materializing the full dataset in worker memory.
-- Benchmark and verification against 100k+ row datasets.
-- Production-grade durable/distributed queue evaluation if required by deployment scale.
+Completed:
+
+- Chunk-oriented workflow execution through the existing `WorkflowEngine`.
+- Batch-per-chunk capability execution using the existing capability execution service.
+- Streaming execution from persisted tabular dataset storage without materializing the complete input dataset in the workflow execution loop.
+- Persisted dataset reference on workflow executions.
+- Dataset ownership and workflow-project scope validation.
+- 100k-row streaming benchmark and bounded-chunk verification.
+- Preserved the S14-A execution-ID queue boundary and persisted workflow-version semantics.
+
+Verification:
+
+- Targeted S14-B regression: 47 passed.
+- Full regression: 495 passed, 1 warning.
+- 100,000 rows processed in 10 chunks of 10,000 rows.
+- Memory verification uses `tracemalloc` as a Python-allocation proxy rather than OS RSS.
+
+Remaining S14 consideration:
+
+- Evaluate production-grade durable/distributed queue infrastructure only if deployment scale requires it.
 
 ---
 

@@ -30,6 +30,7 @@ class WorkflowExecutionRepository:
         status: str = "CREATED",
         inputs: dict | None = None,
         inputs_json: str | None = None,
+        dataset_id: str | None = None,
     ) -> WorkflowExecutionRecord:
 
         with self._sessions() as session:
@@ -41,6 +42,7 @@ class WorkflowExecutionRepository:
                 id=execution_id,
                 workflow_id=workflow_id,
                 workflow_version=workflow_version,
+                dataset_id=dataset_id,
                 status=status,
                 inputs_json=inputs_json,
             )

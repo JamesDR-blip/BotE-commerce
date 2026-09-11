@@ -283,14 +283,17 @@ def activate_workflow_version(
 def execute_workflow(
     workflow_id: str,
     payload: WorkflowExecutionRequest,
+    current_user: CurrentUser = Depends(get_current_user),
     runtime_service: WorkflowRuntimeService = Depends(
         get_workflow_runtime
     ),
 ) -> WorkflowExecutionResponse:
     try:
         runtime = runtime_service.execute(
+            current_user=current_user,
             workflow_id=workflow_id,
             inputs=payload.inputs,
+            dataset_id=payload.dataset_id,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -318,14 +321,17 @@ def execute_workflow(
 def execute_workflow_async(
     workflow_id: str,
     payload: WorkflowExecutionRequest,
+    current_user: CurrentUser = Depends(get_current_user),
     runtime_service: WorkflowRuntimeService = Depends(
         get_workflow_runtime
     ),
 ) -> WorkflowExecutionResponse:
     try:
         runtime = runtime_service.execute_async(
+            current_user=current_user,
             workflow_id=workflow_id,
             inputs=payload.inputs,
+            dataset_id=payload.dataset_id,
         )
     except ValueError as exc:
         raise HTTPException(

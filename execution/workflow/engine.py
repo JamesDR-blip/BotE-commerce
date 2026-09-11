@@ -1,4 +1,4 @@
-﻿"""Runtime engine for AI Studio workflows."""
+"""Runtime engine for AI Studio workflows."""
 
 from __future__ import annotations
 
@@ -26,12 +26,18 @@ class WorkflowEngine:
         capability_execution,
         executions=None,
         trace_persistence=None,
+        datasets=None,
+        streaming_reader=None,
+        dataset_storage=None,
     ) -> None:
 
         self.workflows = workflows
         self.capability_execution = capability_execution
         self.executions = executions
         self.trace_persistence = trace_persistence
+        self.datasets = datasets
+        self.streaming_reader = streaming_reader
+        self.dataset_storage = dataset_storage
 
     def execute(
         self,
@@ -39,6 +45,7 @@ class WorkflowEngine:
         workflow_id: str,
         execution_id: str,
         inputs: dict[str, Any],
+        dataset_id: str | None = None,
     ) -> WorkflowExecution:
 
         workflow = self.workflows.get(
@@ -76,11 +83,20 @@ class WorkflowEngine:
             )
         )
 
+        execution_metadata = plan.metadata.get("execution", {})
+        streaming = execution_metadata.get("mode") == "streaming"
+
+        if streaming and dataset_id is None:
+            raise ValueError(
+                "Streaming workflow execution requires a dataset_id"
+            )
+
         if self.executions is not None:
             self.executions.create(
                 execution_id=execution_id,
                 workflow_id=workflow_id,
                 workflow_version=version.version,
+                dataset_id=dataset_id,
                 inputs_json=json.dumps(
                     inputs,
                     default=str,
@@ -89,6 +105,16 @@ class WorkflowEngine:
 
             self.executions.mark_running(
                 execution_id
+            )
+
+        if streaming:
+            return self._execute_streaming_runtime(
+                execution_id=execution_id,
+                workflow_id=workflow_id,
+                workflow_version=version.version,
+                plan=plan,
+                inputs=inputs,
+                dataset_id=dataset_id,
             )
 
         return self._execute_runtime(
@@ -105,6 +131,7 @@ class WorkflowEngine:
         workflow_id: str,
         execution_id: str,
         inputs: dict[str, Any],
+        dataset_id: str | None = None,
     ) -> WorkflowExecution:
         """Persist a QUEUED execution using the current active version."""
 
@@ -135,6 +162,7 @@ class WorkflowEngine:
             execution_id=execution_id,
             workflow_id=workflow_id,
             workflow_version=version.version,
+            dataset_id=dataset_id,
             status="QUEUED",
             inputs_json=json.dumps(
                 inputs,
@@ -211,6 +239,22 @@ class WorkflowEngine:
             else json.loads(version.plan_json)
         )
 
+        execution_metadata = plan.metadata.get("execution", {})
+        if execution_metadata.get("mode") == "streaming":
+            if record.dataset_id is None:
+                raise ValueError(
+                    "Streaming workflow execution requires a dataset_id"
+                )
+
+            return self._execute_streaming_runtime(
+                execution_id=execution_id,
+                workflow_id=record.workflow_id,
+                workflow_version=record.workflow_version,
+                plan=plan,
+                inputs=inputs,
+                dataset_id=record.dataset_id,
+            )
+
         return self._execute_runtime(
             execution_id=execution_id,
             workflow_id=record.workflow_id,
@@ -218,6 +262,167 @@ class WorkflowEngine:
             plan=plan,
             inputs=inputs,
         )
+
+    def _execute_streaming_runtime(
+        self,
+        *,
+        execution_id: str,
+        workflow_id: str,
+        workflow_version: str,
+        plan,
+        inputs: dict[str, Any],
+        dataset_id: str,
+    ) -> WorkflowExecution:
+        runtime = WorkflowExecution(
+            execution_id=execution_id,
+            workflow_id=workflow_id,
+            workflow_version=workflow_version,
+            plan=plan,
+            inputs=inputs,
+        ).start()
+
+        if self.datasets is None:
+            raise RuntimeError(
+                "Dataset repository is required for streaming execution"
+            )
+
+        dataset = self.datasets.get(dataset_id)
+
+        if dataset is None:
+            raise ValueError(
+                f"Dataset not found: {dataset_id}"
+            )
+
+        if not dataset.storage_key:
+            raise ValueError(
+                f"Dataset has no persisted storage: {dataset_id}"
+            )
+
+        if self.dataset_storage is None:
+            raise RuntimeError(
+                "Dataset storage is required for streaming execution"
+            )
+
+        if self.streaming_reader is None:
+            raise RuntimeError(
+                "Streaming reader is required for streaming execution"
+            )
+
+        processed_chunks = 0
+        processed_rows = 0
+
+        try:
+            with self.dataset_storage.open(
+                storage_key=dataset.storage_key
+            ) as source:
+                for chunk in self.streaming_reader.stream(
+                    dataset.filename,
+                    source,
+                ):
+                    chunk_inputs = dict(inputs)
+                    chunk_inputs["frame"] = chunk
+
+                    trace_collector = ExecutionTraceCollector(
+                        execution_id=execution_id
+                    )
+
+                    execute_plan = (
+                        self.capability_execution.execute_plan
+                    )
+                    parameters = inspect.signature(
+                        execute_plan
+                    ).parameters
+
+                    if "trace_collector" in parameters:
+                        result = execute_plan(
+                            plan=plan,
+                            inputs=chunk_inputs,
+                            execution_id=execution_id,
+                            trace_collector=trace_collector,
+                        )
+                    else:
+                        result = execute_plan(
+                            plan=plan,
+                            inputs=chunk_inputs,
+                            execution_id=execution_id,
+                        )
+
+                    trace = getattr(
+                        result,
+                        "trace",
+                        None,
+                    ) or trace_collector.trace()
+
+                    if (
+                        self.trace_persistence is not None
+                        and trace is not None
+                    ):
+                        self.trace_persistence.save(trace)
+
+                    processed_chunks += 1
+
+                    chunk_outputs = getattr(
+                        result,
+                        "outputs",
+                        {},
+                    ) or {}
+                    chunk_row_count = chunk_outputs.get(
+                        "processed_rows"
+                    )
+
+                    if isinstance(chunk_row_count, int):
+                        processed_rows += chunk_row_count
+                    else:
+                        try:
+                            processed_rows += len(chunk)
+                        except TypeError as exc:
+                            raise TypeError(
+                                "Streaming reader chunks must support len()"
+                            ) from exc
+
+            completed = runtime.complete(
+                outputs={
+                    "processed_chunks": processed_chunks,
+                    "processed_rows": processed_rows,
+                }
+            )
+
+            if self.executions is not None:
+                self.executions.complete(
+                    execution_id=execution_id,
+                    outputs_json=json.dumps(
+                        completed.outputs,
+                        default=str,
+                    ),
+                )
+
+            return completed
+
+        except Exception as exc:
+            trace = getattr(
+                exc,
+                "execution_trace",
+                None,
+            )
+
+            if (
+                self.trace_persistence is not None
+                and trace is not None
+                and trace.records
+            ):
+                self.trace_persistence.save(trace)
+
+            failed = runtime.fail(
+                error=str(exc)
+            )
+
+            if self.executions is not None:
+                self.executions.fail(
+                    execution_id=execution_id,
+                    error=str(exc),
+                )
+
+            return failed
 
     def _execute_runtime(
         self,
@@ -357,5 +562,3 @@ class WorkflowExecutionWorker:
                 execution_id=execution_id,
                 error=str(exc),
             )
-
-

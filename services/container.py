@@ -1,4 +1,4 @@
-﻿"""Composition root: dependency injection without mutable module globals."""
+"""Composition root: dependency injection without mutable module globals."""
 from __future__ import annotations
 from database.models import make_session_factory
 from extractors.deterministic import DeterministicProductExtractor
@@ -243,6 +243,9 @@ class Container:
             capability_execution=self.capability_execution,
             executions=self.workflow_executions,
             trace_persistence=self.workflow_trace_persistence,
+            datasets=self.datasets,
+            streaming_reader=self.streaming_uploads,
+            dataset_storage=self.dataset_storage,
         )
         self.workflow_history = (
                     WorkflowHistoryService(
@@ -261,6 +264,8 @@ class Container:
             workflow_engine=lambda: self.workflow_engine,
             workflow_history=lambda: self.workflow_history,
             workflow_queue=lambda: self.workflow_queue,
+            workflows=lambda: self.workflows,
+            datasets=lambda: self.datasets,
         )
 
 def build_container(
@@ -271,8 +276,3 @@ def build_container(
         app_settings = Settings()
 
     return Container(app_settings)
-
-
-
-
-

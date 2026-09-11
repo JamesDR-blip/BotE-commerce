@@ -100,3 +100,39 @@ def test_terminal_execution_cannot_be_claimed():
             execution_id="exec-completed",
             outputs_json="{}",
         )
+
+def test_execution_persists_dataset_reference():
+    sessions = make_session_factory("sqlite://")
+    repo = WorkflowExecutionRepository(sessions)
+
+    repo.create(
+        execution_id="exec-dataset",
+        workflow_id="wf-1",
+        workflow_version="1.0",
+        status="QUEUED",
+        dataset_id="dataset-1",
+        inputs_json="{}",
+    )
+
+    stored = repo.get("exec-dataset")
+
+    assert stored is not None
+    assert stored.dataset_id == "dataset-1"
+
+
+def test_execution_dataset_reference_is_optional_for_backward_compatibility():
+    sessions = make_session_factory("sqlite://")
+    repo = WorkflowExecutionRepository(sessions)
+
+    repo.create(
+        execution_id="exec-legacy",
+        workflow_id="wf-1",
+        workflow_version="1.0",
+        status="QUEUED",
+        inputs_json="{}",
+    )
+
+    stored = repo.get("exec-legacy")
+
+    assert stored is not None
+    assert stored.dataset_id is None
