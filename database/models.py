@@ -378,6 +378,11 @@ class ExecutionRecord(Base):
     __tablename__ = "executions"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    dataset_id: Mapped[str | None] = mapped_column(
+        ForeignKey("datasets.id"),
+        nullable=True,
+        index=True,
+    )
     category: Mapped[str] = mapped_column(String(100), index=True)
     source_hash: Mapped[str] = mapped_column(String(64), index=True)
     rule_version: Mapped[str] = mapped_column(String(64))

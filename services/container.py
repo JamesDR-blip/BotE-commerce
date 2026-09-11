@@ -56,6 +56,7 @@ from domain.quality.health_score import HealthScoreService
 from domain.catalog.mapping import MappingService
 from domain.catalog.normalization import NormalizationService
 from application.quality.quality_service import QualityService
+from application.quality.data_health_service import DataHealthService
 from infrastructure.upload.tabular_reader import TabularUploadReader
 from infrastructure.upload.streaming_reader import StreamingTabularReader
 from infrastructure.storage.dataset_storage import DatasetStorage
@@ -215,6 +216,10 @@ class Container:
         )
         self.mapping = MappingService()
 
+        self.data_health = DataHealthService(
+            datasets=self.datasets,
+            executions=self.executions,
+        )
         self.quality_service = QualityService(
             requirements=self.agents.requirements,
             planner=self.planner,

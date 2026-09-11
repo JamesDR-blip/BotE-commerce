@@ -2,12 +2,13 @@
 
 ## Current Sprint
 
-**S14 - Performance, Streaming & Asynchronous Workers**
+**S15 - Data Health Command Center**
 
-S14-A and S14-B are complete at code/test level.
+S15 is complete at code/test level, with the remaining limitations explicitly bounded below.
 
 ## Previous Sprints
 
+- **S14** - Performance, Streaming & Asynchronous Workers
 - **S13** - Agent Memory & Execution Context
 - **S12** - RAG / Rule Intelligence
 - **S11** - Streamlit Dashboard & HTTP Client
@@ -34,18 +35,20 @@ S14-A and S14-B are complete at code/test level.
 
 ## Test Status
 
-- **Test Suite:** `495 / 495 passing` via `python -m pytest`
-- **S14-B targeted regression:** `47 / 47 passing`
-- **Full Suite Execution Time:** ~24.8 seconds
-- **Warnings:** 1 dependency deprecation warning from Starlette/AnyIO TestClient.
+- **Test Suite:** `510 / 510 passing` via `python -m pytest`
+- **Full Suite Execution Time:** approximately `24.5 seconds`
+- **Warnings:** 1 existing Starlette/AnyIO TestClient deprecation warning.
+- **S15 domain tests:** 5 passing.
+- **S15 application-service tests:** 3 passing.
+- **S15 API tests:** 5 passing.
 
 ## Database / Migration Status
 
 - **Engine:** SQLite (local dev/test), PostgreSQL (production)
-- **Current Database Revision:** `e2f3a4b5c6d7`
-- **Repository Alembic Head:** `e2f3a4b5c6d7`
+- **Current Database Revision:** `f3a4b5c6d7e8`
+- **Repository Alembic Head:** `f3a4b5c6d7e8`
 - **Migration State:** Database is synchronized with repository head.
-- **S14-B Migration:** Added nullable `workflow_executions.dataset_id`, indexed and linked by foreign key to `datasets.id`.
+- **S15 Migration:** Added nullable `executions.dataset_id`, indexed and linked by foreign key to `datasets.id`.
 - Existing executions remain compatible because `dataset_id` is nullable.
 
 ## Current Architecture
@@ -58,6 +61,19 @@ S14-A and S14-B are complete at code/test level.
   - `infrastructure/`: Technical adapters including Chroma semantic rule retrieval.
   - `api/` & `app/`: Presentation layer (FastAPI routers, Streamlit dashboard, API client).
 - **Composition Root:** `services/container.py`
+
+## S12 Implementation
+
+- Added domain `RuleRetriever` protocol with `RuleQuery`, `RetrievedRuleMatch`, and `SemanticRulePack`.
+- Added persistent Chroma-backed `ChromaRuleRetriever` using `paraphrase-multilingual-MiniLM-L12-v2`.
+- Added `RuleIntelligenceService` for semantic search, recommendation filtering, and explicit index synchronization.
+- Extended `RuleRepository` / `RuleLoader` with `all()` for complete rule-set synchronization while preserving YAML parsing/versioning as the source of truth.
+- Extended `RuleRetrieverAgent` with semantic `search()` while preserving the legacy deterministic `retrieve(category)` contract.
+- Added FastAPI `/rules/search` and `/rules/recommend` endpoints.
+- Added request/response schemas and dependency/container wiring.
+- Added `chroma/` to `.gitignore`.
+- Semantic indexing distinguishes descriptive rules from executable validation rules. Descriptive rules are never automatically treated as executable.
+- Chroma synchronization is explicit; application startup does not automatically build or synchronize the semantic index.
 
 ## S13 Implementation
 
@@ -104,18 +120,27 @@ S14-A and S14-B are complete at code/test level.
 - The memory benchmark uses `tracemalloc` as a Python allocation proxy; it is not an OS RSS measurement.
 - Async execution remains compatible with S14-A because queued messages continue to contain only `execution_id`.
 
-## S12 Implementation
+## S15 Implementation
 
-- Added domain `RuleRetriever` protocol with `RuleQuery`, `RetrievedRuleMatch`, and `SemanticRulePack`.
-- Added persistent Chroma-backed `ChromaRuleRetriever` using `paraphrase-multilingual-MiniLM-L12-v2`.
-- Added `RuleIntelligenceService` for semantic search, recommendation filtering, and explicit index synchronization.
-- Extended `RuleRepository` / `RuleLoader` with `all()` for complete rule-set synchronization while preserving YAML parsing/versioning as the source of truth.
-- Extended `RuleRetrieverAgent` with semantic `search()` while preserving the legacy deterministic `retrieve(category)` contract.
-- Added FastAPI `/rules/search` and `/rules/recommend` endpoints.
-- Added request/response schemas and dependency/container wiring.
-- Added `chroma/` to `.gitignore`.
-- Semantic indexing distinguishes descriptive rules from executable validation rules. Descriptive rules are never automatically treated as executable.
-- Chroma synchronization is explicit; application startup does not automatically build or synchronize the semantic index.
+- Added multidimensional dataset health domain models:
+  - Completeness
+  - Validity
+  - Uniqueness
+  - Consistency
+  - Timeliness
+- Health aggregation ignores dimensions that are not currently assessed.
+- Added sanitized `IssueDiagnostic` domain model.
+- Added read-only `RemediationProposal` domain model.
+- Added `DataHealthService` for project-scoped dataset health aggregation.
+- Reused persisted dataset profile metadata for completeness and uniqueness signals.
+- Reused persisted validation execution health scores for validity.
+- Derived deterministic consistency scoring from persisted validation logs.
+- Timeliness remains explicitly unassessed because no generic freshness/SLA signal exists yet.
+- Added ownership-scoped health metrics API.
+- Added sanitized dataset diagnostics API.
+- Added Streamlit Data Health Command Center UI.
+- Added remediation proposal preview without executing mutations.
+- Added API, application, and domain regression coverage.
 
 ## Current Focus
 
@@ -125,15 +150,15 @@ S14-A and S14-B are complete at code/test level.
 - Synchronous workflow execution remains backward compatible.
 - The in-process queue remains intentionally minimal and non-durable.
 
-## Known Constraints
+## S15 Known Constraints
 
-- The in-process workflow queue is not durable across process restarts.
-- S14-A has no retry policy or dead-letter handling; failed executions are persisted as `FAILED`.
-- No semantic progress percentage is exposed because there is not yet a reliable generic progress unit.
-- Streaming execution is opt-in through workflow execution-plan metadata.
-- Individual capabilities may still have capability-specific memory behavior; S14-B bounds the workflow's tabular input handling rather than guaranteeing constant memory for arbitrary capability internals.
-- The 100k-row memory verification uses `tracemalloc`, not process RSS.
-- Production-scale durable/distributed queue infrastructure remains a future deployment decision.
+- Current health metrics are project-scoped through the existing project API boundary.
+- Historical multidimensional health snapshots are not persisted yet.
+- Category benchmark computation is not implemented yet.
+- Remediation proposals are read-only and are not persisted as an approval/execution lifecycle.
+- Timeliness is explicitly unassessed until a reliable freshness/SLA signal is available.
+- The dashboard relies on the existing authentication boundary; production authentication remains a separate platform concern.
+- Dashboard diagnostic loading currently performs per-dataset diagnostic requests.
 
 ## Known Risks
 
@@ -149,6 +174,10 @@ S14-A and S14-B are complete at code/test level.
 
 ## Next Action
 
-- Evaluate production queue durability, retry, dead-letter, and worker lifecycle requirements before production-scale deployment.
-- Continue future performance work only where measurements demonstrate a bottleneck.
-- Preserve the execution-ID queue boundary and persisted workflow-version semantics.
+Proceed to S16 Risk & Approval after preserving the S15 health/diagnostic boundaries.
+
+Future S15-adjacent improvements should be introduced only when justified by product requirements:
+- historical multidimensional health snapshots,
+- category benchmarks,
+- persisted remediation lifecycle,
+- richer timeliness/freshness signals.

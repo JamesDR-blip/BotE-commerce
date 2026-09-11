@@ -7,17 +7,17 @@ This directory contains the complete sprint specifications for building and evol
 ## Roadmap Overview
 
 ```
-S00-S11: Data Studio & Core Foundation [Completed]
+S00-S11: Data Studio & Core Foundation
    │
    ▼
 Phase 1: Intelligence & Performance (S12 - S14)
    │  ├── S12: RAG & Semantic Rule Intelligence
    │  ├── S13: Agent Memory & Execution Context
-   │  └── S14: Performance, Streaming & Asynchronous Workers[Current Sprint]
+   │  └── S14: Performance, Streaming & Asynchronous Workers
    ▼
 Phase 2: Closed-Loop Governance & Safety (S15 - S19)
-   │  ├── S15: Data Health Command Center
-   │  ├── S16: Risk & Approval Engine
+   │  ├── S15: Data Health Command Center[Completed]
+   │  ├── S16: Risk & Approval Engine[Current Sprint]
    │  ├── S17: Shadow Mode & Simulation
    │  ├── S18: ChangeSet & Atomic Rollback Engine
    │  └── S19: Data Lineage & Audit Trail
@@ -57,53 +57,8 @@ Phase 4: Enterprise Production & Hardening (S24 - S28)
 ### Upgrade Path to Autonomous Platform (S12 - S28)
 - [Sprint 12: RAG & Semantic Rule Intelligence](sprint-12-rag-rule-intelligence.md)
 - [Sprint 13: Agent Memory & Execution Context](sprint-13-memory.md)
-- [Sprint 14: Performance, Streaming & Asynchronous Workers](sprint-14-performance-workers.md) *(COMPLETE)*
-### S14-A — Asynchronous Workflow Execution
-
-Status: COMPLETE
-
-Delivered:
-- QUEUED workflow execution state
-- Application queue port
-- In-process FIFO queue adapter
-- Atomic QUEUED -> RUNNING claim
-- Background workflow execution worker
-- Async execution endpoint
-- Execution status endpoint
-- Persisted execution ID queue payloads
-- Reuse of existing WorkflowEngine
-- Full regression verification
-
-Verification:
-- 32 S14-A targeted tests passed
-- 484 full regression tests passed
-- 1 existing Starlette/AnyIO deprecation warning
-
-### S14-B — Streaming / Chunked / Batch Execution
-
-Status: COMPLETE
-
-Delivered:
-
-- Persisted dataset reference on workflow executions
-- Dataset/workflow ownership and project-scope validation
-- Chunked CSV/XLSX workflow execution
-- Reuse of existing capability execution per chunk
-- Persisted-source streaming through the existing dataset storage abstraction
-- 100k-row benchmark coverage
-- Preservation of the S14-A execution-ID queue boundary
-- Backward-compatible synchronous execution
-
-Verification:
-
-- 47 S14-B targeted tests passed
-- 495 full regression tests passed
-- 1 existing Starlette/AnyIO deprecation warning
-
-Remaining S14 consideration:
-
-- Evaluate durable/distributed queue infrastructure based on production deployment requirements
-- [Sprint 15: Data Health Command Center](sprint-15-data-health.md)
+- [Sprint 14: Performance, Streaming & Asynchronous Workers](sprint-14-performance-workers.md)
+- [Sprint 15: Data Health Command Center](sprint-15-data-health.md) *(COMPLETE)*
 - [Sprint 16: Risk & Approval Engine](sprint-16-risk-approval.md)
 - [Sprint 17: Shadow Mode & Simulation](sprint-17-shadow-mode.md)
 - [Sprint 18: ChangeSet & Atomic Rollback Engine](sprint-18-changeset-rollback.md)

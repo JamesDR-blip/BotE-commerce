@@ -11,9 +11,23 @@ import pandas as pd
 import streamlit as st
 
 try:  # Supports both ``streamlit run dashboard.py`` and ``streamlit run app/dashboard.py``.
-    from app.api_client import DashboardApiClient, DashboardApiError, ValidationSummary
+    from app.api_client import (
+    DashboardApiClient,
+    DashboardApiError,
+    DatasetHealth,
+    Diagnostics,
+    HealthMetrics,
+    ValidationSummary,
+)
 except ModuleNotFoundError:  # pragma: no cover - depends on Streamlit's script path setup.
-    from api_client import DashboardApiClient, DashboardApiError, ValidationSummary
+    from api_client import (
+    DashboardApiClient,
+    DashboardApiError,
+    DatasetHealth,
+    Diagnostics,
+    HealthMetrics,
+    ValidationSummary,
+)
 from configs.settings import Settings
 
 
@@ -42,6 +56,172 @@ def _render_result(client: DashboardApiClient, result: ValidationSummary) -> Non
             )
         except DashboardApiError as exc:
             st.warning(f"{report_format.upper()} report is unavailable: {exc}")
+
+
+def _render_data_health(client: DashboardApiClient) -> None:
+    workspace_id = st.text_input(
+        "Workspace ID",
+        value=st.session_state.get("health_workspace_id", ""),
+        key="health_workspace_id",
+        help="Required because the existing API scopes projects by workspace.",
+    )
+
+    if not workspace_id:
+        st.info("Enter a workspace ID to open the Data Health Command Center.")
+        return
+
+    try:
+        projects = client.projects(workspace_id)
+    except DashboardApiError as exc:
+        st.error(f"Could not load projects: {exc}")
+        return
+
+    if not projects:
+        st.info("No projects are available in this workspace.")
+        return
+
+    project_options = {project.name: project.id for project in projects}
+    project_name = st.selectbox(
+        "Health project",
+        list(project_options),
+        key="health_project_name",
+    )
+    project_id = project_options[project_name]
+
+    try:
+        health = client.health_metrics(project_id)
+    except DashboardApiError as exc:
+        st.error(f"Could not load health metrics: {exc}")
+        return
+
+    st.subheader("Data Health Command Center")
+
+    if not health.items:
+        st.info("No datasets are available for this project.")
+        return
+
+    overall = sum(item.aggregate for item in health.items) / len(health.items)
+    st.metric("Project health", f"{overall:.2f}%")
+
+    rows = []
+    severity_counts: dict[str, int] = {}
+
+    for dataset in health.items:
+        row = {
+            "Dataset": dataset.dataset_name,
+            "Health": dataset.aggregate,
+        }
+        for metric in dataset.metrics:
+            row[metric.dimension.title()] = (
+                metric.score if metric.assessed else None
+            )
+        rows.append(row)
+
+    frame = pd.DataFrame(rows)
+    st.dataframe(frame, use_container_width=True, hide_index=True)
+
+    st.subheader("Health dimensions")
+    if not frame.empty:
+        dimensions = [
+            column
+            for column in frame.columns
+            if column not in {"Dataset", "Health"}
+        ]
+        if dimensions:
+            st.bar_chart(
+                frame.set_index("Dataset")[dimensions],
+                use_container_width=True,
+            )
+
+    st.subheader("Diagnostics")
+
+    for dataset in health.items:
+        try:
+            diagnostics = client.diagnostics(dataset.dataset_id)
+        except DashboardApiError as exc:
+            st.warning(
+                f"Could not load diagnostics for {dataset.dataset_name}: {exc}"
+            )
+            continue
+
+        for diagnostic in diagnostics.diagnostics:
+            severity = diagnostic.severity.lower()
+            severity_counts[severity] = (
+                severity_counts.get(severity, 0) + diagnostic.count
+            )
+
+    if severity_counts:
+        severity_frame = pd.DataFrame(
+            [{"Severity": key, "Count": value}
+             for key, value in sorted(severity_counts.items())]
+        )
+        st.bar_chart(
+            severity_frame.set_index("Severity"),
+            use_container_width=True,
+        )
+    else:
+        st.info("No diagnostics were detected.")
+
+    selected_dataset = st.selectbox(
+        "Dataset diagnostics",
+        health.items,
+        format_func=lambda item: item.dataset_name,
+        key="health_dataset",
+    )
+
+    try:
+        diagnostics = client.diagnostics(selected_dataset.dataset_id)
+    except DashboardApiError as exc:
+        st.error(f"Could not load diagnostics: {exc}")
+        return
+
+    if diagnostics.diagnostics:
+        diagnostic_frame = pd.DataFrame(
+            [
+                {
+                    "Code": item.code,
+                    "Field": item.field,
+                    "Severity": item.severity,
+                    "Count": item.count,
+                    "Message": item.message,
+                }
+                for item in diagnostics.diagnostics
+            ]
+        )
+        st.dataframe(
+            diagnostic_frame,
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.success("No diagnostics detected for this dataset.")
+
+    st.subheader("Remediation preview")
+
+    if not diagnostics.remediation_proposals:
+        st.info("No remediation proposals are available.")
+        return
+
+    proposal_frame = pd.DataFrame(
+        [
+            {
+                "Status": proposal.status,
+                "Severity": proposal.severity,
+                "Action": proposal.action,
+                "Rationale": proposal.rationale,
+            }
+            for proposal in diagnostics.remediation_proposals
+        ]
+    )
+    st.dataframe(
+        proposal_frame,
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.caption(
+        "Remediation proposals are read-only previews. "
+        "No remediation action is executed from this dashboard."
+    )
 
 
 def _render_history(client: DashboardApiClient) -> None:
@@ -88,6 +268,8 @@ def main() -> None:
     result = st.session_state.get("validation_result")
     if result:
         _render_result(client, result)
+
+    _render_data_health(client)
     _render_history(client)
 
 

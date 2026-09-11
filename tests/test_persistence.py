@@ -48,6 +48,57 @@ def test_user_and_execution_repositories_persist_history_reports_scores_and_logs
     assert executions.report_path("execution-1", "json") == "report.json"
 
 
+def test_execution_repository_lists_executions_by_dataset() -> None:
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    sessions = sessionmaker(bind=engine, expire_on_commit=False)
+    repository = ExecutionRepository(sessions)
+
+    repository.create(
+        ExecutionRecord(
+            id="dataset-a-old",
+            dataset_id="dataset-a",
+            category="Fashion",
+            source_hash="a" * 64,
+            rule_version="1",
+            health_score=80.0,
+            status="COMPLETED",
+        )
+    )
+    repository.create(
+        ExecutionRecord(
+            id="dataset-b",
+            dataset_id="dataset-b",
+            category="Fashion",
+            source_hash="b" * 64,
+            rule_version="1",
+            health_score=70.0,
+            status="COMPLETED",
+        )
+    )
+    repository.create(
+        ExecutionRecord(
+            id="dataset-a-new",
+            dataset_id="dataset-a",
+            category="Fashion",
+            source_hash="c" * 64,
+            rule_version="1",
+            health_score=90.0,
+            status="COMPLETED",
+        )
+    )
+
+    executions = repository.list_by_dataset("dataset-a")
+
+    assert [record.id for record in executions] == [
+        "dataset-a-new",
+        "dataset-a-old",
+    ]
+
+    limited = repository.list_by_dataset("dataset-a", limit=1)
+
+    assert [record.id for record in limited] == ["dataset-a-new"]
+
 def test_execution_repository_updates_status() -> None:
     engine = create_engine("sqlite://")
     Base.metadata.create_all(engine)

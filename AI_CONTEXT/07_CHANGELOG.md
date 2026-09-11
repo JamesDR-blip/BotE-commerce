@@ -1,5 +1,56 @@
 # CHANGELOG
 
+## S15 — Data Health Command Center — COMPLETE
+
+Implemented the Data Health Command Center on top of the existing dataset, validation, persistence, and dashboard architecture.
+
+### Added
+
+- Added multidimensional health domain model:
+  - Completeness
+  - Validity
+  - Uniqueness
+  - Consistency
+  - Timeliness
+- Added assessed/unassessed health dimensions and aggregate scoring.
+- Added sanitized issue diagnostics.
+- Added read-only remediation proposals.
+- Added `DataHealthService`.
+- Added project-scoped dataset health aggregation.
+- Added `GET /health-metrics`.
+- Added `GET /diagnostics/{dataset_id}`.
+- Added ownership-scoped diagnostic access.
+- Added validation-log aggregation without exposing raw rows or row numbers.
+- Added Data Health dashboard views.
+- Added remediation preview with no mutation execution.
+- Added persisted `executions.dataset_id` relationship and Alembic migration.
+- Added domain, application, API, dashboard-client, and persistence regression coverage.
+
+### Architectural Decisions
+
+- Reuse persisted dataset profile metadata rather than introducing a second profiling system.
+- Reuse existing validation execution health scores for validity.
+- Keep diagnostics sanitized at the application/API boundary.
+- Keep remediation proposals read-only until later approval/ChangeSet infrastructure exists.
+- Do not invent a timeliness score without a reliable freshness signal.
+- Preserve existing project ownership boundaries rather than introducing a new workspace-wide health API.
+- Preserve existing Clean Architecture + DDD layering.
+
+### Verification
+
+- Full regression: `510 passed`.
+- Full suite runtime: approximately `24.5 seconds`.
+- 1 existing Starlette/AnyIO TestClient deprecation warning remains.
+- Alembic current/head: `f3a4b5c6d7e8`.
+- `git diff --check`: no whitespace errors; existing LF/CRLF conversion warning remains for `tests/test_persistence.py`.
+
+### Known Scope Boundaries
+
+- Historical multidimensional health snapshots are not persisted.
+- Category benchmark computation is not implemented.
+- Remediation proposals are preview-only and are not persisted as an approval/execution lifecycle.
+- Timeliness remains unassessed without a reliable freshness/SLA signal.
+
 ## S14-B — Streaming / Chunked Workflow Execution — COMPLETE
 
 Implemented scalable tabular workflow execution on top of the existing S14-A asynchronous execution foundation.

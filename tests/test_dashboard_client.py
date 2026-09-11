@@ -1,4 +1,4 @@
-import httpx
+﻿import httpx
 import pytest
 
 from app.api_client import DashboardApiClient, DashboardApiError
@@ -29,3 +29,88 @@ def test_dashboard_client_exposes_backend_error_detail() -> None:
     client = _client(lambda request: httpx.Response(422, json={"detail": "Unsupported category"}))
     with pytest.raises(DashboardApiError, match="Unsupported category"):
         client.categories()
+
+def test_dashboard_client_loads_s15_health_endpoints() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/workspaces/workspace-1/projects":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "id": "project-1",
+                        "workspace_id": "workspace-1",
+                        "name": "Products",
+                        "description": "Product data",
+                    }
+                ],
+            )
+
+        if request.url.path == "/health-metrics":
+            assert request.url.params["project_id"] == "project-1"
+            return httpx.Response(
+                200,
+                json={
+                    "project_id": "project-1",
+                    "items": [
+                        {
+                            "dataset_id": "dataset-1",
+                            "dataset_name": "Products",
+                            "aggregate": 91.25,
+                            "metrics": [
+                                {
+                                    "dimension": "completeness",
+                                    "score": 95.0,
+                                    "assessed": True,
+                                },
+                                {
+                                    "dimension": "timeliness",
+                                    "score": 0.0,
+                                    "assessed": False,
+                                },
+                            ],
+                        }
+                    ],
+                },
+            )
+
+        if request.url.path == "/diagnostics/dataset-1":
+            return httpx.Response(
+                200,
+                json={
+                    "dataset_id": "dataset-1",
+                    "diagnostics": [
+                        {
+                            "code": "invalid_price",
+                            "field": "price",
+                            "message": "Price must be positive.",
+                            "severity": "error",
+                            "count": 2,
+                        }
+                    ],
+                    "remediation_proposals": [
+                        {
+                            "id": "proposal-1",
+                            "diagnostic_code": "invalid_price",
+                            "action": "review_invalid_price_issues",
+                            "rationale": "Price must be positive.",
+                            "severity": "error",
+                            "status": "PROPOSED",
+                        }
+                    ],
+                },
+            )
+
+        return httpx.Response(404, json={"detail": "Not found"})
+
+    client = _client(handler)
+
+    projects = client.projects("workspace-1")
+    assert projects[0].id == "project-1"
+
+    health = client.health_metrics("project-1")
+    assert health.items[0].aggregate == 91.25
+    assert health.items[0].metrics[0].dimension == "completeness"
+
+    diagnostics = client.diagnostics("dataset-1")
+    assert diagnostics.diagnostics[0].code == "invalid_price"
+    assert diagnostics.remediation_proposals[0].status == "PROPOSED"

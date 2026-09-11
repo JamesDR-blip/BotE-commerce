@@ -19,6 +19,61 @@ class ValidationSummary:
     cached: bool
 
 
+@dataclass(frozen=True)
+class ProjectSummary:
+    id: str
+    workspace_id: str
+    name: str
+    description: str | None = None
+
+
+@dataclass(frozen=True)
+class HealthMetric:
+    dimension: str
+    score: float
+    assessed: bool
+
+
+@dataclass(frozen=True)
+class DatasetHealth:
+    dataset_id: str
+    dataset_name: str
+    aggregate: float
+    metrics: list[HealthMetric]
+
+
+@dataclass(frozen=True)
+class HealthMetrics:
+    project_id: str
+    items: list[DatasetHealth]
+
+
+@dataclass(frozen=True)
+class Diagnostic:
+    code: str
+    field: str
+    message: str
+    severity: str
+    count: int
+
+
+@dataclass(frozen=True)
+class RemediationProposal:
+    id: str
+    diagnostic_code: str
+    action: str
+    rationale: str
+    severity: str
+    status: str
+
+
+@dataclass(frozen=True)
+class Diagnostics:
+    dataset_id: str
+    diagnostics: list[Diagnostic]
+    remediation_proposals: list[RemediationProposal]
+
+
 class DashboardApiClient:
     def __init__(self, base_url: str, client: httpx.Client | None = None) -> None:
         self._client = client or httpx.Client(base_url=base_url.rstrip("/"), timeout=30.0)
@@ -35,6 +90,79 @@ class DashboardApiClient:
 
     def history(self) -> list[dict[str, object]]:
         return self._request("GET", "/history").json()["items"]
+
+    def projects(self, workspace_id: str) -> list[ProjectSummary]:
+        payload = self._request(
+            "GET",
+            f"/workspaces/{workspace_id}/projects",
+        ).json()
+        return [
+            ProjectSummary(
+                id=item["id"],
+                workspace_id=item["workspace_id"],
+                name=item["name"],
+                description=item.get("description"),
+            )
+            for item in payload
+        ]
+
+    def health_metrics(self, project_id: str) -> HealthMetrics:
+        payload = self._request(
+            "GET",
+            "/health-metrics",
+            params={"project_id": project_id},
+        ).json()
+
+        return HealthMetrics(
+            project_id=payload["project_id"],
+            items=[
+                DatasetHealth(
+                    dataset_id=item["dataset_id"],
+                    dataset_name=item["dataset_name"],
+                    aggregate=item["aggregate"],
+                    metrics=[
+                        HealthMetric(
+                            dimension=metric["dimension"],
+                            score=metric["score"],
+                            assessed=metric["assessed"],
+                        )
+                        for metric in item["metrics"]
+                    ],
+                )
+                for item in payload["items"]
+            ],
+        )
+
+    def diagnostics(self, dataset_id: str) -> Diagnostics:
+        payload = self._request(
+            "GET",
+            f"/diagnostics/{dataset_id}",
+        ).json()
+
+        return Diagnostics(
+            dataset_id=payload["dataset_id"],
+            diagnostics=[
+                Diagnostic(
+                    code=item["code"],
+                    field=item["field"],
+                    message=item["message"],
+                    severity=item["severity"],
+                    count=item["count"],
+                )
+                for item in payload["diagnostics"]
+            ],
+            remediation_proposals=[
+                RemediationProposal(
+                    id=item["id"],
+                    diagnostic_code=item["diagnostic_code"],
+                    action=item["action"],
+                    rationale=item["rationale"],
+                    severity=item["severity"],
+                    status=item["status"],
+                )
+                for item in payload["remediation_proposals"]
+            ],
+        )
 
     def download_report(self, path: str) -> bytes:
         return self._request("GET", path).content

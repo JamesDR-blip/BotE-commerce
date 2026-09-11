@@ -1,113 +1,111 @@
-# S14 Sprint Handoff
+# S15 Sprint Handoff
 
 ## Status
 
-S14 — Performance, Streaming & Asynchronous Workers: COMPLETE at code/test level.
+S15 — Data Health Command Center: COMPLETE at code/test level.
 
-S14-A asynchronous execution and S14-B streaming/chunked execution are both implemented and verified.
+The implementation is verified by the full regression suite and preserves the existing Clean Architecture + DDD boundaries.
 
 ## Completed Work
 
-### S14-A
+### Domain
 
-- Persisted `QUEUED` workflow execution state.
-- Application-level queue port.
-- In-process worker.
-- Execution-ID-only queue payload.
-- Persisted workflow-version execution.
-- Async execution and status APIs.
-- Atomic execution claiming.
+- Added `HealthDimension`.
+- Added `HealthMetric`.
+- Added `DataHealthScore`.
+- Added assessed-only aggregate scoring.
+- Added `IssueDiagnostic`.
+- Added read-only `RemediationProposal`.
+- Added deterministic completeness and uniqueness scoring helpers.
 
-### S14-B
+### Application
 
-- Added nullable `workflow_executions.dataset_id`.
-- Added dataset ownership validation.
-- Added workflow/dataset project-scope validation.
-- Added opt-in streaming execution in the existing `WorkflowEngine`.
-- Reused persisted dataset storage and `StreamingTabularReader`.
-- Processed tabular datasets chunk-by-chunk.
-- Reused existing capability execution per chunk.
-- Preserved synchronous workflow execution.
-- Preserved the S14-A queue boundary.
-- Added 100k-row benchmark coverage.
+- Added `DataHealthService`.
+- Aggregates persisted dataset profile and validation execution signals.
+- Produces sanitized diagnostics.
+- Produces read-only remediation proposals.
+- Enforces dataset ownership through repository access.
 
-## Changed Files
+### API
 
-- `api/routes/workflows.py`
-- `application/workflows/runtime_service.py`
-- `database/models.py`
-- `database/migrations/versions/e2f3a4b5c6d7_add_workflow_execution_dataset.py`
-- `execution/workflow/engine.py`
-- `repositories/workflow_executions.py`
-- `schemas/requests.py`
-- `services/container.py`
-- `tests/test_api_workflow_execution.py`
-- `tests/test_streaming_reader.py`
-- `tests/test_workflow_engine.py`
-- `tests/test_workflow_execution_async_state.py`
-- `tests/test_workflow_runtime_service.py`
-- `data_quality.db`
+- Added `GET /health-metrics`.
+- Added `GET /diagnostics/{dataset_id}`.
+- Added authentication dependency.
+- Added ownership-scoped access.
+- Added sanitized response DTOs.
 
-## Tests
+### Dashboard
 
-- S14-B targeted regression: 47 passed.
-- Full regression: 495 passed.
-- Runtime: approximately 24.8 seconds.
-- 1 existing Starlette/AnyIO deprecation warning.
+- Added Data Health Command Center.
+- Added project/dataset health overview.
+- Added dimension-level health visualization.
+- Added severity breakdown.
+- Added selected-dataset diagnostics.
+- Added read-only remediation preview.
+- No remediation is executed from the dashboard.
 
-## Migration
+## Persistence
 
-`e2f3a4b5c6d7_add_workflow_execution_dataset.py`
-
-Revision:
-
-`d14c1f2a9b31 -> e2f3a4b5c6d7`
-
-Changes:
-
-- nullable `workflow_executions.dataset_id`
-- foreign key to `datasets.id`
-- index `ix_workflow_executions_dataset_id`
-
-Current database and repository are both at `e2f3a4b5c6d7`.
-
-## Architecture Decisions
-
-1. Reuse `WorkflowEngine`; do not create a second streaming engine.
-2. Reuse existing dataset storage and streaming reader abstractions.
-3. Reuse existing capability execution for each chunk.
-4. Persist dataset identity rather than queueing raw data.
-5. Preserve execution-ID-only async queue payloads.
-6. Keep `dataset_id` nullable for backward compatibility.
-7. Make streaming execution opt-in through existing execution-plan metadata.
-8. Do not introduce a durable/distributed queue without deployment-driven justification.
+- Added nullable `executions.dataset_id`.
+- Added foreign key to `datasets.id`.
+- Added index on `executions.dataset_id`.
+- Migration: `f3a4b5c6d7e8_add_execution_dataset.py`.
+- Existing executions remain compatible because the relationship is nullable.
 
 ## Security / Safety
 
-- No `eval`, `exec`, unsafe YAML, pickle, or arbitrary SQL introduced.
-- Queue payloads do not contain raw data.
-- Dataset/workflow ownership is enforced.
-- Dataset and workflow must belong to the same project.
-- Existing risk, approval, ChangeSet, and confidence boundaries are unaffected.
+- Diagnostics do not expose raw rows.
+- Validation row numbers are not returned by the diagnostics API.
+- Dataset access is owner-scoped.
+- Remediation proposals remain `PROPOSED` and read-only.
+- No mutation bypasses the existing ChangeSet/approval architecture.
+- No `eval`, `exec`, pickle, or unsafe YAML introduced by S15.
 
-## Known Issues
+## Verification
 
-- In-process queue is not durable.
-- No retry/dead-letter infrastructure.
-- No generic semantic progress percentage.
-- Individual capabilities may have capability-specific memory behavior.
-- `tracemalloc` benchmark is not an OS RSS measurement.
-- Existing Starlette/AnyIO deprecation warning remains.
+- Full regression: `510 passed`.
+- Full suite runtime: approximately `24.5 seconds`.
+- 1 existing Starlette/AnyIO TestClient deprecation warning.
+- Alembic current/head: `f3a4b5c6d7e8`.
 
-## Remaining Work
+## Known Scope Boundaries
 
-- Evaluate durable/distributed queue infrastructure for production deployment.
-- Define retry/dead-letter semantics if durable workers are introduced.
-- Define reliable progress semantics before exposing progress percentage.
+- Historical multidimensional health snapshots are not persisted.
+- Category benchmark computation is not implemented.
+- Timeliness is explicitly unassessed without a reliable freshness/SLA signal.
+- Remediation proposals are not yet a persisted approval/execution lifecycle.
+- The dashboard remains project-scoped through the existing API boundary.
 
-## Recommended Next Steps
+## Changed / Added Files
 
-1. Keep S14-A/S14-B behavior stable.
-2. Monitor large-dataset execution characteristics.
-3. Evaluate production queue requirements based on actual deployment topology.
-4. Address the Starlette/AnyIO dependency warning through dependency maintenance.
+Tracked modifications:
+
+- `api/dependencies.py`
+- `api/main.py`
+- `api/routes/__init__.py`
+- `app/api_client.py`
+- `app/dashboard.py`
+- `application/quality/quality_service.py`
+- `data_quality.db`
+- `database/models.py`
+- `repositories/executions.py`
+- `schemas/responses.py`
+- `services/container.py`
+- `tests/test_dashboard_client.py`
+- `tests/test_persistence.py`
+
+New files:
+
+- `api/routes/health.py`
+- `application/quality/data_health_service.py`
+- `database/migrations/versions/f3a4b5c6d7e8_add_execution_dataset.py`
+- `domain/quality/data_health.py`
+- `tests/test_data_health_domain.py`
+- `tests/test_data_health_service.py`
+- `tests/test_s15_data_health_api.py`
+
+## Next Sprint
+
+S16 — Risk & Approval Engine.
+
+The S15 remediation proposal boundary should remain read-only until the risk/approval and later ChangeSet infrastructure is available.

@@ -172,5 +172,43 @@ class RuleSearchResponse(BaseModel):
     query: RuleSearchRequestEcho
     matches: list[RetrievedRuleMatchResponse]
 
+class HealthMetricResponse(BaseModel):
+    dimension: str
+    score: float
+    assessed: bool
 
+
+class DatasetHealthResponse(BaseModel):
+    dataset_id: str
+    dataset_name: str
+    aggregate: float
+    metrics: list[HealthMetricResponse]
+
+
+class HealthMetricsResponse(BaseModel):
+    project_id: str
+    items: list[DatasetHealthResponse]
+
+
+class IssueDiagnosticResponse(BaseModel):
+    code: str
+    field: str
+    message: str
+    severity: str
+    count: int
+
+
+class RemediationProposalResponse(BaseModel):
+    id: str
+    diagnostic_code: str
+    action: str
+    rationale: str
+    severity: str
+    status: str
+
+
+class DiagnosticsResponse(BaseModel):
+    dataset_id: str
+    diagnostics: list[IssueDiagnosticResponse]
+    remediation_proposals: list[RemediationProposalResponse]
 

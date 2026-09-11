@@ -6,6 +6,7 @@ from api.routes import (
     data_router,
     datasets_router,
     executions_router,
+    health_router,
     rules_router,
     studio_router,
     system_router,
@@ -45,6 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(data_router)
     app.include_router(datasets_router)
     app.include_router(executions_router)
+    app.include_router(health_router)
     app.include_router(rules_router)
     app.include_router(studio_router)
     app.include_router(system_router)
@@ -53,6 +55,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.container = container
     app.state.authentication = container.authentication
     app.state.quality_service = quality_service
+    app.state.data_health = container.data_health
     app.state.data_operations = container.data_operations
     app.state.mapping_service = container.mapping
     app.state.workflow_history = container.workflow_history

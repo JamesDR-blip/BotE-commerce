@@ -90,6 +90,36 @@ class ExecutionRepository:
                 )
             )
 
+    def list_by_dataset(
+        self,
+        dataset_id: str,
+        limit: int = 50,
+    ) -> list[ExecutionRecord]:
+        with self._sessions() as session:
+            return list(
+                session.scalars(
+                    select(ExecutionRecord)
+                    .where(ExecutionRecord.dataset_id == dataset_id)
+                    .order_by(ExecutionRecord.created_at.desc())
+                    .limit(limit)
+                )
+            )
+
+    def list_validation_logs(
+        self,
+        execution_id: str,
+    ) -> list[ValidationLogRecord]:
+        with self._sessions() as session:
+            return list(
+                session.scalars(
+                    select(ValidationLogRecord)
+                    .where(
+                        ValidationLogRecord.execution_id == execution_id
+                    )
+                    .order_by(ValidationLogRecord.id.asc())
+                )
+            )
+
     def get(self, execution_id: str) -> ExecutionRecord | None:
         with self._sessions() as session:
             return session.get(ExecutionRecord, execution_id)

@@ -10,6 +10,7 @@ from application.datasets.dataset_service import DatasetService
 from application.rules.rule_intelligence_service import RuleIntelligenceService
 from domain.catalog.mapping import MappingService
 from application.quality.quality_service import QualityService
+from application.quality.data_health_service import DataHealthService
 from application.workspace.project_service import WorkspaceProjectService
 from infrastructure.upload.tabular_reader import TabularUploadReader
 from application.workflows.authoring_service import WorkflowAuthoringService
@@ -22,6 +23,10 @@ from repositories.execution_traces import ExecutionTraceRepository
 
 def get_quality_service(request: Request) -> QualityService:
     return request.app.state.quality_service
+
+
+def get_data_health_service(request: Request) -> DataHealthService:
+    return request.app.state.data_health
 
 
 def get_data_operations(request: Request) -> DataOperationsService:

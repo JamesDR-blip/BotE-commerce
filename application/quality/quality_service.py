@@ -1,4 +1,4 @@
-"""Application orchestration for the multi-agent validation workflow."""
+﻿"""Application orchestration for the multi-agent validation workflow."""
 
 from __future__ import annotations
 
@@ -49,6 +49,7 @@ class QualityService:
         frame: pd.DataFrame,
         source_bytes: bytes,
         requested_category: str | None = None,
+        dataset_id: str | None = None,
     ) -> ExecutionSummary:
         execution_id = str(uuid4())
         source_hash = sha256(source_bytes).hexdigest()
@@ -56,6 +57,7 @@ class QualityService:
         self._executions.create(
             ExecutionRecord(
                 id=execution_id,
+                dataset_id=dataset_id,
                 category=requested_category or "unknown",
                 source_hash=source_hash,
                 rule_version="unknown",
