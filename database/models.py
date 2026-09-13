@@ -635,6 +635,80 @@ class CapabilityExecutionTraceRecord(Base):
         back_populates="capability_traces",
     )
 
+class ApprovalRecord(Base):
+    """Persistence model for approval workflow requests and decisions."""
+
+    __tablename__ = "approvals"
+
+    approval_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    execution_id: Mapped[str] = mapped_column(
+        ForeignKey("workflow_executions.id"),
+        nullable=False,
+        index=True,
+    )
+    risk_score: Mapped[str] = mapped_column(String(20), nullable=False)
+    confidence_score: Mapped[float] = mapped_column(Float, nullable=False)
+    requested_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decision: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    # Relationship back to execution if needed
+    execution = relationship("WorkflowExecutionRecord", backref="approvals", foreign_keys=[execution_id])
+
+class RiskAssessmentRecord(Base):
+    """Persistence model for workflow execution risk assessments."""
+
+    __tablename__ = "risk_assessments"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+
+    execution_id: Mapped[str] = mapped_column(
+        ForeignKey("workflow_executions.id"),
+        nullable=False,
+        index=True,
+    )
+
+    risk_score: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+    )
+
+    confidence_score: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+
+    approval_required: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    execution = relationship(
+        "WorkflowExecutionRecord",
+        backref="risk_assessments",
+        foreign_keys=[execution_id],
+    )
+
+
+class RiskPolicyRecord(Base):
+    """Persistence model for risk policy thresholds."""
+    __tablename__ = "risk_policies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    high_risk_threshold: Mapped[float] = mapped_column(Float, nullable=False, default=0.7)
+    critical_risk_threshold: Mapped[float] = mapped_column(Float, nullable=False, default=0.9)
+
 class ReportRecord(Base):
     __tablename__ = "reports"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

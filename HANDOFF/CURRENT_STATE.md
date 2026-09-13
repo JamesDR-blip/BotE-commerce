@@ -7,13 +7,13 @@ AI Studio E-commerce Platform
 Autonomous E-commerce Data Operations Platform
 
 **Current Sprint:**
-S15 — Data Health Command Center: COMPLETE at code/test level.
+S16 — Risk & Approval Engine: COMPLETE.
 
 **Last Completed:**
-S15 — Data Health Command Center.
+S16 — Risk & Approval Engine.
 
 **Next Sprint:**
-S16 — Risk & Approval Engine.
+S17 — Shadow Mode & Simulation.
 
 **Architecture:**
 Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presentation)
@@ -22,64 +22,72 @@ Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presen
 `services/container.py`
 
 **Tests:**
-510 / 510 passing via `python -m pytest`.
+533 / 533 passing via `python -m pytest`.
 
 **Database:**
-- Current database revision: `f3a4b5c6d7e8`.
-- Repository Alembic head: `f3a4b5c6d7e8`.
-- Database is synchronized with repository head.
+- Current local database revision: `c13a7e91d204`.
+- Repository Alembic head: `20230912_04`.
+- Local database is not yet synchronized with repository head.
+- Legacy clean-from-zero Alembic baseline/bootstrap limitation remains known.
 
-**Current Work:**
-S14-A introduces asynchronous workflow execution while preserving the existing synchronous execution path. Workflow executions can be persisted as `QUEUED`, dispatched through an application-level queue port, atomically claimed by a background worker, and resumed through the existing `WorkflowEngine`.
+## S16 Completed Work
 
-The async worker receives only the persisted `execution_id`. It reloads the persisted workflow execution and workflow version before execution, preventing raw DataFrame/upload payloads from being placed on the queue and ensuring execution uses the version that was persisted when the execution was created.
+### Risk
 
-## S15 Completed Work
+- Added `RiskPolicy`.
+- Added `RiskScore`.
+- Added `ConfidenceScore`.
+- Added deterministic risk evaluation.
+- Added persisted risk assessments.
+- Wired Data Health confidence into production runtime.
 
-- Added multidimensional `DataHealthScore`.
-- Added health dimensions:
-  - completeness
-  - validity
-  - uniqueness
-  - consistency
-  - timeliness
-- Added assessed-only aggregate scoring.
-- Added `IssueDiagnostic`.
-- Added read-only `RemediationProposal`.
-- Added `DataHealthService`.
-- Aggregated persisted dataset profile and validation execution signals.
-- Added project-scoped `GET /health-metrics`.
-- Added ownership-scoped `GET /diagnostics/{dataset_id}`.
-- Diagnostics expose sanitized metadata only; raw rows and row numbers are not exposed.
-- Added Streamlit Data Health Command Center.
-- Added remediation preview without executing mutations.
-- Added S15 domain/service/API regression coverage.
-- Added execution-to-dataset persistence reference through migration `f3a4b5c6d7e8`.
+### Approval
 
-**Key Safety Properties:**
-- Queue payloads do not contain raw DataFrame or upload bytes.
-- Workflow execution remains behind the existing application/execution boundaries.
-- The domain layer remains framework-independent.
-- The worker cannot bypass persisted workflow execution state.
-- Atomic execution claiming prevents the same queued execution from being claimed twice.
-- Existing ChangeSet, approval, risk, and confidence boundaries remain unaffected.
-- No `eval`, `exec`, `pickle`, or unsafe YAML loading was introduced by S14-A.
+- Added `ApprovalRequest`.
+- Added `ApprovalDecision`.
+- Added approval persistence.
+- Added hashed approval tokens.
+- Added approver-role authorization.
+- Added token validation and expiry handling.
+- Added pending approvals API.
+- Added approve/reject API.
 
-**Blocking Issues:**
-None.
+### Workflow Integration
 
-## Known Considerations
+- Added `PENDING_APPROVAL`.
+- Added `CANCELLED`.
+- High/Critical risk executions pause before execution.
+- Approved executions return to `QUEUED`.
+- Existing worker resumes approved executions.
+- Rejected executions are cancelled.
 
-- Timeliness is explicitly unassessed because the current dataset model does not provide a generic freshness/SLA signal.
-- Historical multidimensional health snapshots are not persisted.
-- Category benchmark computation is not implemented.
-- Remediation proposals are generated as read-only previews and are not persisted as an approval/execution lifecycle.
-- The dashboard uses the existing project API boundary rather than introducing a new workspace-wide health endpoint.
-- Production authentication remains an existing platform boundary.
-- The existing Starlette/AnyIO TestClient deprecation warning remains.
+## Safety Properties
+
+- High/Critical execution cannot proceed without valid approval.
+- Approval requires the `approver` role.
+- Approval token plaintext is not persisted.
+- Pending approval responses do not expose token or token hash.
+- Existing execution queue receives only persisted execution IDs.
+- Domain remains framework-independent.
+- No `eval`, `exec`, unsafe YAML loading, or arbitrary SQL was introduced by S16.
+- Existing synchronous workflow execution remains backward compatible.
+
+## Verification
+
+- Full regression: `533 passed`.
+- Full suite runtime: approximately `25.55 seconds`.
+- 1 existing Starlette/AnyIO TestClient deprecation warning.
+
+## Known Issues
+
+- Local Alembic revision is behind repository head.
+- Clean-from-zero Alembic history has an existing legacy baseline/bootstrap limitation.
+- Blast radius is currently metadata-driven.
+- In-process workflow queue is not durable.
+- Approval request creation is currently separate from runtime risk assessment.
 
 ## Next Action
 
-Begin S16 Risk & Approval Engine while preserving S15's read-only remediation boundary.
+Begin S17 — Shadow Mode & Simulation.
 
-Future health enhancements should be driven by explicit requirements for historical snapshots, category benchmarks, remediation lifecycle, or freshness/SLA semantics.
+S17 should preserve the S16 risk and approval boundaries and introduce dry-run/diff verification without bypassing approval or ChangeSet safety requirements.

@@ -53,6 +53,82 @@ class WorkflowExecutionRepository:
 
             return record
 
+    def mark_pending_approval(
+        self,
+        execution_id: str,
+    ) -> WorkflowExecutionRecord:
+
+        with self._sessions() as session:
+
+            record = self._get_mutable(
+                session,
+                execution_id,
+            )
+
+            if record.status not in {"CREATED", "QUEUED"}:
+                raise ValueError(
+                    "Workflow execution cannot enter approval state: "
+                    f"{execution_id} ({record.status})"
+                )
+
+            record.status = "PENDING_APPROVAL"
+
+            session.commit()
+            session.refresh(record)
+
+            return record
+
+    def release_to_queue(
+        self,
+        execution_id: str,
+    ) -> WorkflowExecutionRecord:
+
+        with self._sessions() as session:
+
+            record = self._get_mutable(
+                session,
+                execution_id,
+            )
+
+            if record.status != "PENDING_APPROVAL":
+                raise ValueError(
+                    "Workflow execution is not pending approval: "
+                    f"{execution_id} ({record.status})"
+                )
+
+            record.status = "QUEUED"
+
+            session.commit()
+            session.refresh(record)
+
+            return record
+
+    def cancel(
+        self,
+        execution_id: str,
+    ) -> WorkflowExecutionRecord:
+
+        with self._sessions() as session:
+
+            record = self._get_mutable(
+                session,
+                execution_id,
+            )
+
+            if record.status != "PENDING_APPROVAL":
+                raise ValueError(
+                    "Only pending approval executions can be cancelled: "
+                    f"{execution_id} ({record.status})"
+                )
+
+            record.status = "CANCELLED"
+            record.finished_at = datetime.now(timezone.utc)
+
+            session.commit()
+            session.refresh(record)
+
+            return record
+
     def mark_running(
         self,
         execution_id: str,
@@ -64,6 +140,12 @@ class WorkflowExecutionRepository:
                 session,
                 execution_id,
             )
+
+            if record.status not in {"CREATED", "QUEUED"}:
+                raise ValueError(
+                    "Workflow execution cannot start running: "
+                    f"{execution_id} ({record.status})"
+                )
 
             record.status = "RUNNING"
             record.started_at = datetime.now(timezone.utc)

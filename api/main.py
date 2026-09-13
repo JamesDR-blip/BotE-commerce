@@ -11,6 +11,8 @@ from api.routes import (
     studio_router,
     system_router,
     workflows_router,
+    risk_router,
+    approval_router,
 )
 from configs.settings import Settings
 
@@ -51,6 +53,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(studio_router)
     app.include_router(system_router)
     app.include_router(workflows_router)
+    app.include_router(risk_router)
+    app.include_router(approval_router)
     app.add_exception_handler(Exception, _internal_server_error)
     app.state.container = container
     app.state.authentication = container.authentication

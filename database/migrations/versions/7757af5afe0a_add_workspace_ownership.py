@@ -15,6 +15,16 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Ensure workspaces table exists before altering it
+    op.execute(
+        """
+        CREATE TABLE IF NOT EXISTS workspaces (
+            id VARCHAR(36) NOT NULL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            created_at DATETIME NOT NULL
+        )
+        """
+    )
     with op.batch_alter_table("workspaces") as batch:
         batch.add_column(
             sa.Column(

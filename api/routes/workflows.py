@@ -426,8 +426,3 @@ def workflow_execution_detail(
             for trace in data["traces"]
         ],
     )
-
-
-
-
-

@@ -2,7 +2,7 @@
 
 ## Current Sprint
 
-**S15 - Data Health Command Center**
+**S16 - Risk & Approval Engine**
 
 S15 is complete at code/test level, with the remaining limitations explicitly bounded below.
 
@@ -47,7 +47,7 @@ S15 is complete at code/test level, with the remaining limitations explicitly bo
 - **Engine:** SQLite (local dev/test), PostgreSQL (production)
 - **Current Database Revision:** `f3a4b5c6d7e8`
 - **Repository Alembic Head:** `f3a4b5c6d7e8`
-- **Migration State:** Database is synchronized with repository head.
+- **Migration State:** Local database is at c13a7e91d204; repository head is 20230912_04. Legacy clean-from-zero Alembic baseline remains a known limitation.
 - **S15 Migration:** Added nullable `executions.dataset_id`, indexed and linked by foreign key to `datasets.id`.
 - Existing executions remain compatible because `dataset_id` is nullable.
 
@@ -142,6 +142,21 @@ S15 is complete at code/test level, with the remaining limitations explicitly bo
 - Added remediation proposal preview without executing mutations.
 - Added API, application, and domain regression coverage.
 
+## S16 Implementation
+
+- Added deterministic risk classification through RiskPolicy and RiskScore.
+- Added ConfidenceScore and risk evaluation application service.
+- Added persisted risk assessments.
+- Added ApprovalRequest / ApprovalDecision lifecycle.
+- Added hashed approval tokens; plaintext tokens are returned only at approval creation.
+- Added approver-role authorization and token validation.
+- Added PENDING_APPROVAL and CANCELLED workflow states.
+- Integrated high/critical risk gating into workflow runtime.
+- Approved executions return to QUEUED and resume through the existing worker.
+- Rejected executions become CANCELLED.
+- Wired DataHealthService confidence into production runtime.
+- Added risk/approval API, repositories, migrations, and regression coverage.
+
 ## Current Focus
 
 - S14 Performance / Streaming & Asynchronous Workers is complete at code/test level.
@@ -174,7 +189,7 @@ S15 is complete at code/test level, with the remaining limitations explicitly bo
 
 ## Next Action
 
-Proceed to S16 Risk & Approval after preserving the S15 health/diagnostic boundaries.
+S16 Risk & Approval Engine is complete. Proceed to S17 Shadow Mode & Simulation.
 
 Future S15-adjacent improvements should be introduced only when justified by product requirements:
 - historical multidimensional health snapshots,

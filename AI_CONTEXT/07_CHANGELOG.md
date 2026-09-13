@@ -1,5 +1,54 @@
 # CHANGELOG
 
+## S16 — Risk & Approval Engine — COMPLETE
+
+Implemented the Risk & Approval Engine as a policy-driven human-in-the-loop safety boundary for workflow execution.
+
+### Added
+
+- Added `RiskPolicy` with deterministic `LOW`, `MEDIUM`, `HIGH`, and `CRITICAL` classification.
+- Added `ConfidenceScore` validation.
+- Added risk evaluation application service.
+- Added persisted risk assessments.
+- Added `ApprovalRequest` and `ApprovalDecision`.
+- Added `PENDING_APPROVAL` and `CANCELLED` workflow execution states.
+- Added approval-aware workflow runtime integration.
+- Added approval release back to the existing queue/worker execution path.
+- Added rejection cancellation.
+- Added secure approval-token generation and SHA-256 token-hash persistence.
+- Added approver-role authorization.
+- Added approval token validation and expiry handling.
+- Added risk and approval API routes.
+- Wired `DataHealthService` confidence into the production runtime.
+- Added S16 domain, application, persistence, API, and runtime regression coverage.
+
+### Architectural Decisions
+
+- Keep risk policy and value objects in the framework-independent domain layer.
+- Keep risk/approval orchestration in application services.
+- Keep persistence behind repositories/infrastructure adapters.
+- Do not bypass the existing workflow execution state machine or queue boundary.
+- High/Critical risk executions remain blocked until explicit approval.
+- Approval tokens are never persisted in plaintext and are not exposed by pending-approval listings.
+- Preserve existing synchronous workflow behavior and legacy runtime compatibility.
+- Do not introduce ChangeSet/rollback implementation as part of S16; that remains a later sprint boundary.
+
+### Verification
+
+- Full regression: `533 passed`.
+- Full suite runtime: approximately `25.55 seconds`.
+- 1 existing Starlette/AnyIO TestClient deprecation warning remains.
+- Repository Alembic head: `20230912_04`.
+- Local database revision: `c13a7e91d204`.
+
+### Known Scope Boundaries
+
+- Blast radius is currently supplied through execution-plan risk metadata.
+- Approval request creation and runtime risk assessment are currently separate lifecycle steps.
+- The in-process queue remains non-durable.
+- Existing Alembic baseline/bootstrap limitations remain outside S16 scope.
+
+
 ## S15 — Data Health Command Center — COMPLETE
 
 Implemented the Data Health Command Center on top of the existing dataset, validation, persistence, and dashboard architecture.

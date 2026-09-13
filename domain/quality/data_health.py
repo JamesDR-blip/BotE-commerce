@@ -1,4 +1,4 @@
-"""Domain models for multidimensional dataset health."""
+﻿"""Domain models for multidimensional dataset health."""
 
 from __future__ import annotations
 
@@ -45,6 +45,20 @@ class DataHealthScore:
         if not assessed:
             return 0.0
         return round(sum(assessed) / len(assessed), 2)
+
+    @property
+    def confidence_score(self) -> float:
+        """Return the assessed-dimension ratio on a 0.0-1.0 scale."""
+
+        if not self.metrics:
+            return 0.0
+
+        assessed_count = sum(
+            1
+            for metric in self.metrics
+            if metric.assessed
+        )
+        return round(assessed_count / len(self.metrics), 4)
 
     def metric(self, dimension: HealthDimension) -> HealthMetric | None:
         return next(

@@ -1,4 +1,4 @@
-﻿from enum import Enum
+from enum import Enum
 
 
 class WorkflowExecutionStatus(str, Enum):
@@ -7,8 +7,14 @@ class WorkflowExecutionStatus(str, Enum):
 
     QUEUED = "QUEUED"
 
+    PENDING_APPROVAL = "PENDING_APPROVAL"
+
     RUNNING = "RUNNING"
 
     COMPLETED = "COMPLETED"
 
     FAILED = "FAILED"
+
+    CANCELLED = "CANCELLED"
+
+

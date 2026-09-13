@@ -62,6 +62,12 @@ def get_workflow_runtime(
     return request.app.state.workflow_runtime
 
 
+def get_approval_service(
+    request: Request,
+):
+    return request.app.state.container.approval_service
+
+
 def get_execution_repository(
     request: Request,
 ) -> ExecutionRepository:
