@@ -19,51 +19,21 @@
 - **S13 Agent Memory & Execution Context**: Tenant-scoped persistent agent memory, correction events, execution learning, PII redaction, expiration, and memory-aware requirement parameter resolution.
 - **S14 Performance**: Streaming tabular ingestion, chunked processing, async execution workers.
 - **S15 Data Health Command Center**: Live health scores, issue tracking, and automated fix recommendations.
+- **S16 Risk & Approval Engine**: RiskPolicy domain model, confidence scoring, and human-in-the-loop approval gates.
 
 ---
 
 ## Current Sprint
 
-- **S15 Data Health Command Center**: multidimensional health monitoring, diagnostics, and read-only remediation proposals.
-
-### S15 — Data Health Command Center — COMPLETE
-
-Completed:
-
-- Multidimensional health model.
-- Completeness, validity, uniqueness, and consistency scoring.
-- Explicitly unassessed timeliness dimension.
-- Dataset/project-scoped health aggregation.
-- Sanitized diagnostics.
-- Read-only remediation proposals.
-- Health metrics API.
-- Dataset diagnostics API.
-- Streamlit Data Health Command Center.
-- Ownership/security regression coverage.
-- S15 domain/application/API regression coverage.
-
-Verification:
-
-- Full regression: 510 passed.
-- 1 existing Starlette/AnyIO deprecation warning.
-- Alembic current/head: `f3a4b5c6d7e8`.
-
-Remaining S15-adjacent considerations:
-
-- Historical multidimensional health snapshots.
-- Category benchmark computation.
-- Persisted remediation approval/execution lifecycle.
-- Reliable timeliness/freshness signals.
+- **S17 Shadow Mode**: Dry-run simulation and diff verification before mutation.
 
 ---
 
 ## Next Sprint
 
-- **S16 Risk & Approval Engine**: RiskPolicy domain model, confidence scoring, and human-in-the-loop approval gates.
+- **S18 ChangeSet & Rollback**: Immutable change sets, automated rollbacks, and recovery transactions.
 
 ## Future Roadmap
-- **S17 Shadow Mode**: Dry-run simulation and diff verification before mutation.
-- **S18 ChangeSet & Rollback**: Immutable change sets, automated rollbacks, and recovery transactions.
 - **S19 Lineage & Audit**: Full data provenance, audit trails, and event sourcing.
 - **S20 Autonomous Agent Operations**: Guardrailed self-healing data pipelines.
 - **S21 Channel Sync**: Multi-channel connectors (Shopify, Amazon, TikTok Shop, Shopee, Lazada).
