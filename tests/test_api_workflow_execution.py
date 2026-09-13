@@ -1,4 +1,4 @@
-﻿import json
+import json
 import time
 from fastapi.testclient import TestClient
 from api.main import create_app
@@ -914,3 +914,140 @@ def test_workflow_execution_accepts_dataset_in_same_project() -> None:
 
     assert execution is not None
     assert execution.dataset_id == "dataset-valid"
+
+
+def test_workflow_simulation_endpoint_does_not_persist_execution() -> None:
+    client = _client()
+
+    workspace_response = client.post(
+        "/workspaces",
+        json={"id": "ws-sim", "name": "Simulation Demo"},
+    )
+    assert workspace_response.status_code == 200
+
+    project_response = client.post(
+        "/projects",
+        json={
+            "id": "p-sim",
+            "workspace_id": "ws-sim",
+            "name": "Simulation Catalog",
+            "description": "Simulation test",
+        },
+    )
+    assert project_response.status_code == 200
+
+    workflow_response = client.post(
+        "/workflows",
+        json={
+            "id": "wf-sim",
+            "project_id": "p-sim",
+            "name": "Simulation Workflow",
+            "version": "1.0",
+            "plan": {
+                "version": "1.0",
+                "steps": [],
+                "metadata": {},
+            },
+        },
+    )
+    assert workflow_response.status_code == 200
+
+    before_ids = {
+        execution.id
+        for execution in client.app.state.container.workflow_executions.list_by_workflow("wf-sim")
+    }
+
+    response = client.post(
+        "/workflows/wf-sim/simulate",
+        json={
+            "inputs": {
+                "file": "products.csv",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+
+    payload = response.json()
+
+    assert payload["simulation_id"]
+    assert payload["workflow_id"] == "wf-sim"
+    assert payload["workflow_version"] == "1.0"
+    assert payload["success"] is True
+    assert payload["outputs"] == {
+        "file": "products.csv",
+    }
+    assert payload["diff"]["changed_keys"] == []
+    assert payload["diff"]["tabular"] == []
+
+    after_ids = {
+        execution.id
+        for execution in client.app.state.container.workflow_executions.list_by_workflow("wf-sim")
+    }
+
+    assert after_ids == before_ids
+
+
+def test_workflow_simulation_endpoint_enforces_dataset_project_scope() -> None:
+    client = _client()
+
+    assert client.post(
+        "/workspaces",
+        json={"id": "ws-scope-sim", "name": "Scope"},
+    ).status_code == 200
+
+    assert client.post(
+        "/projects",
+        json={
+            "id": "p-scope-sim-a",
+            "workspace_id": "ws-scope-sim",
+            "name": "Workflow Project",
+            "description": "Scope",
+        },
+    ).status_code == 200
+
+    assert client.post(
+        "/projects",
+        json={
+            "id": "p-scope-sim-b",
+            "workspace_id": "ws-scope-sim",
+            "name": "Dataset Project",
+            "description": "Scope",
+        },
+    ).status_code == 200
+
+    assert client.post(
+        "/workflows",
+        json={
+            "id": "wf-scope-sim",
+            "project_id": "p-scope-sim-a",
+            "name": "Scoped Simulation",
+            "version": "1.0",
+            "plan": {"steps": []},
+        },
+    ).status_code == 200
+
+    assert client.post(
+        "/datasets",
+        json={
+            "id": "dataset-scope-sim",
+            "project_id": "p-scope-sim-b",
+            "name": "Other Project Dataset",
+            "source_type": "upload",
+            "metadata": {},
+        },
+    ).status_code == 200
+
+    response = client.post(
+        "/workflows/wf-scope-sim/simulate",
+        json={
+            "dataset_id": "dataset-scope-sim",
+            "inputs": {},
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == (
+        "Dataset does not belong to workflow project: "
+        "dataset-scope-sim"
+    )

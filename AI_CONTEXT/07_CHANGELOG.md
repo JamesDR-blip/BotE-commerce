@@ -1,5 +1,52 @@
 # CHANGELOG
 
+## S17 — Shadow Mode / Simulation — COMPLETE
+
+Implemented an isolated workflow simulation path for safe dry-run verification without production mutation.
+
+### Added
+
+- Added domain simulation contracts:
+  - SimulationResult
+  - DiffPreview
+  - TabularDiff
+  - RowDiff
+- Added ShadowExecutionRunner for ephemeral workflow simulation.
+- Added SimulationService with owner-scoped workflow and dataset resolution.
+- Added POST /workflows/{workflow_id}/simulate.
+- Added workflow/dataset project-scope validation.
+- Added read-only streaming simulation through DatasetStorage.open().
+- Added bounded-memory streaming diff aggregation.
+- Added deep isolation of DataFrame, Series, and mutable auxiliary inputs.
+- Added simulation result and diff API response schemas.
+- Added regression coverage for zero production mutation and input isolation.
+
+### Architectural Decisions
+
+- Reuse the existing CapabilityExecutionService and capability registry rather than introducing a second capability execution engine.
+- Keep simulation orchestration in the execution/application layers; keep simulation result contracts in the domain layer.
+- Keep the production WorkflowEngine execution path unchanged.
+- Simulation must not create or persist WorkflowExecution records.
+- Simulation must not persist execution traces or write dataset storage.
+- Simulation must not create ChangeSets or mutate production state.
+- Preserve S16 Risk & Approval boundaries; simulation does not bypass approval controls.
+- Use bounded-memory accumulation for streaming diffs rather than materializing the complete dataset.
+
+### Verification
+
+- Full regression: 546 passed.
+- Full suite runtime: approximately 25.01 seconds.
+- 1 existing Starlette/AnyIO TestClient deprecation warning remains.
+- git diff --check clean.
+- No Alembic migration required.
+
+### Known Scope Boundaries
+
+- Streaming row diffs currently use positional row alignment rather than business-key matching.
+- The simulation diff preview is bounded by max_diff_rows; the API currently uses the default limit.
+- Simulation plan deserialization is currently local to SimulationService.
+- The existing Starlette/AnyIO dependency warning remains.
+
 ## S16 — Risk & Approval Engine — COMPLETE
 
 Implemented the Risk & Approval Engine as a policy-driven human-in-the-loop safety boundary for workflow execution.

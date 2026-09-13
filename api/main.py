@@ -67,6 +67,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.dataset_service = container.dataset_service
     app.state.workspace_projects = container.workspace_projects
     app.state.workflow_runtime = container.workflow_runtime
+    app.state.simulation_service = container.simulation_service
     app.state.execution_repository = container.executions
     app.state.execution_trace_repository = container.execution_traces
     app.state.upload_reader = container.uploads

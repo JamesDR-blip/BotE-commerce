@@ -2,9 +2,9 @@
 
 ## Current Sprint
 
-**S16 - Risk & Approval Engine**
+**S17 - Shadow Mode & Simulation**
 
-S15 is complete at code/test level, with the remaining limitations explicitly bounded below.
+S17 is complete at code/test level, with the simulation path isolated from production mutation and the remaining limitations explicitly bounded below.
 
 ## Previous Sprints
 
@@ -157,13 +157,50 @@ S15 is complete at code/test level, with the remaining limitations explicitly bo
 - Wired DataHealthService confidence into production runtime.
 - Added risk/approval API, repositories, migrations, and regression coverage.
 
+### S17 Implementation
+
+- Added domain simulation contracts:
+  - SimulationResult
+  - DiffPreview
+  - TabularDiff
+  - RowDiff
+- Added ShadowExecutionRunner for isolated, ephemeral workflow simulation.
+- Reused the existing CapabilityExecutionService and capability registry; no separate capability execution engine was introduced.
+- Added SimulationService with owner-scoped workflow and dataset resolution.
+- Added POST /workflows/{workflow_id}/simulate.
+- Added owner/project-scope validation for simulation datasets.
+- Added streaming simulation through read-only DatasetStorage.open() access.
+- Added bounded-memory streaming diff aggregation.
+- Added deep isolation of DataFrame, Series, and mutable auxiliary inputs.
+- Simulation does not create or persist WorkflowExecution.
+- Simulation does not persist execution traces.
+- Simulation does not write dataset storage.
+- Simulation does not create ChangeSets or mutate production state.
+- Existing production WorkflowEngine execution behavior remains unchanged.
+- No risk/approval boundary from S16 is bypassed.
+- No Alembic migration was required.
+
+### S17 Test Status
+
+- Full regression: **546 / 546 passing** via python -m pytest.
+- Full suite execution time: approximately **25.01 seconds**.
+- Warnings: 1 existing Starlette/AnyIO TestClient deprecation warning.
+- git diff --check: clean.
+
+### S17 Known Constraints
+
+- Streaming row diffs currently use positional row alignment rather than business-key matching.
+- Simulation uses a bounded diff preview; the API currently relies on the default max_diff_rows limit.
+- Simulation plan deserialization is currently implemented locally in SimulationService.
+- The existing Starlette/AnyIO deprecation warning remains.
+
 ## Current Focus
 
-- S14 Performance / Streaming & Asynchronous Workers is complete at code/test level.
-- S14-A provides persisted asynchronous workflow execution through the execution-ID queue boundary.
-- S14-B provides opt-in chunked execution over persisted tabular datasets.
-- Synchronous workflow execution remains backward compatible.
-- The in-process queue remains intentionally minimal and non-durable.
+- S17 Shadow Mode & Simulation is complete at code/test level.
+- Simulation provides an isolated dry-run path without production execution persistence or dataset mutation.
+- Streaming simulation uses read-only persisted dataset access and bounded-memory diff aggregation.
+- Existing synchronous and asynchronous production execution paths remain backward compatible.
+- S18 ChangeSet & Rollback is the next production-boundary milestone.
 
 ## S15 Known Constraints
 
@@ -189,7 +226,9 @@ S15 is complete at code/test level, with the remaining limitations explicitly bo
 
 ## Next Action
 
-S16 Risk & Approval Engine is complete. Proceed to S17 Shadow Mode & Simulation.
+S17 Shadow Mode & Simulation is complete. Proceed to S18 ChangeSet & Rollback.
+
+S18 should introduce the explicit production mutation boundary required for deterministic ChangeSets, rollback, auditability, lineage, and HITL approval integration.
 
 Future S15-adjacent improvements should be introduced only when justified by product requirements:
 - historical multidimensional health snapshots,

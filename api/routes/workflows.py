@@ -8,6 +8,7 @@ from api.dependencies import (
     get_workflow_history,
     get_workflow_runtime,
     get_workflow_authoring_service,
+    get_simulation_service,
 )
 
 from domain.identity import CurrentUser
@@ -26,14 +27,77 @@ from schemas.responses import (
     WorkflowExecutionStatusResponse,
     WorkflowResponse,
     WorkflowVersionResponse,
+    SimulationRowDiffResponse,
+    SimulationTabularDiffResponse,
+    SimulationDiffResponse,
+    WorkflowSimulationResponse,
 )
 from domain.serialization.execution_plan import ExecutionPlanSerializer
 from application.workflows.authoring_service import WorkflowAuthoringService
 from application.workflows.history_service import WorkflowHistoryService
 from application.workflows.runtime_service import WorkflowRuntimeService
+from application.workflows.simulation_service import SimulationService
+
+try:
+    import pandas as pd
+except ImportError:  # pragma: no cover
+    pd = None
 
 
 router = APIRouter()
+
+
+def _simulation_json_value(value):
+    if pd is not None and isinstance(value, pd.DataFrame):
+        return value.to_dict(orient="records")
+    if pd is not None and isinstance(value, pd.Series):
+        return value.tolist()
+    if isinstance(value, dict):
+        return {
+            str(key): _simulation_json_value(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [_simulation_json_value(item) for item in value]
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    return str(value)
+
+
+def _simulation_response(result) -> WorkflowSimulationResponse:
+    return WorkflowSimulationResponse(
+        simulation_id=result.simulation_id,
+        workflow_id=result.workflow_id,
+        workflow_version=result.workflow_version,
+        success=result.success,
+        outputs=_simulation_json_value(result.outputs),
+        error=result.error,
+        diff=SimulationDiffResponse(
+            changed_keys=list(result.diff.changed_keys),
+            tabular=[
+                SimulationTabularDiffResponse(
+                    input_key=item.input_key,
+                    before_rows=item.before_rows,
+                    after_rows=item.after_rows,
+                    before_columns=list(item.before_columns),
+                    after_columns=list(item.after_columns),
+                    added_rows=item.added_rows,
+                    removed_rows=item.removed_rows,
+                    changed_rows=item.changed_rows,
+                    row_diffs=[
+                        SimulationRowDiffResponse(
+                            row_index=row.row_index,
+                            before=_simulation_json_value(row.before),
+                            after=_simulation_json_value(row.after),
+                        )
+                        for row in item.row_diffs
+                    ],
+                    truncated=item.truncated,
+                )
+                for item in result.diff.tabular
+            ],
+        ),
+    )
 
 
 def _execution_plan_from_payload(payload: dict):
@@ -274,6 +338,34 @@ def activate_workflow_version(
         status=workflow.status,
         created_at=workflow.created_at,
     )
+
+
+@router.post(
+    "/workflows/{workflow_id}/simulate",
+    response_model=WorkflowSimulationResponse,
+)
+def simulate_workflow(
+    workflow_id: str,
+    payload: WorkflowExecutionRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    simulation_service: SimulationService = Depends(
+        get_simulation_service
+    ),
+) -> WorkflowSimulationResponse:
+    try:
+        result = simulation_service.simulate(
+            current_user=current_user,
+            workflow_id=workflow_id,
+            inputs=payload.inputs,
+            dataset_id=payload.dataset_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    return _simulation_response(result)
 
 
 @router.post(

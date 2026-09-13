@@ -49,6 +49,7 @@ from execution.capabilities.capability_execution_service import (
 )
 from execution.capabilities.capability_executor import CapabilityExecutor
 from execution.workflow.engine import WorkflowEngine, WorkflowExecutionWorker
+from execution.shadow_execution_runner import ShadowExecutionRunner
 from extractors.deterministic import DeterministicProductExtractor
 from infrastructure.cache.ttl import TTLCache
 from infrastructure.persistence.approval_repository import ApprovalRepository
@@ -78,6 +79,7 @@ from repositories.workflow_executions import WorkflowExecutionRepository
 from repositories.workflows import WorkflowRepository
 from repositories.workspaces import WorkspaceRepository
 from services.authentication import AuthenticationService
+from application.workflows.simulation_service import SimulationService
 from services.authorization import AuthorizationService
 from services.data_operations import DataOperationsService
 from services.validation_service import ValidationService
@@ -230,6 +232,12 @@ class Container:
             settings.max_upload_bytes,
         )
         self.dataset_storage = DatasetStorage(settings.dataset_storage_path)
+
+        self.shadow_execution_runner = ShadowExecutionRunner(
+            capability_execution=self.capability_execution,
+            dataset_storage=self.dataset_storage,
+            streaming_reader=self.streaming_uploads,
+        )
         self.dataset_profile = DatasetProfileService()
         self.dataset_ingestion = DatasetIngestionService(
             reader=self.uploads,
@@ -303,6 +311,11 @@ class Container:
             risk_assessments=lambda: self.risk_assessment_repository,
             workflow_executions=lambda: self.workflow_executions,
         )
+        self.simulation_service = SimulationService(
+            shadow_runner=self.shadow_execution_runner,
+            workflows=self.workflows,
+            datasets=self.datasets,
+        )
 
 
 def build_container(
@@ -313,5 +326,3 @@ def build_container(
         app_settings = Settings()
 
     return Container(app_settings)
-
-

@@ -128,6 +128,40 @@ class WorkflowExecutionResponse(BaseModel):
     finished_at: datetime | None = None
 
 
+class SimulationRowDiffResponse(BaseModel):
+    row_index: int
+    before: dict[str, Any] | None = None
+    after: dict[str, Any] | None = None
+
+
+class SimulationTabularDiffResponse(BaseModel):
+    input_key: str
+    before_rows: int
+    after_rows: int
+    before_columns: list[str]
+    after_columns: list[str]
+    added_rows: int
+    removed_rows: int
+    changed_rows: int
+    row_diffs: list[SimulationRowDiffResponse]
+    truncated: bool
+
+
+class SimulationDiffResponse(BaseModel):
+    tabular: list[SimulationTabularDiffResponse]
+    changed_keys: list[str]
+
+
+class WorkflowSimulationResponse(BaseModel):
+    simulation_id: str
+    workflow_id: str
+    workflow_version: str
+    success: bool
+    outputs: dict[str, Any]
+    diff: SimulationDiffResponse
+    error: str | None = None
+
+
 class WorkflowExecutionStatusResponse(BaseModel):
     execution_id: str
     workflow_id: str

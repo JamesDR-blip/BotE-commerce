@@ -1,152 +1,154 @@
-# S16 Sprint Handoff
+# S17 Sprint Handoff
 
 ## Status
 
-S16 — Risk & Approval Engine: COMPLETE.
+S17 — Shadow Mode & Simulation: COMPLETE.
 
-The implementation is verified by the full regression suite and preserves the existing Clean Architecture + DDD boundaries.
+The implementation is verified by the full regression suite and preserves the existing Clean Architecture + DDD boundaries. The simulation path is isolated from production mutation.
+
+## Objective
+
+Provide a safe dry-run workflow execution path that can verify workflow behavior, outputs, and tabular diffs without creating production executions, persisting traces, writing dataset storage, or creating ChangeSets.
 
 ## Completed Work
 
 ### Domain
 
-- Added `RiskPolicy`.
-- Added `RiskScore`.
-- Added `ConfidenceScore`.
-- Added `RiskEvaluationResult`.
-- Added `ApprovalRequest`.
-- Added `ApprovalDecision`.
-- Added `PENDING_APPROVAL` and `CANCELLED` workflow execution states.
-
-### Application
-
-- Added risk evaluation service.
-- Added persisted risk assessments.
-- Added `ApprovalService`.
-- Added approval token generation and validation.
-- Added approver-role authorization.
-- Added approval expiry handling.
-- Integrated risk gating into workflow runtime.
-- Integrated Data Health confidence into production runtime.
+- Added `SimulationResult`.
+- Added `DiffPreview`.
+- Added `TabularDiff`.
+- Added `RowDiff`.
+- Added bounded diff metadata including row counts, column changes, changed rows, and truncation state.
 
 ### Execution
 
-- High/Critical risk executions transition to `PENDING_APPROVAL`.
-- Approval releases the execution to `QUEUED`.
-- Existing worker resumes the approved execution.
-- Rejection transitions the execution to `CANCELLED`.
+- Added `ShadowExecutionRunner`.
+- Reused the existing `CapabilityExecutionService` and capability registry.
+- Added isolated in-memory simulation.
+- Added read-only streaming simulation.
+- Added bounded-memory diff accumulation.
+- Added deep isolation of DataFrame, Series, and mutable auxiliary inputs.
+- Added failure capture into `SimulationResult` without persisting production execution state.
+
+### Application
+
+- Added `SimulationService`.
+- Added owner-scoped workflow resolution.
+- Added owner-scoped optional dataset resolution.
+- Added workflow/dataset project-scope validation.
+- Reused the active workflow-version and plan deserialization path.
+- Preserved the existing production workflow execution service boundary.
 
 ### API
 
-- Added risk assessment endpoint(s).
-- Added approval request endpoint.
-- Added pending approvals endpoint.
-- Added approval decision endpoint.
-- Added approve/reject endpoints.
-- Approval token is accepted through the request body.
-- Pending responses do not expose token or token hash.
+- Added `POST /workflows/{workflow_id}/simulate`.
+- Added simulation response schemas.
+- Added recursive conversion of DataFrame/Series outputs for API responses.
+- Added project-scope error handling.
+- Added API coverage proving simulation does not persist production executions.
 
-### Persistence
+### Streaming
 
-- Added risk repository.
-- Added risk assessment repository.
-- Added approval repository.
-- Added risk/approval database records.
-- Added hashed approval-token persistence.
+- Simulation reads datasets through `DatasetStorage.open()` only.
+- Streaming uses the existing bounded `StreamingTabularReader`.
+- No simulation path calls dataset save/write methods.
+- Diff accumulation remains bounded by `max_diff_rows`.
+- Every external input is isolated before streaming execution to prevent mutable-input leakage.
 
-## Migrations
+## Safety / Security
 
-S16 added:
+- `WorkflowEngine` production execution path was not changed.
+- Simulation does not create or persist `WorkflowExecution` records.
+- Simulation does not persist execution traces.
+- Simulation does not write dataset storage.
+- Simulation does not create ChangeSets.
+- Simulation does not mutate production state.
+- S16 Risk & Approval boundaries remain intact.
+- Simulation does not bypass production approval controls.
+- No `eval`, `exec`, unsafe YAML loading, or arbitrary dynamic LLM execution was introduced.
+- No raw production mutation mechanism was added to the shadow runner.
+- Existing synchronous production workflow behavior remains backward compatible.
 
-- `20230912_01_add_risk_and_approval_tables.py`
-- `20230912_02_add_approval_fk.py`
-- `20230912_03_add_risk_assessments.py`
-- `20230912_04_add_approval_token_hash.py`
+## Architecture Decisions
 
-Additional workspace migration present in the working tree:
+1. Keep simulation result contracts in the framework-independent domain layer.
+2. Keep simulation orchestration in the application and execution layers.
+3. Reuse `CapabilityExecutionService` rather than introducing a second capability execution engine.
+4. Keep dataset storage access read-only during simulation.
+5. Keep production `WorkflowEngine` unchanged.
+6. Keep simulation independent from production execution persistence and trace persistence.
+7. Use bounded-memory accumulation for streaming diffs rather than materializing the complete dataset.
+8. Preserve S16 risk and approval as the production safety boundary.
+9. Defer production mutation, immutable ChangeSets, and rollback semantics to S18.
 
-- `fcbc1a52044c_create_workspaces.py`
+## Database / Migrations
 
-Repository head:
-
-`20230912_04`
-
-Local database revision:
-
-`c13a7e91d204`
-
-## Architectural Decisions
-
-1. Risk and approval logic remain outside the presentation layer.
-2. Domain models remain framework-independent.
-3. Repositories own persistence concerns.
-4. Approval does not bypass the existing workflow state machine.
-5. Approved executions resume through the existing queue/worker.
-6. High/Critical actions require explicit approval.
-7. Approval tokens are hashed before persistence.
-8. Existing synchronous execution behavior remains backward compatible.
-9. ChangeSet/rollback implementation remains outside S16 scope.
-
-## Security / Safety
-
-- Approver role is required.
-- Missing/invalid approval tokens are rejected.
-- Expired approvals are rejected.
-- Already-decided approvals cannot be decided again.
-- Approval tokens are not exposed by pending approval responses.
-- No unsafe dynamic execution mechanism was introduced.
-- No raw data payload is placed on the workflow queue.
+- S17 introduced no database schema changes.
+- No Alembic migration was required.
+- Existing repository Alembic head remains `20230912_04`.
+- Local database revision remains `c13a7e91d204`.
+- Local database is not yet synchronized with repository head.
+- Existing clean-from-zero Alembic baseline/bootstrap limitation remains known.
 
 ## Verification
 
-- Full regression: `533 passed`.
-- 1 existing Starlette/AnyIO TestClient deprecation warning.
-- Targeted S16/runtime regression also passes.
-- Production `data_health` wiring verified by regression.
+- Full regression: `546 passed`.
+- Full suite runtime: approximately `25.01 seconds`.
+- 1 existing Starlette/AnyIO TestClient deprecation warning remains.
+- `git diff --check` reports no whitespace errors; Git reports existing Windows LF/CRLF normalization warnings for modified Markdown files.
+- Focused S17 simulation, service, streaming, and workflow regression coverage passes.
+- Regression coverage includes mutable auxiliary-input isolation.
 
-## Known Issues
+## Files Added by S17
 
-- Local Alembic revision is behind repository head.
-- Existing legacy Alembic clean-from-zero bootstrap limitation remains unresolved.
-- Blast radius is currently supplied through execution-plan metadata.
-- Approval request creation is separate from runtime risk assessment.
-- In-process queue is non-durable.
-- Full ChangeSet/rollback boundary is deferred to S18.
+- `application/workflows/simulation_service.py`
+- `domain/simulation.py`
+- `execution/shadow_execution_runner.py`
+- `tests/test_shadow_execution_runner.py`
+- `tests/test_simulation_service.py`
 
-## Files Added / Changed by S16
+## Files Modified by S17
 
-### Added
-
-- `api/routes/approval.py`
-- `api/routes/risk.py`
-- `application/approval/`
-- `application/risk/`
-- `database/migrations/versions/20230912_01_add_risk_and_approval_tables.py`
-- `database/migrations/versions/20230912_02_add_approval_fk.py`
-- `database/migrations/versions/20230912_03_add_risk_assessments.py`
-- `database/migrations/versions/20230912_04_add_approval_token_hash.py`
-- `domain/approval.py`
-- `domain/risk.py`
-- `domain/risk_evaluation.py`
-- `infrastructure/persistence/approval_repository.py`
-- `infrastructure/persistence/risk_assessment_repository.py`
-- `infrastructure/persistence/risk_repository.py`
-- `repositories/approval.py`
-- `tests/test_stage16_risk_approval.py`
-
-### Modified for S16 integration
-
-- `application/workflows/runtime_service.py`
-- `domain/studio/runtime.py`
-- `domain/workflow_execution_status.py`
-- `repositories/workflow_executions.py`
+- `api/dependencies.py`
+- `api/main.py`
+- `api/routes/workflows.py`
+- `schemas/responses.py`
 - `services/container.py`
-- `tests/test_workflow_runtime_service.py`
+- `tests/test_api_workflow_execution.py`
 
-Other modified files in the working tree predate or support adjacent sprint work and should not be attributed to S16 without reviewing their individual diffs.
+## Documentation Updated
+
+- `AI_CONTEXT/05_ROADMAP.md`
+- `AI_CONTEXT/06_PROJECT_STATE.md`
+- `AI_CONTEXT/07_CHANGELOG.md`
+- `SPRINTS/README.md`
+- `HANDOFF/CURRENT_STATE.md`
+- `HANDOFF/SPRINT_HANDOFF.md`
+
+## Known Issues / Limitations
+
+- Streaming row diffs currently use positional row alignment rather than business-key matching.
+- Simulation diff preview is bounded by `max_diff_rows`; the API currently uses the runner default.
+- Simulation plan deserialization is currently local to `SimulationService`.
+- Local Alembic revision remains behind repository head.
+- Existing clean-from-zero Alembic bootstrap limitation remains unresolved.
+- Blast radius remains metadata-driven.
+- In-process workflow queue remains non-durable.
+- Approval request creation remains separate from runtime risk assessment.
+- Existing Starlette/AnyIO TestClient deprecation warning remains.
 
 ## Next Sprint
 
-S17 — Shadow Mode & Simulation.
+S18 — ChangeSet & Rollback.
 
-S17 must preserve the S16 risk/approval gate and introduce dry-run/diff verification without allowing shadow execution to mutate production state.
+S18 should establish the production mutation boundary after S17 simulation, including immutable ChangeSets, auditable mutation intent, deterministic rollback/recovery semantics, and integration with the existing S16 Risk & Approval boundary.
+
+## Handoff Notes
+
+S17 is complete at code, test, architecture, and documentation level.
+
+The key invariant for S18 is:
+
+**Simulation verifies proposed behavior; ChangeSet is the only production mutation boundary.**
+
+Any future production mutation path should preserve explicit approval, auditability, rollback capability, and clear separation between simulation and mutation.

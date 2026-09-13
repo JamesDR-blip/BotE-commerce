@@ -1,5 +1,6 @@
 """FastAPI dependency providers backed by the application composition root."""
 from domain.identity import CurrentUser
+from application.workflows.simulation_service import SimulationService
 
 from fastapi import Depends, Header, HTTPException, Request
 
@@ -60,6 +61,12 @@ def get_workflow_runtime(
     request: Request,
 ) -> WorkflowRuntimeService:
     return request.app.state.workflow_runtime
+
+
+def get_simulation_service(
+    request: Request,
+) -> SimulationService:
+    return request.app.state.simulation_service
 
 
 def get_approval_service(

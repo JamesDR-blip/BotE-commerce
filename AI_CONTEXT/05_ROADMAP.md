@@ -20,18 +20,19 @@
 - **S14 Performance**: Streaming tabular ingestion, chunked processing, async execution workers.
 - **S15 Data Health Command Center**: Live health scores, issue tracking, and automated fix recommendations.
 - **S16 Risk & Approval Engine**: RiskPolicy domain model, confidence scoring, and human-in-the-loop approval gates.
+- **S17 Shadow Mode & Simulation**: Safe dry-run workflow simulation, bounded diff verification, read-only streaming, and zero production mutation.
 
 ---
 
 ## Current Sprint
 
-- **S17 Shadow Mode**: Dry-run simulation and diff verification before mutation.
+- **S17 Shadow Mode & Simulation — COMPLETE**: Safe dry-run workflow simulation, bounded diff verification, read-only streaming, and zero production mutation.
 
 ---
 
 ## Next Sprint
 
-- **S18 ChangeSet & Rollback**: Immutable change sets, automated rollbacks, and recovery transactions.
+- **S18 ChangeSet & Rollback**: Immutable change sets, automated rollbacks, and recovery transactions. This becomes the production mutation boundary following S17 simulation.
 
 ## Future Roadmap
 - **S19 Lineage & Audit**: Full data provenance, audit trails, and event sourcing.
