@@ -19,9 +19,11 @@ class CapabilityExecutionService:
         *,
         executor,
         validator=None,
+        lineage_tracking=None,
     ) -> None:
         self._executor = executor
         self._validator = validator or PlanValidator()
+        self._lineage_tracking = lineage_tracking
 
 
     def execute_plan(
@@ -31,6 +33,7 @@ class CapabilityExecutionService:
         inputs: Mapping[str, Any],
         execution_id: str,
         trace_collector=None,
+        lineage_context=None,
     ) -> CapabilityExecutionResult:
 
         self._validator.validate(
@@ -46,12 +49,53 @@ class CapabilityExecutionService:
             )
         )
 
+        lineage_callback = None
+
+        if (
+            self._lineage_tracking is not None
+            and lineage_context is not None
+            and lineage_context.get("dataset_id")
+            and lineage_context.get("workflow_id")
+            and lineage_context.get("workflow_version")
+        ):
+            def record_lineage(
+                *,
+                capability_id,
+                capability_version,
+                inputs,
+                outputs,
+            ):
+                event = self._lineage_tracking.record(
+                    dataset_id=lineage_context["dataset_id"],
+                    execution_id=execution_id,
+                    workflow_id=lineage_context["workflow_id"],
+                    workflow_version=lineage_context["workflow_version"],
+                    capability_id=capability_id,
+                    capability_version=capability_version,
+                    event_type="CAPABILITY_EXECUTED",
+                    input_refs={
+                        "dataset_id": lineage_context["dataset_id"],
+                        "input_keys": sorted(inputs.keys()),
+                        "previous_event_id": lineage_context.get(
+                            "previous_event_id"
+                        ),
+                    },
+                    output_refs={
+                        "output_keys": sorted(outputs.keys()),
+                    },
+                )
+
+                lineage_context["previous_event_id"] = event.id
+
+            lineage_callback = record_lineage
+
         try:
             outputs = self._executor.execute(
                 plan=plan,
                 inputs=inputs,
                 execution_id=execution_id,
                 trace_collector=collector,
+                lineage_callback=lineage_callback,
             )
 
         except Exception as exc:

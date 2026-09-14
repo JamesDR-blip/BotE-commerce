@@ -17,6 +17,7 @@ from agents.workflow import (
     ValidatorAgent,
 )
 from application.approval.approval_changeset_service import ApprovalChangeSetService
+from application.audit.audit_service import AuditService
 from application.approval.approval_service import ApprovalService
 from application.changesets.changeset_service import ChangeSetService
 from application.changesets.mutation_service import ChangeSetMutationService
@@ -25,6 +26,7 @@ from application.changesets.query_service import ChangeSetQueryService
 from application.datasets.artifact_materializer import DatasetArtifactMaterializer
 from application.datasets.dataset_ingestion import DatasetIngestionService
 from application.datasets.dataset_service import DatasetService
+from application.lineage.lineage_tracking_service import LineageTrackingService
 from application.memory.memory_service import AgentMemoryService
 from application.quality.data_health_service import DataHealthService
 from application.quality.quality_service import QualityService
@@ -72,9 +74,11 @@ from infrastructure.upload.tabular_reader import TabularUploadReader
 from plugins.registry import ValidatorRegistry
 from reports.generator import ReportAgent
 from repositories.agent_memory import AgentMemoryRepository
+from repositories.audit_events import AuditEventRepository
 from repositories.capability_execution_traces import (
     CapabilityExecutionTraceRepository,
 )
+from repositories.data_lineage_events import DataLineageEventRepository
 from repositories.datasets import DatasetRepository
 from repositories.changesets import ChangeSetRepository
 from repositories.execution_traces import ExecutionTraceRepository
@@ -214,9 +218,6 @@ class Container:
         self.workflow_trace_persistence = ExecutionTracePersistence(
             self.workflow_capability_traces
         )
-        self.capability_execution = CapabilityExecutionService(
-            executor=self.capability_executor,
-        )
 
         self.reports = ReportAgent(settings.reports_path)
         self.reporter = ReporterAgent(self.reports)
@@ -235,6 +236,19 @@ class Container:
         self.projects = ProjectRepository(sessions)
         self.datasets = DatasetRepository(sessions)
         self.changesets = ChangeSetRepository(sessions)
+        self.data_lineage_events = DataLineageEventRepository(sessions)
+        self.audit_events = AuditEventRepository(sessions)
+        self.lineage_tracking = LineageTrackingService(
+            repository=self.data_lineage_events,
+        )
+        self.capability_execution = CapabilityExecutionService(
+            executor=self.capability_executor,
+            lineage_tracking=self.lineage_tracking,
+        )
+        self.audit_service = AuditService(
+            sessions=self.sessions,
+            repository=self.audit_events,
+        )
         self.cache = TTLCache(settings.cache_ttl_seconds)
         self.uploads = TabularUploadReader(settings.max_upload_bytes)
         self.streaming_uploads = StreamingTabularReader(
@@ -308,11 +322,13 @@ class Container:
         self.changeset_mutation_service = ChangeSetMutationService(
             sessions=self.sessions,
             changesets=self.changesets,
+            audit_service=self.audit_service,
         )
 
         self.changeset_rollback_service = ChangeSetRollbackService(
             sessions=self.sessions,
             changesets=self.changesets,
+            audit_service=self.audit_service,
         )
         self.changeset_query_service = ChangeSetQueryService(
             changesets=self.changesets,
@@ -334,6 +350,7 @@ class Container:
             approvals=self.approval_repository,
             changesets=self.changesets,
             workflow_executions=self.workflow_executions,
+            audit_service=self.audit_service,
         )
         self.approval_service = ApprovalService(
             self.approval_repository,
@@ -368,6 +385,3 @@ def build_container(
         app_settings = Settings()
 
     return Container(app_settings)
-
-
-

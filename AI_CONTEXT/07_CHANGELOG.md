@@ -1,5 +1,73 @@
 # CHANGELOG
 
+## S19 — Data Lineage & Audit Trail — COMPLETE
+
+Implemented end-to-end capability-level lineage tracking and a workspace-scoped tamper-evident audit trail on top of the S18 ChangeSet mutation boundary.
+
+### Added
+
+- Added DataLineageEvent domain model.
+- Added AuditEvent domain model.
+- Added canonical SHA-256 audit event hashing.
+- Added DataLineageEventRepository.
+- Added AuditEventRepository.
+- Added LineageTrackingService.
+- Added AuditService.
+- Added automatic lineage emission after successful capability execution.
+- Added ordered capability lineage chaining through previous_event_id.
+- Added owner-scoped GET /datasets/{dataset_id}/lineage.
+- Added owner-scoped and filtered GET /audit-logs.
+- Added sensitive audit metadata sanitization.
+- Added audit events for ChangeSet Apply.
+- Added audit events for ChangeSet Rollback.
+- Added audit events for approved ChangeSet application.
+- Added transactionally consistent audit writes for production mutations.
+- Added Alembic migration 20260914_03_add_lineage_audit.py.
+- Wired lineage and audit services through the composition root.
+- Added regression and integration coverage.
+
+### Architectural Decisions
+
+- Keep ExecutionTrace as execution telemetry; do not repurpose it as lineage or audit persistence.
+- Keep lineage and audit domain models framework-independent.
+- Keep lineage/audit orchestration in application services.
+- Keep persistence concerns behind repository adapters.
+- Emit lineage from capability execution through an optional callback so existing callers remain compatible.
+- Keep ChangeSet as the only production mutation boundary.
+- Record mutation audit events in the same transaction as ChangeSet Apply, Rollback, and Approval Apply.
+- Scope externally exposed lineage and audit queries to the authenticated owner's resources.
+- Treat the audit chain as tamper-evident rather than absolutely tamper-proof.
+
+### Security
+
+- Audit metadata is sanitized for credentials, tokens, passwords, secrets, cookies, and related sensitive values.
+- Raw dataset/customer secrets are not intentionally persisted into audit payloads.
+- Hash chaining uses SHA-256 over a canonical event representation.
+- Workspace serialization prevents concurrent writers from producing inconsistent chain heads.
+
+### Verification
+
+- Full regression: **612 passed**.
+- Latest full-suite runtime: **26.65 seconds**.
+- 1 existing Starlette/AnyIO TestClient deprecation warning remains.
+- git diff --check: no whitespace errors; only Git LF/CRLF normalization warnings remain.
+- S19 API, repository, lineage, audit, ChangeSet, approval, rollback, and workflow integration coverage passes.
+
+### Migration
+
+- 20260914_03_add_lineage_audit.py
+- Creates data_lineage_events.
+- Creates audit_events.
+- Adds indexed ownership/execution/workflow/resource fields.
+- Adds unique SHA-256 event_hash.
+
+### Known Scope Boundaries
+
+- Artifact-level lineage using storage keys and content hashes is deferred.
+- Retention enforcement according to governance policy is deferred.
+- Seven pre-existing Alembic model/schema drift operations remain outside S19 scope.
+
+---
 ## S18 — ChangeSet & Atomic Rollback Engine — COMPLETE
 
 Implemented the immutable production mutation boundary required for autonomous data operations.
@@ -42,7 +110,7 @@ Implemented the immutable production mutation boundary required for autonomous d
 - S18 migrations:
   - `20260914_01_add_changesets.py`
   - `20260914_02_add_approval_changeset_fk.py`
-- `alembic check` still reports seven pre-existing model/schema drift operations unrelated to S18.
+- `aAlembic check` still reports seven pre-existing model/schema drift operations unrelated to S18.
 
 ### Known Scope Boundaries
 
@@ -125,7 +193,7 @@ Implemented the Risk & Approval Engine as a policy-driven human-in-the-loop safe
 
 - Keep risk policy and value objects in the framework-independent domain layer.
 - Keep risk/approval orchestration in application services.
-- Keep persistence behind repositories/infrastructure adapters.
+- Keep persistence behind rrepositories/infrastructure adapters.
 - Do not bypass the existing workflow execution state machine or queue boundary.
 - High/Critical risk executions remain blocked until explicit approval.
 - Approval tokens are never persisted in plaintext and are not exposed by pending-approval listings.
@@ -178,7 +246,7 @@ Implemented the Data Health Command Center on top of the existing dataset, valid
 
 - Reuse persisted dataset profile metadata rather than introducing a second profiling system.
 - Reuse existing validation execution health scores for validity.
-- Keep diagnostics sanitized at the application/API boundary.
+- Keep diagnostics sanitized at the aapplication/API boundary.
 - Keep remediation proposals read-only until later approval/ChangeSet infrastructure exists.
 - Do not invent a timeliness score without a reliable freshness signal.
 - Preserve existing project ownership boundaries rather than introducing a new workspace-wide health API.
@@ -190,7 +258,7 @@ Implemented the Data Health Command Center on top of the existing dataset, valid
 - Full suite runtime: approximately `24.5 seconds`.
 - 1 existing Starlette/AnyIO TestClient deprecation warning remains.
 - Alembic current/head: `f3a4b5c6d7e8`.
-- `git diff --check`: no whitespace errors; existing LF/CRLF conversion warning remains for `tests/test_persistence.py`.
+- `git diff --check`: no whitespace errors; existing LF/CRLF conversion warning remains for `ttests/test_persistence.py`.
 
 ### Known Scope Boundaries
 
@@ -309,10 +377,10 @@ Accepted.
 ## ADR-004
 
 **Decision:**
-Formalize package layering into `domain/`, `application/`, `execution/`, and `infrastructure/`, and extract domain serialization helpers.
+Formalize package layering into `domain/`, `aapplication/`, `execution/`, and `infrastructure/`, and extract domain serialization helpers.
 
 **Reason:**
-1. Group use-case services under `application/` (`workspace`, `datasets`, `workflows`, `quality`).
+1. Group use-case services under `aapplication/` (`workspace`, `datasets`, `workflows`, `quality`).
 2. Centralize workflow runtime, state transitions, and capability dispatch under `execution/`.
 3. Isolate caching behind an `application.cache.Cache` protocol with an infrastructure `TTLCache` implementation.
 4. Provide pure domain serialization for `ExecutionPlan` and `WorkflowRequirement` under `domain/serialization/`.

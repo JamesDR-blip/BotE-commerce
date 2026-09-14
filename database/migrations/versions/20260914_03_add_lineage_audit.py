@@ -1,0 +1,270 @@
+﻿"""add data lineage and tamper-evident audit events
+
+Revision ID: 20260914_03
+Revises: 20260914_02
+Create Date: 2026-09-14 00:00:00.000000
+"""
+
+from alembic import op
+import sqlalchemy as sa
+
+
+revision = "20260914_03"
+down_revision = "20260914_02"
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    op.create_table(
+        "data_lineage_events",
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column(
+            "dataset_id",
+            sa.String(length=36),
+            nullable=False,
+        ),
+        sa.Column(
+            "execution_id",
+            sa.String(length=36),
+            nullable=False,
+        ),
+        sa.Column(
+            "workflow_id",
+            sa.String(length=36),
+            nullable=False,
+        ),
+        sa.Column(
+            "workflow_version",
+            sa.String(length=50),
+            nullable=False,
+        ),
+        sa.Column(
+            "capability_id",
+            sa.String(length=100),
+            nullable=False,
+        ),
+        sa.Column(
+            "capability_version",
+            sa.String(length=50),
+            nullable=False,
+        ),
+        sa.Column(
+            "event_type",
+            sa.String(length=50),
+            nullable=False,
+        ),
+        sa.Column(
+            "input_refs_json",
+            sa.JSON(),
+            nullable=False,
+        ),
+        sa.Column(
+            "output_refs_json",
+            sa.JSON(),
+            nullable=False,
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(
+            ["dataset_id"],
+            ["datasets.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["execution_id"],
+            ["workflow_executions.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["workflow_id"],
+            ["workflows.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+
+    op.create_index(
+        "ix_data_lineage_events_dataset_id",
+        "data_lineage_events",
+        ["dataset_id"],
+    )
+    op.create_index(
+        "ix_data_lineage_events_execution_id",
+        "data_lineage_events",
+        ["execution_id"],
+    )
+    op.create_index(
+        "ix_data_lineage_events_workflow_id",
+        "data_lineage_events",
+        ["workflow_id"],
+    )
+    op.create_index(
+        "ix_data_lineage_events_created_at",
+        "data_lineage_events",
+        ["created_at"],
+    )
+
+    op.create_table(
+        "audit_events",
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column(
+            "workspace_id",
+            sa.String(length=36),
+            nullable=False,
+        ),
+        sa.Column(
+            "actor_id",
+            sa.String(length=36),
+            nullable=False,
+        ),
+        sa.Column(
+            "action",
+            sa.String(length=100),
+            nullable=False,
+        ),
+        sa.Column(
+            "resource_type",
+            sa.String(length=100),
+            nullable=False,
+        ),
+        sa.Column(
+            "resource_id",
+            sa.String(length=36),
+            nullable=False,
+        ),
+        sa.Column(
+            "execution_id",
+            sa.String(length=36),
+            nullable=True,
+        ),
+        sa.Column(
+            "changeset_id",
+            sa.String(length=36),
+            nullable=True,
+        ),
+        sa.Column(
+            "metadata_json",
+            sa.JSON(),
+            nullable=False,
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+        ),
+        sa.Column(
+            "previous_hash",
+            sa.String(length=64),
+            nullable=True,
+        ),
+        sa.Column(
+            "event_hash",
+            sa.String(length=64),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"],
+            ["workspaces.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["actor_id"],
+            ["users.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["execution_id"],
+            ["workflow_executions.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["changeset_id"],
+            ["changesets.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("event_hash"),
+    )
+
+    op.create_index(
+        "ix_audit_events_workspace_id",
+        "audit_events",
+        ["workspace_id"],
+    )
+    op.create_index(
+        "ix_audit_events_actor_id",
+        "audit_events",
+        ["actor_id"],
+    )
+    op.create_index(
+        "ix_audit_events_resource_id",
+        "audit_events",
+        ["resource_id"],
+    )
+    op.create_index(
+        "ix_audit_events_execution_id",
+        "audit_events",
+        ["execution_id"],
+    )
+    op.create_index(
+        "ix_audit_events_changeset_id",
+        "audit_events",
+        ["changeset_id"],
+    )
+    op.create_index(
+        "ix_audit_events_created_at",
+        "audit_events",
+        ["created_at"],
+    )
+    op.create_index(
+        "ix_audit_events_event_hash",
+        "audit_events",
+        ["event_hash"],
+    )
+
+
+def downgrade() -> None:
+    op.drop_index(
+        "ix_audit_events_event_hash",
+        table_name="audit_events",
+    )
+    op.drop_index(
+        "ix_audit_events_created_at",
+        table_name="audit_events",
+    )
+    op.drop_index(
+        "ix_audit_events_changeset_id",
+        table_name="audit_events",
+    )
+    op.drop_index(
+        "ix_audit_events_execution_id",
+        table_name="audit_events",
+    )
+    op.drop_index(
+        "ix_audit_events_resource_id",
+        table_name="audit_events",
+    )
+    op.drop_index(
+        "ix_audit_events_actor_id",
+        table_name="audit_events",
+    )
+    op.drop_index(
+        "ix_audit_events_workspace_id",
+        table_name="audit_events",
+    )
+    op.drop_table("audit_events")
+
+    op.drop_index(
+        "ix_data_lineage_events_created_at",
+        table_name="data_lineage_events",
+    )
+    op.drop_index(
+        "ix_data_lineage_events_workflow_id",
+        table_name="data_lineage_events",
+    )
+    op.drop_index(
+        "ix_data_lineage_events_execution_id",
+        table_name="data_lineage_events",
+    )
+    op.drop_index(
+        "ix_data_lineage_events_dataset_id",
+        table_name="data_lineage_events",
+    )
+    op.drop_table("data_lineage_events")

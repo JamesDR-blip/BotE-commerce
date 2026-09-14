@@ -21,6 +21,8 @@ from database.models import (
 )
 from infrastructure.persistence.approval_repository import ApprovalRepository
 from repositories.changesets import ChangeSetRepository
+from repositories.audit_events import AuditEventRepository
+from application.audit.audit_service import AuditService
 from repositories.workflow_executions import WorkflowExecutionRepository
 
 
@@ -132,14 +134,24 @@ def test_approval_changeset_service_commits_atomically():
     changesets = ChangeSetRepository(sessions)
     workflow_executions = WorkflowExecutionRepository(sessions)
 
+    audit_repository = AuditEventRepository(sessions)
+    audit_service = AuditService(
+        sessions=sessions,
+        repository=audit_repository,
+    )
+
     service = ApprovalChangeSetService(
         sessions=sessions,
         approvals=approvals,
         changesets=changesets,
         workflow_executions=workflow_executions,
+        audit_service=audit_service,
     )
 
-    service.apply(approval_id="approval-1")
+    service.apply(
+        approval_id="approval-1",
+        actor_id="user-1",
+    )
 
     with sessions() as session:
         dataset = session.get(DatasetRecord, "dataset-1")
@@ -174,6 +186,37 @@ def test_approval_changeset_service_commits_atomically():
             "status": "APPLIED",
         }
 
+        audit_events = audit_repository.list_for_owner(
+            owner_id="user-1",
+        )
+
+        assert len(audit_events) == 1
+
+        event = audit_events[0]
+
+        assert event.workspace_id == "workspace-1"
+        assert event.actor_id == "user-1"
+        assert event.action == "APPROVAL_APPLIED"
+        assert event.resource_type == "changeset"
+        assert event.resource_id == "changeset-1"
+        assert event.execution_id == "execution-1"
+        assert event.changeset_id == "changeset-1"
+        assert event.metadata == {
+            "approval_id": "approval-1",
+            "dataset_id": "dataset-1",
+            "status": "APPLIED",
+            "before_storage_key": (
+                "datasets/dataset-1/before.csv"
+            ),
+            "before_content_hash": "b" * 64,
+            "after_storage_key": (
+                "changesets/changeset-1/after.csv"
+            ),
+            "after_content_hash": "a" * 64,
+        }
+        assert event.previous_hash is None
+        assert len(event.event_hash) == 64
+
 
 class FailingWorkflowExecutionRepository:
     def get_in_transaction(
@@ -203,11 +246,18 @@ def test_approval_changeset_service_rolls_back_all_mutations_on_failure():
     approvals = ApprovalRepository(sessions)
     changesets = ChangeSetRepository(sessions)
 
+    audit_repository = AuditEventRepository(sessions)
+    audit_service = AuditService(
+        sessions=sessions,
+        repository=audit_repository,
+    )
+
     service = ApprovalChangeSetService(
         sessions=sessions,
         approvals=approvals,
         changesets=changesets,
         workflow_executions=FailingWorkflowExecutionRepository(),
+        audit_service=audit_service,
     )
 
     with pytest.raises(
@@ -242,6 +292,12 @@ def test_approval_changeset_service_rolls_back_all_mutations_on_failure():
 
         assert execution.status == "PENDING_APPROVAL"
         assert execution.outputs_json is None
+
+        audit_events = audit_repository.list_for_owner(
+            owner_id="user-1",
+        )
+
+        assert audit_events == []
 
 
 def test_approval_changeset_service_rejects_stale_dataset_pointer():

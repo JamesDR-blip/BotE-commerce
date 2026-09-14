@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import inspect
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from api.dependencies import (
@@ -131,9 +133,20 @@ def rollback_changeset(
         )
 
     try:
-        rolled_back = rollback_service.rollback(
-            changeset_id=changeset_id,
-        )
+        rollback_method = rollback_service.rollback
+        rollback_parameters = inspect.signature(
+            rollback_method
+        ).parameters
+
+        if "actor_id" in rollback_parameters:
+            rolled_back = rollback_method(
+                changeset_id=changeset_id,
+                actor_id=current_user.user_id,
+            )
+        else:
+            rolled_back = rollback_method(
+                changeset_id=changeset_id,
+            )
     except ValueError as exc:
         raise HTTPException(
             status_code=409,

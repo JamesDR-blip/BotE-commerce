@@ -2,11 +2,11 @@
 
 ## Current Sprint
 
-**S18 - ChangeSet & Atomic Rollback Engine — COMPLETE**
+**S19 - Data Lineage & Audit — COMPLETE**
 
-S18 is complete at code, test, architecture, persistence, API, and approval-integration level.
+S19 is complete at code, test, architecture, persistence, API, security, and integration level.
 
-The production mutation boundary is now represented by immutable ChangeSets. Candidate artifacts are materialized before approval, production dataset pointers are changed only through transactional ChangeSet application, and rollback restores the prior immutable artifact pointer using optimistic concurrency protection.
+The platform now records capability-level data lineage for workflow executions and maintains a workspace-scoped, SHA-256 hash-chained audit trail. ChangeSet Apply, ChangeSet Rollback, and approved ChangeSet application emit audit events inside the same transaction as the corresponding production mutation.
 
 ## Previous Sprints
 
@@ -33,35 +33,36 @@ The production mutation boundary is now represented by immutable ChangeSets. Can
 - S12 RAG / Semantic Rule Intelligence
 - S13 Agent Memory & Execution Context
 - S14-A Async Workflow Execution
-- Structural Refactor: Clean Architecture + DDD layers (`domain/`, `application/`, `execution/`, `infrastructure/`)
+- Structural Refactor: Clean Architecture + DDD layers (`domain/`, `aapplication/`, `execution/`, `infrastructure/`)
 
 ## Test Status
 
-- **Test Suite:** `510 / 510 passing` via `python -m pytest`
-- **Full Suite Execution Time:** approximately `24.5 seconds`
+- **Test Suite:** 612 / 612 passing via python -m pytest
+- **Latest Full Suite Runtime:** 26.65 seconds
 - **Warnings:** 1 existing Starlette/AnyIO TestClient deprecation warning.
-- **S15 domain tests:** 5 passing.
-- **S15 application-service tests:** 3 passing.
-- **S15 API tests:** 5 passing.
+- S19 lineage, audit, API, ChangeSet, approval, rollback, repository, and workflow integration tests all pass.
+- git diff --check: no whitespace errors; remaining messages are Git LF/CRLF normalization warnings.
 
 ## Database / Migration Status
 
 - **Engine:** SQLite (local dev/test), PostgreSQL (production)
-- **Current Database Revision:** `f3a4b5c6d7e8`
-- **Repository Alembic Head:** `f3a4b5c6d7e8`
-- **Migration State:** Local database is at c13a7e91d204; repository head is 20230912_04. Legacy clean-from-zero Alembic baseline remains a known limitation.
-- **S15 Migration:** Added nullable `executions.dataset_id`, indexed and linked by foreign key to `datasets.id`.
-- Existing executions remain compatible because `dataset_id` is nullable.
+- **Current Database Revision:** 20260914_03
+- **Repository Alembic Head:** 20260914_03
+- **S19 Migration:** 20260914_03_add_lineage_audit.py
+- Added data_lineage_events and audit_events.
+- S19 database schema was verified against the migration before stamping the local database to 20260914_03.
+- Alembic check continues to report seven pre-existing model/schema drift operations unrelated to S19.
+- Existing clean-from-zero Alembic baseline/bootstrap limitations remain outside S19 scope.
 
 ## Current Architecture
 
 - **Pattern:** Clean Architecture + Domain-Driven Design (DDD).
 - **Layers:**
   - `domain/`: Pure domain logic, entities, value objects, capability contracts, and semantic rule-retrieval contracts.
-  - `application/`: Application services and use-case orchestration, including rule intelligence and agent memory services.
+  - `aapplication/`: Application services and use-case orchestration, including rule intelligence and agent memory services.
   - `execution/`: Runtime orchestration & engine (`execution/workflow`, `execution/capabilities`, `execution/context`, `execution/planning`, `execution/tracing`).
   - `infrastructure/`: Technical adapters including Chroma semantic rule retrieval.
-  - `api/` & `app/`: Presentation layer (FastAPI routers, Streamlit dashboard, API client).
+  - `aapi/` & `app/`: Presentation layer (FastAPI routers, Streamlit dashboard, API client).
 - **Composition Root:** `services/container.py`
 
 ## S12 Implementation
@@ -250,15 +251,34 @@ S18 supersedes the S16 approval-resumption behavior for ChangeSet-backed product
 - S14-A has no retry policy or dead-letter handling; failed executions are persisted as `FAILED`.
 - Large-scale streaming/chunk execution is not yet integrated into the async worker path; this remains S14-B scope.
 
-## Next Action
+## S19 Implementation
 
-## Next Action
+- Added immutable DataLineageEvent domain model.
+- Added immutable AuditEvent domain model and canonical SHA-256 hash computation.
+- Added DataLineageEventRepository with owner-scoped dataset lineage queries.
+- Added AuditEventRepository with workspace locking and ordered hash-chain retrieval.
+- Added LineageTrackingService.
+- Added AuditService with sensitive metadata sanitization.
+- Added automatic capability-level lineage emission through CapabilityExecutionService.
+- Preserved ExecutionTrace as execution telemetry rather than repurposing it as lineage/audit storage.
+- Added owner-scoped lineage and audit APIs.
+- Added ChangeSet Apply, Rollback, and Approval Apply audit integration.
+- Audit events for production mutations are recorded in the same transaction as the corresponding mutation.
+- Added Alembic migration 20260914_03_add_lineage_audit.py.
+- Wired lineage and audit services through the composition root.
+- Preserved backward compatibility for existing capability execution and workflow test doubles.
 
-S18 ChangeSet & Atomic Rollback Engine is complete.
+### S19 Known Scope Boundaries
 
-Proceed to S19 Data Lineage & Audit.
+- Current lineage references are logical (dataset_id, input/output keys, and event chaining); artifact-level storage_key and content_hash provenance remains future work.
+- Retention enforcement according to governance policy remains future work.
+- Audit is tamper-evident through SHA-256 chaining and workspace serialization; it is not claimed to be absolutely tamper-proof against privileged database administrators.
 
-S18 should introduce the explicit production mutation boundary required for deterministic ChangeSets, rollback, auditability, lineage, and HITL approval integration.
+## Current Focus
+
+S19 Data Lineage & Audit is complete.
+
+The next planned sprint is S20 Autonomous Agent Operations.
 
 Future S15-adjacent improvements should be introduced only when justified by product requirements:
 - historical multidimensional health snapshots,

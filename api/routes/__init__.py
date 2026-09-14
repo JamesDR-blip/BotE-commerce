@@ -9,6 +9,7 @@ from .workflows import router as workflows_router
 from .risk import router as risk_router
 from .approval import router as approval_router
 from .changesets import router as changesets_router
+from .lineage import router as lineage_router
 
 __all__ = [
     "data_router",
@@ -22,4 +23,5 @@ __all__ = [
     "risk_router",
     "approval_router",
     "changesets_router",
+    "lineage_router",
 ]

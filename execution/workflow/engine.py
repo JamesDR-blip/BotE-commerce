@@ -273,6 +273,12 @@ class WorkflowEngine:
         inputs: dict[str, Any],
         dataset_id: str,
     ) -> WorkflowExecution:
+        lineage_context = {
+            "dataset_id": dataset_id,
+            "workflow_id": workflow_id,
+            "workflow_version": workflow_version,
+        }
+
         runtime = WorkflowExecution(
             execution_id=execution_id,
             workflow_id=workflow_id,
@@ -333,19 +339,19 @@ class WorkflowEngine:
                         execute_plan
                     ).parameters
 
+                    kwargs = {
+                        "plan": plan,
+                        "inputs": chunk_inputs,
+                        "execution_id": execution_id,
+                    }
+
                     if "trace_collector" in parameters:
-                        result = execute_plan(
-                            plan=plan,
-                            inputs=chunk_inputs,
-                            execution_id=execution_id,
-                            trace_collector=trace_collector,
-                        )
-                    else:
-                        result = execute_plan(
-                            plan=plan,
-                            inputs=chunk_inputs,
-                            execution_id=execution_id,
-                        )
+                        kwargs["trace_collector"] = trace_collector
+
+                    if "lineage_context" in parameters:
+                        kwargs["lineage_context"] = lineage_context
+
+                    result = execute_plan(**kwargs)
 
                     trace = getattr(
                         result,
@@ -432,7 +438,17 @@ class WorkflowEngine:
         workflow_version: str,
         plan,
         inputs: dict[str, Any],
+        dataset_id: str | None = None,
     ) -> WorkflowExecution:
+
+        lineage_context = None
+
+        if dataset_id is not None:
+            lineage_context = {
+                "dataset_id": dataset_id,
+                "workflow_id": workflow_id,
+                "workflow_version": workflow_version,
+            }
 
         runtime = WorkflowExecution(
             execution_id=execution_id,
@@ -460,19 +476,22 @@ class WorkflowEngine:
                 execute_plan
             ).parameters
 
+            kwargs = {
+                "plan": plan,
+                "inputs": inputs,
+                "execution_id": execution_id,
+            }
+
             if "trace_collector" in parameters:
-                result = execute_plan(
-                    plan=plan,
-                    inputs=inputs,
-                    execution_id=execution_id,
-                    trace_collector=trace_collector,
-                )
-            else:
-                result = execute_plan(
-                    plan=plan,
-                    inputs=inputs,
-                    execution_id=execution_id,
-                )
+                kwargs["trace_collector"] = trace_collector
+
+            if (
+                lineage_context is not None
+                and "lineage_context" in parameters
+            ):
+                kwargs["lineage_context"] = lineage_context
+
+            result = execute_plan(**kwargs)
 
             trace = getattr(
                 result,

@@ -1,4 +1,5 @@
 import hashlib
+import inspect
 import secrets
 from datetime import datetime, timezone
 from typing import Any
@@ -105,9 +106,20 @@ class ApprovalService:
                     "ChangeSet-backed approvals"
                 )
 
-            self.approval_changeset_service.apply(
-                approval_id=approval_id,
-            )
+            apply_method = self.approval_changeset_service.apply
+            apply_parameters = inspect.signature(
+                apply_method
+            ).parameters
+
+            if "actor_id" in apply_parameters:
+                apply_method(
+                    approval_id=approval_id,
+                    actor_id=user.user_id,
+                )
+            else:
+                apply_method(
+                    approval_id=approval_id,
+                )
             return
 
         if decision == ApprovalDecision.REJECTED:

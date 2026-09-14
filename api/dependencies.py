@@ -1,4 +1,4 @@
-﻿"""FastAPI dependency providers backed by the application composition root."""
+"""FastAPI dependency providers backed by the application composition root."""
 from domain.identity import CurrentUser
 from application.workflows.simulation_service import SimulationService
 
@@ -18,6 +18,8 @@ from application.workflows.authoring_service import WorkflowAuthoringService
 from application.workflows.history_service import WorkflowHistoryService
 from application.workflows.runtime_service import WorkflowRuntimeService
 from application.changesets.query_service import ChangeSetQueryService
+from application.lineage.lineage_tracking_service import LineageTrackingService
+from application.audit.audit_service import AuditService
 
 from repositories.executions import ExecutionRepository
 from repositories.execution_traces import ExecutionTraceRepository
@@ -38,47 +40,38 @@ def get_data_operations(request: Request) -> DataOperationsService:
 def get_mapping_service(request: Request) -> MappingService:
     return request.app.state.mapping_service
 
-def get_workflow_history(
-    request: Request,
-) -> WorkflowHistoryService:
+
+def get_workflow_history(request: Request) -> WorkflowHistoryService:
     return request.app.state.workflow_history
 
-def get_workflow_authoring_service(
-    request: Request,
-) -> WorkflowAuthoringService:
+
+def get_workflow_authoring_service(request: Request) -> WorkflowAuthoringService:
     return request.app.state.workflow_authoring
 
-def get_dataset_service(
-    request: Request,
-) -> DatasetService:
+
+def get_dataset_service(request: Request) -> DatasetService:
     return request.app.state.dataset_service
+
 
 def get_workspace_project_service(
     request: Request,
 ) -> WorkspaceProjectService:
     return request.app.state.workspace_projects
 
-def get_workflow_runtime(
-    request: Request,
-) -> WorkflowRuntimeService:
+
+def get_workflow_runtime(request: Request) -> WorkflowRuntimeService:
     return request.app.state.workflow_runtime
 
 
-def get_simulation_service(
-    request: Request,
-) -> SimulationService:
+def get_simulation_service(request: Request) -> SimulationService:
     return request.app.state.simulation_service
 
 
-def get_approval_service(
-    request: Request,
-):
+def get_approval_service(request: Request):
     return request.app.state.container.approval_service
 
 
-def get_execution_repository(
-    request: Request,
-) -> ExecutionRepository:
+def get_execution_repository(request: Request) -> ExecutionRepository:
     return request.app.state.execution_repository
 
 
@@ -88,16 +81,13 @@ def get_execution_trace_repository(
     return request.app.state.execution_trace_repository
 
 
-def get_upload_reader(
-    request: Request,
-) -> TabularUploadReader:
+def get_upload_reader(request: Request) -> TabularUploadReader:
     return request.app.state.upload_reader
 
 
-def get_categories(
-    request: Request,
-) -> list[str]:
+def get_categories(request: Request) -> list[str]:
     return request.app.state.categories
+
 
 def get_authentication_service(
     request: Request,
@@ -127,6 +117,7 @@ def get_current_user(
 
     return authentication.authenticate(token)
 
+
 def get_authorization_service(
     request: Request,
 ) -> AuthorizationService:
@@ -147,3 +138,13 @@ def get_changeset_query_service(
 
 def get_changeset_rollback_service(request: Request):
     return request.app.state.container.changeset_rollback_service
+
+
+def get_lineage_tracking_service(
+    request: Request,
+) -> LineageTrackingService:
+    return request.app.state.container.lineage_tracking
+
+
+def get_audit_service(request: Request) -> AuditService:
+    return request.app.state.container.audit_service

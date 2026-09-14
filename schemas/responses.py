@@ -1,8 +1,9 @@
-﻿"""HTTP response contracts."""
+"""HTTP response contracts."""
 from typing import Any
+from datetime import datetime
 
 from pydantic import BaseModel
-from datetime import datetime
+
 
 class ValidationResponse(BaseModel):
     execution_id: str
@@ -49,6 +50,7 @@ class ExecutionHistoryItem(BaseModel):
 class HistoryResponse(BaseModel):
     items: list[ExecutionHistoryItem]
 
+
 class CapabilityTraceResponse(BaseModel):
     capability_id: str
     capability_version: str
@@ -74,6 +76,7 @@ class WorkspaceResponse(BaseModel):
     name: str
     created_at: datetime
 
+
 class ProjectResponse(BaseModel):
     id: str
     workspace_id: str
@@ -81,24 +84,22 @@ class ProjectResponse(BaseModel):
     description: str | None = None
     created_at: datetime
 
+
 class DatasetResponse(BaseModel):
     id: str
     project_id: str
     name: str
     source_type: str
-
     filename: str | None = None
     file_format: str | None = None
     size_bytes: int | None = None
     content_hash: str | None = None
-
     row_count: int | None = None
     column_count: int | None = None
-
     status: str
     metadata: dict[str, Any]
-
     created_at: datetime
+
 
 class WorkflowResponse(BaseModel):
     id: str
@@ -115,6 +116,7 @@ class WorkflowVersionResponse(BaseModel):
     version: str
     plan: dict[str, Any]
     created_at: datetime
+
 
 class WorkflowExecutionResponse(BaseModel):
     execution_id: str
@@ -207,6 +209,7 @@ class RuleSearchResponse(BaseModel):
     query: RuleSearchRequestEcho
     matches: list[RetrievedRuleMatchResponse]
 
+
 class HealthMetricResponse(BaseModel):
     dimension: str
     score: float
@@ -247,13 +250,8 @@ class DiagnosticsResponse(BaseModel):
     diagnostics: list[IssueDiagnosticResponse]
     remediation_proposals: list[RemediationProposalResponse]
 
+
 """API response schemas for ChangeSets."""
-
-from datetime import datetime
-from typing import Any
-
-from pydantic import BaseModel
-
 
 class ChangeSetResponse(BaseModel):
     id: str
@@ -285,3 +283,32 @@ class ChangeSetDetailResponse(ChangeSetResponse):
 class ChangeSetRollbackResponse(BaseModel):
     status: str
     changeset: ChangeSetResponse
+
+
+class LineageEventResponse(BaseModel):
+    id: str
+    dataset_id: str
+    execution_id: str
+    workflow_id: str
+    workflow_version: str
+    capability_id: str
+    capability_version: str
+    event_type: str
+    input_refs: dict[str, Any]
+    output_refs: dict[str, Any]
+    created_at: datetime | None = None
+
+
+class AuditEventResponse(BaseModel):
+    id: str
+    workspace_id: str
+    actor_id: str
+    action: str
+    resource_type: str
+    resource_id: str
+    execution_id: str | None = None
+    changeset_id: str | None = None
+    metadata: dict[str, Any]
+    created_at: datetime | None = None
+    previous_hash: str | None = None
+    event_hash: str | None = None

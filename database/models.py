@@ -1,4 +1,4 @@
-﻿"""SQLAlchemy persistence schema."""
+"""SQLAlchemy persistence schema."""
 from __future__ import annotations
 
 import uuid
@@ -834,6 +834,145 @@ class ChangeSetItemRecord(Base):
         back_populates="items",
     )
 
+class DataLineageEventRecord(Base):
+    __tablename__ = "data_lineage_events"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+
+    dataset_id: Mapped[str] = mapped_column(
+        ForeignKey("datasets.id"),
+        nullable=False,
+        index=True,
+    )
+
+    execution_id: Mapped[str] = mapped_column(
+        ForeignKey("workflow_executions.id"),
+        nullable=False,
+        index=True,
+    )
+
+    workflow_id: Mapped[str] = mapped_column(
+        ForeignKey("workflows.id"),
+        nullable=False,
+        index=True,
+    )
+
+    workflow_version: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    capability_id: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    capability_version: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    event_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    input_refs_json: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+        default=dict,
+    )
+
+    output_refs_json: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+        default=dict,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
+    )
+
+
+class AuditEventRecord(Base):
+    __tablename__ = "audit_events"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id"),
+        nullable=False,
+        index=True,
+    )
+
+    actor_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    action: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    resource_type: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    resource_id: Mapped[str] = mapped_column(
+        String(36),
+        nullable=False,
+        index=True,
+    )
+
+    execution_id: Mapped[str | None] = mapped_column(
+        ForeignKey("workflow_executions.id"),
+        nullable=True,
+        index=True,
+    )
+
+    changeset_id: Mapped[str | None] = mapped_column(
+        ForeignKey("changesets.id"),
+        nullable=True,
+        index=True,
+    )
+
+    metadata_json: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+        default=dict,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
+    )
+
+    previous_hash: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+
+    event_hash: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
 class RiskPolicyRecord(Base):
     """Persistence model for risk policy thresholds."""
     __tablename__ = "risk_policies"
@@ -871,7 +1010,3 @@ def make_session_factory(url: str):
 
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
-
-
-
-

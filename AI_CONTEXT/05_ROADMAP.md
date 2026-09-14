@@ -14,7 +14,7 @@
 - **S09 FastAPI Presentation Layer**: REST endpoints (`/upload`, `/validate`, `/clean`, `/extract`, `/mapping`, `/history`, `/report`).
 - **S10 Persistence & Alembic Migrations**: PostgreSQL & SQLite support, migrations up to `b05fd7d45c87`.
 - **S11 Streamlit Dashboard & Client**: Decoupled HTTP client, interactive validation & report download.
-- **Clean Architecture & DDD Refactoring**: Reorganized into `domain/`, `application/`, `execution/`, `infrastructure/` packages; introduced `Cache` protocol and domain serialization.
+- **Clean Architecture & DDD Refactoring**: Reorganized into `domain/`, `aapplication/`, `execution/`, `infrastructure/` packages; introduced `Cache` protocol and domain serialization.
 - **S12 RAG / Rule Intelligence**: RuleRetriever abstraction, semantic rule search, dynamic category rule packs.
 - **S13 Agent Memory & Execution Context**: Tenant-scoped persistent agent memory, correction events, execution learning, PII redaction, expiration, and memory-aware requirement parameter resolution.
 - **S14 Performance**: Streaming tabular ingestion, chunked processing, async execution workers.
@@ -32,11 +32,9 @@
 
 ## Next Sprint
 
-- **S19 Data Lineage & Audit**: Full data provenance, audit trails, and event sourcing.
 
 ## Future Roadmap
-- **S19 Lineage & Audit**: Full data provenance, audit trails, and event sourcing.
-- **S20 Autonomous Agent Operations**: Guardrailed self-healing data pipelines.
+
 - **S21 Channel Sync**: Multi-channel connectors (Shopify, Amazon, TikTok Shop, Shopee, Lazada).
 - **S22 Copilot**: Natural language conversational assistant for dataset querying and pipeline authoring.
 - **S23 Marketplace**: Community rule packs, custom validator plugins, and connectors.

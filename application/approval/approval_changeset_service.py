@@ -6,6 +6,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Callable
 
+from application.audit.audit_service import AuditService
 from domain.approval import ApprovalDecision
 
 
@@ -19,16 +20,19 @@ class ApprovalChangeSetService:
         approvals: Any,
         changesets: Any,
         workflow_executions: Any,
+        audit_service: AuditService | None = None,
     ) -> None:
         self._sessions = sessions
         self._approvals = approvals
         self._changesets = changesets
         self._workflow_executions = workflow_executions
+        self._audit_service = audit_service
 
     def apply(
         self,
         *,
         approval_id: str,
+        actor_id: str | None = None,
     ) -> None:
         with self._sessions() as session:
             with session.begin():
@@ -119,3 +123,45 @@ class ApprovalChangeSetService:
                         }
                     ),
                 )
+
+                if self._audit_service is not None and actor_id is not None:
+                    workspace_id = (
+                        self._changesets.get_workspace_id_in_transaction(
+                            session,
+                            changeset.id,
+                        )
+                    )
+
+                    if workspace_id is None:
+                        raise ValueError(
+                            "Workspace not found for ChangeSet: "
+                            f"{changeset.id}"
+                        )
+
+                    self._audit_service.record_in_transaction(
+                        session,
+                        workspace_id=workspace_id,
+                        actor_id=actor_id,
+                        action="APPROVAL_APPLIED",
+                        resource_type="changeset",
+                        resource_id=changeset.id,
+                        execution_id=changeset.execution_id,
+                        changeset_id=changeset.id,
+                        metadata={
+                            "approval_id": approval.approval_id,
+                            "dataset_id": changeset.dataset_id,
+                            "status": "APPLIED",
+                            "before_storage_key": (
+                                changeset.before_storage_key
+                            ),
+                            "before_content_hash": (
+                                changeset.before_content_hash
+                            ),
+                            "after_storage_key": (
+                                changeset.after_storage_key
+                            ),
+                            "after_content_hash": (
+                                changeset.after_content_hash
+                            ),
+                        },
+                    )

@@ -7,7 +7,15 @@ from sqlalchemy.orm import sessionmaker
 from application.changesets.mutation_service import (
     ChangeSetMutationService,
 )
-from database.models import Base, DatasetRecord
+from database.models import (
+    Base,
+    DatasetRecord,
+    ProjectRecord,
+    UserRecord,
+    WorkspaceRecord,
+)
+from application.audit.audit_service import AuditService
+from repositories.audit_events import AuditEventRepository
 from domain.changeset import (
     ChangeSet,
     ChangeSetItem,
@@ -56,6 +64,27 @@ def create_dataset(
 ) -> None:
     with sessions() as session:
         session.add(
+            UserRecord(
+                id="user-1",
+                email="test@example.com",
+                display_name="Test User",
+            )
+        )
+        session.add(
+            WorkspaceRecord(
+                id="workspace-1",
+                owner_id="user-1",
+                name="test-workspace",
+            )
+        )
+        session.add(
+            ProjectRecord(
+                id="project-1",
+                workspace_id="workspace-1",
+                name="test-project",
+            )
+        )
+        session.add(
             DatasetRecord(
                 id=dataset_id,
                 project_id="project-1",
@@ -69,13 +98,22 @@ def create_dataset(
         session.commit()
 
 
-def create_service(sessions):
+def create_service(sessions, *, with_audit=False):
     repository = ChangeSetRepository(sessions)
+
+    audit_service = None
+
+    if with_audit:
+        audit_service = AuditService(
+            sessions=sessions,
+            repository=AuditEventRepository(sessions),
+        )
 
     return (
         ChangeSetMutationService(
             sessions=sessions,
             changesets=repository,
+            audit_service=audit_service,
         ),
         repository,
     )
@@ -199,3 +237,152 @@ def test_mutation_transaction_rolls_back_dataset_and_changeset(
             "datasets/dataset-1/before.csv"
         )
         assert dataset.content_hash == "b" * 64
+
+
+def test_mutation_service_records_audit_event_with_actor_and_metadata() -> None:
+    sessions = create_session()
+    service, repository = create_service(
+        sessions,
+        with_audit=True,
+    )
+
+    create_dataset(sessions)
+    repository.create(make_changeset(), [])
+
+    applied = service.apply(
+        changeset_id="cs-1",
+        actor_id="user-1",
+    )
+
+    assert applied.status is ChangeSetStatus.APPLIED
+
+    audit_repository = AuditEventRepository(sessions)
+
+    with sessions() as session:
+        events = audit_repository.list_for_owner(
+            owner_id="user-1",
+        )
+
+    assert len(events) == 1
+
+    event = events[0]
+
+    assert event.workspace_id == "workspace-1"
+    assert event.actor_id == "user-1"
+    assert event.action == "CHANGESET_APPLIED"
+    assert event.resource_type == "changeset"
+    assert event.resource_id == "cs-1"
+    assert event.execution_id == "execution-1"
+    assert event.changeset_id == "cs-1"
+    assert event.metadata == {
+        "dataset_id": "dataset-1",
+        "status": "APPLIED",
+        "before_storage_key": (
+            "datasets/dataset-1/before.csv"
+        ),
+        "before_content_hash": "b" * 64,
+        "after_storage_key": (
+            "datasets/dataset-1/after.csv"
+        ),
+        "after_content_hash": "a" * 64,
+    }
+    assert event.previous_hash is None
+    assert len(event.event_hash) == 64
+
+
+def test_mutation_service_does_not_persist_audit_on_transaction_failure(
+    monkeypatch,
+) -> None:
+    sessions = create_session()
+    service, repository = create_service(
+        sessions,
+        with_audit=True,
+    )
+
+    create_dataset(sessions)
+    repository.create(make_changeset(), [])
+
+    original_apply = repository.apply_in_transaction
+
+    def failing_apply(*args, **kwargs):
+        record = original_apply(*args, **kwargs)
+        raise RuntimeError("force rollback")
+
+    monkeypatch.setattr(
+        repository,
+        "apply_in_transaction",
+        failing_apply,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="force rollback",
+    ):
+        service.apply(
+            changeset_id="cs-1",
+            actor_id="user-1",
+        )
+
+    audit_repository = AuditEventRepository(sessions)
+
+    with sessions() as session:
+        events = audit_repository.list_for_owner(
+            owner_id="user-1",
+        )
+
+    assert events == []
+
+
+def test_mutation_and_rollback_audit_events_form_workspace_hash_chain() -> None:
+    from application.changesets.rollback_service import (
+        ChangeSetRollbackService,
+    )
+
+    sessions = create_session()
+
+    mutation_repository = ChangeSetRepository(sessions)
+    audit_repository = AuditEventRepository(sessions)
+    audit_service = AuditService(
+        sessions=sessions,
+        repository=audit_repository,
+    )
+
+    mutation_service = ChangeSetMutationService(
+        sessions=sessions,
+        changesets=mutation_repository,
+        audit_service=audit_service,
+    )
+
+    rollback_service = ChangeSetRollbackService(
+        sessions=sessions,
+        changesets=mutation_repository,
+        audit_service=audit_service,
+    )
+
+    create_dataset(sessions)
+    mutation_repository.create(make_changeset(), [])
+
+    mutation_service.apply(
+        changeset_id="cs-1",
+        actor_id="user-1",
+    )
+
+    rollback_service.rollback(
+        changeset_id="cs-1",
+        actor_id="user-1",
+    )
+
+    events = audit_repository.list_for_owner(
+        owner_id="user-1",
+    )
+
+    assert len(events) == 2
+
+    first, second = events
+
+    assert first.action == "CHANGESET_APPLIED"
+    assert first.previous_hash is None
+
+    assert second.action == "CHANGESET_ROLLED_BACK"
+    assert second.previous_hash == first.event_hash
+    assert second.event_hash != first.event_hash

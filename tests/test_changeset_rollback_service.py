@@ -7,7 +7,15 @@ from sqlalchemy.orm import sessionmaker
 from application.changesets.rollback_service import (
     ChangeSetRollbackService,
 )
-from database.models import Base, DatasetRecord
+from database.models import (
+    Base,
+    DatasetRecord,
+    ProjectRecord,
+    UserRecord,
+    WorkspaceRecord,
+)
+from application.audit.audit_service import AuditService
+from repositories.audit_events import AuditEventRepository
 from domain.changeset import (
     ChangeSet,
     ChangeSetStatus,
@@ -55,6 +63,27 @@ def create_dataset(
 ) -> None:
     with sessions() as session:
         session.add(
+            UserRecord(
+                id="user-1",
+                email="test@example.com",
+                display_name="Test User",
+            )
+        )
+        session.add(
+            WorkspaceRecord(
+                id="workspace-1",
+                owner_id="user-1",
+                name="test-workspace",
+            )
+        )
+        session.add(
+            ProjectRecord(
+                id="project-1",
+                workspace_id="workspace-1",
+                name="test-project",
+            )
+        )
+        session.add(
             DatasetRecord(
                 id=dataset_id,
                 project_id="project-1",
@@ -68,13 +97,22 @@ def create_dataset(
         session.commit()
 
 
-def create_service(sessions):
+def create_service(sessions, *, with_audit=False):
     repository = ChangeSetRepository(sessions)
+
+    audit_service = None
+
+    if with_audit:
+        audit_service = AuditService(
+            sessions=sessions,
+            repository=AuditEventRepository(sessions),
+        )
 
     return (
         ChangeSetRollbackService(
             sessions=sessions,
             changesets=repository,
+            audit_service=audit_service,
         ),
         repository,
     )
@@ -216,3 +254,107 @@ def test_rollback_transaction_rolls_back_dataset_and_changeset(
             "datasets/dataset-1/after.csv"
         )
         assert dataset.content_hash == "a" * 64
+
+
+def test_rollback_service_records_audit_event_with_actor_and_metadata() -> None:
+    sessions = create_session()
+    service, repository = create_service(
+        sessions,
+        with_audit=True,
+    )
+
+    create_dataset(sessions)
+    repository.create(
+        make_changeset(
+            status=ChangeSetStatus.APPLIED,
+        ),
+        [],
+    )
+
+    rolled_back = service.rollback(
+        changeset_id="cs-1",
+        actor_id="user-1",
+    )
+
+    assert rolled_back.status is ChangeSetStatus.ROLLED_BACK
+
+    audit_repository = AuditEventRepository(sessions)
+
+    with sessions() as session:
+        events = audit_repository.list_for_owner(
+            owner_id="user-1",
+        )
+
+    assert len(events) == 1
+
+    event = events[0]
+
+    assert event.workspace_id == "workspace-1"
+    assert event.actor_id == "user-1"
+    assert event.action == "CHANGESET_ROLLED_BACK"
+    assert event.resource_type == "changeset"
+    assert event.resource_id == "cs-1"
+    assert event.execution_id == "execution-1"
+    assert event.changeset_id == "cs-1"
+    assert event.metadata == {
+        "dataset_id": "dataset-1",
+        "status": "ROLLED_BACK",
+        "before_storage_key": (
+            "datasets/dataset-1/before.csv"
+        ),
+        "before_content_hash": "b" * 64,
+        "after_storage_key": (
+            "datasets/dataset-1/after.csv"
+        ),
+        "after_content_hash": "a" * 64,
+    }
+    assert event.previous_hash is None
+    assert len(event.event_hash) == 64
+
+
+def test_rollback_service_does_not_persist_audit_on_transaction_failure(
+    monkeypatch,
+) -> None:
+    sessions = create_session()
+    service, repository = create_service(
+        sessions,
+        with_audit=True,
+    )
+
+    create_dataset(sessions)
+    repository.create(
+        make_changeset(
+            status=ChangeSetStatus.APPLIED,
+        ),
+        [],
+    )
+
+    original_rollback = repository.rollback_in_transaction
+
+    def failing_rollback(*args, **kwargs):
+        record = original_rollback(*args, **kwargs)
+        raise RuntimeError("force rollback")
+
+    monkeypatch.setattr(
+        repository,
+        "rollback_in_transaction",
+        failing_rollback,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="force rollback",
+    ):
+        service.rollback(
+            changeset_id="cs-1",
+            actor_id="user-1",
+        )
+
+    audit_repository = AuditEventRepository(sessions)
+
+    with sessions() as session:
+        events = audit_repository.list_for_owner(
+            owner_id="user-1",
+        )
+
+    assert events == []

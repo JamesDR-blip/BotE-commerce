@@ -25,6 +25,7 @@ class CapabilityExecutor:
         inputs: Mapping[str, Any],
         execution_id: str,
         trace_collector=None,
+        lineage_callback=None,
     ) -> dict[str, Any]:
         context: dict[str, Any] = dict(inputs)
 
@@ -162,6 +163,14 @@ class CapabilityExecutor:
                     trace_collector.complete(
                         trace_index,
                         dict(result.outputs),
+                    )
+
+                if lineage_callback is not None:
+                    lineage_callback(
+                        capability_id=capability.spec.id,
+                        capability_version=capability.spec.version,
+                        inputs=mapped_inputs,
+                        outputs=dict(result.outputs),
                     )
 
             except Exception as exc:
