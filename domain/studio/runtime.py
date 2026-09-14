@@ -21,6 +21,7 @@ class WorkflowExecution:
     success: bool = False
     outputs: dict[str, Any] = field(default_factory=dict)
     error: str | None = None
+    changeset_id: str | None = None
 
     def start(self):
         return replace(

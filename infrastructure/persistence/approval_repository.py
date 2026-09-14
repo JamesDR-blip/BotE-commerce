@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+﻿from datetime import datetime, timezone
 from typing import Callable, Optional
 
 from sqlalchemy import select
@@ -24,6 +24,7 @@ class ApprovalRepository:
             record = ApprovalRecord(
                 approval_id=request.approval_id,
                 execution_id=request.execution_id,
+                changeset_id=request.changeset_id,
                 risk_score=request.risk_score,
                 confidence_score=request.confidence_score,
                 requested_by=request.requested_by,
@@ -74,6 +75,47 @@ class ApprovalRepository:
             record.decision = decision.value
             session.commit()
 
+    def get_in_transaction(
+        self,
+        session: Session,
+        approval_id: str,
+    ) -> ApprovalRecord | None:
+        return session.get(
+            ApprovalRecord,
+            approval_id,
+        )
+
+    def update_decision_in_transaction(
+        self,
+        session: Session,
+        approval_id: str,
+        decision: ApprovalDecision,
+    ) -> ApprovalRecord:
+        record = session.get(
+            ApprovalRecord,
+            approval_id,
+        )
+
+        if record is None:
+            raise ValueError(
+                f"Approval {approval_id} not found"
+            )
+
+        if record.decision is not None:
+            raise ValueError(
+                f"Approval {approval_id} has already been decided"
+            )
+
+        if decision == ApprovalDecision.EXPIRED:
+            raise ValueError(
+                "EXPIRED is not a caller-selectable approval decision"
+            )
+
+        record.decision = decision.value
+        session.flush()
+
+        return record
+
     def get(self, approval_id: str) -> Optional[ApprovalRecord]:
         with self._sessions() as session:
             return session.get(ApprovalRecord, approval_id)
@@ -86,3 +128,4 @@ class ApprovalRepository:
                 .order_by(ApprovalRecord.created_at.asc())
             )
             return list(session.scalars(statement).all())
+

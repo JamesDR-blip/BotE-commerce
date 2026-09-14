@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
@@ -13,6 +13,7 @@ class ApprovalDecision(str, Enum):
 class ApprovalRequest:
     approval_id: str
     execution_id: str
+    changeset_id: str
     risk_score: str
     confidence_score: float
     requested_by: str

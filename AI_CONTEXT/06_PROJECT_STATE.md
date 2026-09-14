@@ -2,9 +2,11 @@
 
 ## Current Sprint
 
-**S17 - Shadow Mode & Simulation**
+**S18 - ChangeSet & Atomic Rollback Engine — COMPLETE**
 
-S17 is complete at code/test level, with the simulation path isolated from production mutation and the remaining limitations explicitly bounded below.
+S18 is complete at code, test, architecture, persistence, API, and approval-integration level.
+
+The production mutation boundary is now represented by immutable ChangeSets. Candidate artifacts are materialized before approval, production dataset pointers are changed only through transactional ChangeSet application, and rollback restores the prior immutable artifact pointer using optimistic concurrency protection.
 
 ## Previous Sprints
 
@@ -157,6 +159,10 @@ S17 is complete at code/test level, with the simulation path isolated from produ
 - Wired DataHealthService confidence into production runtime.
 - Added risk/approval API, repositories, migrations, and regression coverage.
 
+### S18 Lifecycle Update
+
+S18 supersedes the S16 approval-resumption behavior for ChangeSet-backed production mutations: approved high/critical executions now apply their prepared immutable ChangeSet atomically instead of returning to `QUEUED` for workflow re-execution. The legacy queue execution path remains available for non-ChangeSet execution flows.
+
 ### S17 Implementation
 
 - Added domain simulation contracts:
@@ -180,6 +186,26 @@ S17 is complete at code/test level, with the simulation path isolated from produ
 - No risk/approval boundary from S16 is bypassed.
 - No Alembic migration was required.
 
+## S18 Implementation
+
+- Added immutable `ChangeSet` and `ChangeSetItem` domain models.
+- Added `PREPARED`, `APPLIED`, and `ROLLED_BACK` lifecycle states.
+- Added candidate artifact materialization with SHA-256 verification.
+- Added positional row-level ChangeSet items based on the existing S17 diff identity model.
+- Added `ChangeSetRepository` with owner-scoped queries.
+- Added transactional Apply and Rollback operations.
+- Added optimistic concurrency guards using the expected dataset storage key.
+- Added `ChangeSetMutationService`.
+- Added `ChangeSetRollbackService`.
+- Added `ApprovalChangeSetService`.
+- Integrated ChangeSet preparation into the high/critical risk approval path.
+- Approval now applies the prepared ChangeSet atomically instead of requeueing the execution.
+- Approval, ChangeSet Apply, and execution completion occur within one database transaction.
+- Added ChangeSet list/detail/rollback APIs.
+- Added approval → ChangeSet foreign-key integrity.
+- Preserved the existing WorkflowEngine for computation/execution rather than making it responsible for production mutation.
+- Production `DatasetRecord` mutation is restricted to the ChangeSet repository boundary.
+
 ### S17 Test Status
 
 - Full regression: **546 / 546 passing** via python -m pytest.
@@ -200,7 +226,7 @@ S17 is complete at code/test level, with the simulation path isolated from produ
 - Simulation provides an isolated dry-run path without production execution persistence or dataset mutation.
 - Streaming simulation uses read-only persisted dataset access and bounded-memory diff aggregation.
 - Existing synchronous and asynchronous production execution paths remain backward compatible.
-- S18 ChangeSet & Rollback is the next production-boundary milestone.
+- S18 ChangeSet & Rollback is complete and is now the production mutation boundary.
 
 ## S15 Known Constraints
 
@@ -226,7 +252,11 @@ S17 is complete at code/test level, with the simulation path isolated from produ
 
 ## Next Action
 
-S17 Shadow Mode & Simulation is complete. Proceed to S18 ChangeSet & Rollback.
+## Next Action
+
+S18 ChangeSet & Atomic Rollback Engine is complete.
+
+Proceed to S19 Data Lineage & Audit.
 
 S18 should introduce the explicit production mutation boundary required for deterministic ChangeSets, rollback, auditability, lineage, and HITL approval integration.
 

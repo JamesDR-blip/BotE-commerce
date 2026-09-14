@@ -16,7 +16,13 @@ from agents.workflow import (
     RuleRetrieverAgent,
     ValidatorAgent,
 )
+from application.approval.approval_changeset_service import ApprovalChangeSetService
 from application.approval.approval_service import ApprovalService
+from application.changesets.changeset_service import ChangeSetService
+from application.changesets.mutation_service import ChangeSetMutationService
+from application.changesets.rollback_service import ChangeSetRollbackService
+from application.changesets.query_service import ChangeSetQueryService
+from application.datasets.artifact_materializer import DatasetArtifactMaterializer
 from application.datasets.dataset_ingestion import DatasetIngestionService
 from application.datasets.dataset_service import DatasetService
 from application.memory.memory_service import AgentMemoryService
@@ -70,6 +76,7 @@ from repositories.capability_execution_traces import (
     CapabilityExecutionTraceRepository,
 )
 from repositories.datasets import DatasetRepository
+from repositories.changesets import ChangeSetRepository
 from repositories.execution_traces import ExecutionTraceRepository
 from repositories.executions import ExecutionRepository
 from repositories.projects import ProjectRepository
@@ -92,6 +99,7 @@ class Container:
         self.authorization = AuthorizationService()
 
         sessions = make_session_factory(settings.database_url)
+        self.sessions = sessions
         self.registry = ValidatorRegistry()
         self.rules = RuleRepository(settings.rules_path)
 
@@ -226,6 +234,7 @@ class Container:
         self.workspaces = WorkspaceRepository(sessions)
         self.projects = ProjectRepository(sessions)
         self.datasets = DatasetRepository(sessions)
+        self.changesets = ChangeSetRepository(sessions)
         self.cache = TTLCache(settings.cache_ttl_seconds)
         self.uploads = TabularUploadReader(settings.max_upload_bytes)
         self.streaming_uploads = StreamingTabularReader(
@@ -284,6 +293,31 @@ class Container:
             streaming_reader=self.streaming_uploads,
             dataset_storage=self.dataset_storage,
         )
+        self.dataset_artifact_materializer = DatasetArtifactMaterializer(
+            storage=self.dataset_storage,
+        )
+        self.changeset_service = ChangeSetService(
+            workflows=self.workflows,
+            executions=self.workflow_executions,
+            datasets=self.datasets,
+            dataset_storage=self.dataset_storage,
+            capability_execution=self.capability_execution,
+            artifact_materializer=self.dataset_artifact_materializer,
+            changesets=self.changesets,
+        )
+        self.changeset_mutation_service = ChangeSetMutationService(
+            sessions=self.sessions,
+            changesets=self.changesets,
+        )
+
+        self.changeset_rollback_service = ChangeSetRollbackService(
+            sessions=self.sessions,
+            changesets=self.changesets,
+        )
+        self.changeset_query_service = ChangeSetQueryService(
+            changesets=self.changesets,
+        )
+
         self.workflow_history = WorkflowHistoryService(
             executions=self.workflow_executions,
             traces=self.workflow_capability_traces,
@@ -295,10 +329,17 @@ class Container:
         self.workflow_queue = InProcessWorkflowExecutionQueue(
             worker=self.workflow_worker.run,
         )
+        self.approval_changeset_service = ApprovalChangeSetService(
+            sessions=self.sessions,
+            approvals=self.approval_repository,
+            changesets=self.changesets,
+            workflow_executions=self.workflow_executions,
+        )
         self.approval_service = ApprovalService(
             self.approval_repository,
             workflow_executions=self.workflow_executions,
             workflow_queue=self.workflow_queue,
+            approval_changeset_service=self.approval_changeset_service,
         )
         self.workflow_runtime = WorkflowRuntimeService(
             workflow_engine=lambda: self.workflow_engine,
@@ -310,6 +351,7 @@ class Container:
             risk_service=lambda: self.risk_service,
             risk_assessments=lambda: self.risk_assessment_repository,
             workflow_executions=lambda: self.workflow_executions,
+            changeset_service=lambda: self.changeset_service,
         )
         self.simulation_service = SimulationService(
             shadow_runner=self.shadow_execution_runner,
@@ -326,3 +368,6 @@ def build_container(
         app_settings = Settings()
 
     return Container(app_settings)
+
+
+

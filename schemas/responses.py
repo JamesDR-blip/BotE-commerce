@@ -124,6 +124,7 @@ class WorkflowExecutionResponse(BaseModel):
     success: bool
     outputs: dict[str, Any]
     error: str | None = None
+    changeset_id: str | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None
 
@@ -246,3 +247,41 @@ class DiagnosticsResponse(BaseModel):
     diagnostics: list[IssueDiagnosticResponse]
     remediation_proposals: list[RemediationProposalResponse]
 
+"""API response schemas for ChangeSets."""
+
+from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel
+
+
+class ChangeSetResponse(BaseModel):
+    id: str
+    dataset_id: str
+    execution_id: str
+    workflow_id: str
+    workflow_version: str
+    before_content_hash: str
+    after_content_hash: str
+    status: str
+    created_at: datetime
+    applied_at: datetime | None = None
+    rolled_back_at: datetime | None = None
+
+
+class ChangeSetItemResponse(BaseModel):
+    id: str
+    changeset_id: str
+    entity: str
+    record_id: str
+    before_snapshot: dict[str, Any]
+    after_snapshot: dict[str, Any]
+
+
+class ChangeSetDetailResponse(ChangeSetResponse):
+    items: list[ChangeSetItemResponse]
+
+
+class ChangeSetRollbackResponse(BaseModel):
+    status: str
+    changeset: ChangeSetResponse

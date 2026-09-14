@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime, timezone
 
@@ -19,6 +19,7 @@ class ApprovalTokenModel(BaseModel):
 class ApprovalRequestModel(BaseModel):
     approval_id: str
     execution_id: str
+    changeset_id: str
     risk_score: str
     confidence_score: float
     requested_by: str | None = None
@@ -53,6 +54,7 @@ def request_approval(
     approval_req = ApprovalRequest(
         approval_id=request.approval_id,
         execution_id=request.execution_id,
+        changeset_id=request.changeset_id,
         risk_score=request.risk_score,
         confidence_score=request.confidence_score,
         requested_by=current_user.user_id,
@@ -171,3 +173,4 @@ def reject(
             status_code=400,
             detail=str(exc),
         ) from exc
+

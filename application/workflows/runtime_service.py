@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, Callable
 from uuid import uuid4
 
@@ -24,6 +25,7 @@ class WorkflowRuntimeService:
         risk_service: Callable[[], Any] | None = None,
         risk_assessments: Callable[[], Any] | None = None,
         workflow_executions: Callable[[], Any] | None = None,
+        changeset_service: Callable[[], Any] | None = None,
     ) -> None:
         self._workflow_engine = workflow_engine
         self._workflow_history = workflow_history
@@ -34,6 +36,7 @@ class WorkflowRuntimeService:
         self._risk_service = risk_service
         self._risk_assessments = risk_assessments
         self._workflow_executions = workflow_executions
+        self._changeset_service = changeset_service
 
     def _validate_execution_scope(
         self,
@@ -165,6 +168,26 @@ class WorkflowRuntimeService:
 
         return result
 
+    def _prepare_candidate(
+        self,
+        *,
+        execution: WorkflowExecution,
+    ) -> WorkflowExecution:
+        if self._changeset_service is None:
+            raise RuntimeError(
+                "ChangeSet service is required before entering "
+                "PENDING_APPROVAL"
+            )
+
+        changeset = self._changeset_service().prepare_candidate(
+            execution_id=execution.execution_id,
+        )
+
+        return replace(
+            execution,
+            changeset_id=changeset.id,
+        )
+
     def _pending_execution(
         self,
         execution: WorkflowExecution,
@@ -218,6 +241,9 @@ class WorkflowRuntimeService:
         )
 
         if result is not None and result.approval_required:
+            execution = self._prepare_candidate(
+                execution=execution,
+            )
             return self._pending_execution(execution)
 
         self._workflow_executions().mark_running(
@@ -270,6 +296,9 @@ class WorkflowRuntimeService:
         )
 
         if result is not None and result.approval_required:
+            execution = self._prepare_candidate(
+                execution=execution,
+            )
             return self._pending_execution(execution)
 
         self._workflow_queue().dispatch(

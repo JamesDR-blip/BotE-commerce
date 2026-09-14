@@ -222,6 +222,47 @@ class WorkflowExecutionRepository:
 
             return record
 
+    def get_in_transaction(
+        self,
+        session: Session,
+        execution_id: str,
+    ) -> WorkflowExecutionRecord | None:
+        return session.get(
+            WorkflowExecutionRecord,
+            execution_id,
+        )
+
+    def complete_after_approval_in_transaction(
+        self,
+        session: Session,
+        *,
+        execution_id: str,
+        outputs_json: str,
+    ) -> WorkflowExecutionRecord:
+        record = session.get(
+            WorkflowExecutionRecord,
+            execution_id,
+        )
+
+        if record is None:
+            raise ValueError(
+                f"Workflow execution not found: {execution_id}"
+            )
+
+        if record.status != "PENDING_APPROVAL":
+            raise ValueError(
+                "Workflow execution is not pending approval: "
+                f"{execution_id} ({record.status})"
+            )
+
+        record.status = "COMPLETED"
+        record.outputs_json = outputs_json
+        record.finished_at = datetime.now(timezone.utc)
+
+        session.flush()
+
+        return record
+
     def fail(
         self,
         *,

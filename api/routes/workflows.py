@@ -401,6 +401,7 @@ def execute_workflow(
         success=runtime.success,
         outputs=runtime.outputs,
         error=runtime.error,
+        changeset_id=runtime.changeset_id,
         started_at=runtime.started_at,
         finished_at=runtime.finished_at,
     )
@@ -439,6 +440,7 @@ def execute_workflow_async(
         success=runtime.success,
         outputs=runtime.outputs,
         error=runtime.error,
+        changeset_id=runtime.changeset_id,
         started_at=runtime.started_at,
         finished_at=runtime.finished_at,
     )

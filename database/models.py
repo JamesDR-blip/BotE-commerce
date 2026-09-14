@@ -1,4 +1,4 @@
-"""SQLAlchemy persistence schema."""
+﻿"""SQLAlchemy persistence schema."""
 from __future__ import annotations
 
 import uuid
@@ -646,16 +646,31 @@ class ApprovalRecord(Base):
         nullable=False,
         index=True,
     )
+    changeset_id: Mapped[str] = mapped_column(
+        ForeignKey("changesets.id"),
+        nullable=False,
+        index=True,
+    )
     risk_score: Mapped[str] = mapped_column(String(20), nullable=False)
     confidence_score: Mapped[float] = mapped_column(Float, nullable=False)
     requested_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     decision: Mapped[str | None] = mapped_column(String(20), nullable=True)
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
 
     # Relationship back to execution if needed
-    execution = relationship("WorkflowExecutionRecord", backref="approvals", foreign_keys=[execution_id])
+    execution = relationship(
+        "WorkflowExecutionRecord",
+        backref="approvals",
+        foreign_keys=[execution_id],
+    )
 
 class RiskAssessmentRecord(Base):
     """Persistence model for workflow execution risk assessments."""
@@ -701,6 +716,124 @@ class RiskAssessmentRecord(Base):
     )
 
 
+class ChangeSetRecord(Base):
+    __tablename__ = "changesets"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+
+    dataset_id: Mapped[str] = mapped_column(
+        ForeignKey("datasets.id"),
+        nullable=False,
+        index=True,
+    )
+
+    execution_id: Mapped[str] = mapped_column(
+        ForeignKey("workflow_executions.id"),
+        nullable=False,
+        index=True,
+    )
+
+    workflow_id: Mapped[str] = mapped_column(
+        ForeignKey("workflows.id"),
+        nullable=False,
+        index=True,
+    )
+
+    workflow_version: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    before_storage_key: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+
+    before_content_hash: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+    )
+
+    after_storage_key: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+
+    after_content_hash: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        index=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
+    )
+
+    applied_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    rolled_back_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    items: Mapped[list["ChangeSetItemRecord"]] = relationship(
+        back_populates="changeset",
+        cascade="all, delete-orphan",
+    )
+
+
+class ChangeSetItemRecord(Base):
+    __tablename__ = "changeset_items"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+
+    changeset_id: Mapped[str] = mapped_column(
+        ForeignKey("changesets.id"),
+        nullable=False,
+        index=True,
+    )
+
+    entity: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    record_id: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    before_snapshot: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+    )
+
+    after_snapshot: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+    )
+
+    changeset: Mapped["ChangeSetRecord"] = relationship(
+        back_populates="items",
+    )
+
 class RiskPolicyRecord(Base):
     """Persistence model for risk policy thresholds."""
     __tablename__ = "risk_policies"
@@ -738,3 +871,7 @@ def make_session_factory(url: str):
 
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
+
+
+
+

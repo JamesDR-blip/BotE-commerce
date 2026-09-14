@@ -156,6 +156,20 @@ class FakeHealth:
         return self.Score()
 
 
+class FakeChangeSet:
+    def __init__(self, changeset_id="changeset-1"):
+        self.id = changeset_id
+
+
+class FakeChangeSetService:
+    def __init__(self):
+        self.calls = []
+
+    def prepare_candidate(self, *, execution_id):
+        self.calls.append(execution_id)
+        return FakeChangeSet()
+
+
 def test_runtime_high_risk_enters_pending_approval():
     from application.workflows.runtime_service import WorkflowRuntimeService
     from domain.identity import CurrentUser
@@ -181,6 +195,7 @@ def test_runtime_high_risk_enters_pending_approval():
             return super().create_queued(**kwargs)
 
     engine = Engine()
+    changesets = FakeChangeSetService()
 
     service = WorkflowRuntimeService(
         workflow_engine=lambda: engine,
@@ -192,6 +207,7 @@ def test_runtime_high_risk_enters_pending_approval():
         risk_service=lambda: FakeRiskService(),
         risk_assessments=lambda: assessments,
         workflow_executions=lambda: executions,
+        changeset_service=lambda: changesets,
     )
 
     result = service.execute_async(
@@ -202,6 +218,8 @@ def test_runtime_high_risk_enters_pending_approval():
     )
 
     assert result.status == WorkflowExecutionStatus.PENDING_APPROVAL
+    assert result.changeset_id == "changeset-1"
+    assert changesets.calls == [result.execution_id]
     assert executions.pending == [result.execution_id]
     assert executions.running == []
     assert engine.executed == []
@@ -255,6 +273,7 @@ def test_runtime_without_risk_metadata_remains_backward_compatible():
         risk_service=lambda: LowRiskService(),
         risk_assessments=lambda: assessments,
         workflow_executions=lambda: executions,
+        changeset_service=lambda: changesets,
     )
 
     result = service.execute_async(
@@ -264,6 +283,7 @@ def test_runtime_without_risk_metadata_remains_backward_compatible():
     )
 
     assert result.status == WorkflowExecutionStatus.QUEUED
+    assert result.changeset_id is None
     assert executions.pending == []
     assert executions.running == []
     assert assessments.created[0]["risk_score"] == "LOW"
@@ -305,5 +325,6 @@ def test_runtime_rejects_invalid_plan_blast_radius():
             workflow_id="workflow-1",
             inputs={},
         )
+
 
 

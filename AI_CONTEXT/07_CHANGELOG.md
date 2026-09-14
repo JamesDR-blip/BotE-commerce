@@ -1,5 +1,57 @@
 # CHANGELOG
 
+## S18 — ChangeSet & Atomic Rollback Engine — COMPLETE
+
+Implemented the immutable production mutation boundary required for autonomous data operations.
+
+### Added
+
+- Added immutable `ChangeSet` aggregate and `ChangeSetItem`.
+- Added `PREPARED`, `APPLIED`, and `ROLLED_BACK` lifecycle states.
+- Added candidate after-artifact materialization with SHA-256 verification.
+- Added `ChangeSetRepository`.
+- Added transactional ChangeSet Apply.
+- Added transactional ChangeSet Rollback.
+- Added optimistic concurrency protection using dataset storage-key guards.
+- Added owner-scoped ChangeSet query APIs.
+- Added ChangeSet list/detail/rollback endpoints.
+- Added approval → ChangeSet foreign-key integrity.
+- Added `ApprovalChangeSetService`.
+- Integrated candidate ChangeSet preparation into the high/critical risk approval path.
+- Changed approved ChangeSet-backed executions from queue resumption to atomic ChangeSet application.
+- Added execution completion in the same transaction as approval and ChangeSet application.
+
+### Architectural Decisions
+
+- `WorkflowEngine` remains responsible for computation/execution, not production persistence.
+- `ChangeSet` is the only production mutation boundary.
+- Dataset artifacts are immutable; production state is represented by the `DatasetRecord.storage_key` pointer.
+- Candidate after-artifacts are materialized before HITL approval.
+- Approval operates on a concrete immutable ChangeSet rather than re-executing a workflow.
+- Apply and Rollback use optimistic concurrency guards and atomic database transactions.
+- ChangeSet items contain logical row-level before/after snapshots; complete dataset artifacts remain in immutable storage.
+- Approved ChangeSet-backed executions do not return to the existing execution queue.
+
+### Verification
+
+- Full regression: **591 passed**.
+- Runtime: **28.05 seconds**.
+- `python -m compileall` passed.
+- One existing Starlette/AnyIO TestClient deprecation warning remains.
+- Alembic current/head: `20260914_02`.
+- S18 migrations:
+  - `20260914_01_add_changesets.py`
+  - `20260914_02_add_approval_changeset_fk.py`
+- `alembic check` still reports seven pre-existing model/schema drift operations unrelated to S18.
+
+### Known Scope Boundaries
+
+- Streaming ChangeSet candidate materialization remains future work; the current ChangeSet preparation path explicitly rejects streaming execution mode.
+- Row-level ChangeSet identity currently follows S17 positional row alignment rather than a business-key identity model.
+- The in-process workflow queue remains non-durable.
+- The existing Starlette/AnyIO dependency warning remains.
+- Seven pre-existing Alembic model/schema drift operations remain outside S18 scope.
+
 ## S17 — Shadow Mode / Simulation — COMPLETE
 
 Implemented an isolated workflow simulation path for safe dry-run verification without production mutation.

@@ -1,4 +1,4 @@
-"""FastAPI dependency providers backed by the application composition root."""
+﻿"""FastAPI dependency providers backed by the application composition root."""
 from domain.identity import CurrentUser
 from application.workflows.simulation_service import SimulationService
 
@@ -17,6 +17,7 @@ from infrastructure.upload.tabular_reader import TabularUploadReader
 from application.workflows.authoring_service import WorkflowAuthoringService
 from application.workflows.history_service import WorkflowHistoryService
 from application.workflows.runtime_service import WorkflowRuntimeService
+from application.changesets.query_service import ChangeSetQueryService
 
 from repositories.executions import ExecutionRepository
 from repositories.execution_traces import ExecutionTraceRepository
@@ -137,3 +138,12 @@ def get_rule_intelligence_service(
 ) -> RuleIntelligenceService:
     return request.app.state.rule_intelligence
 
+
+def get_changeset_query_service(
+    request: Request,
+) -> ChangeSetQueryService:
+    return request.app.state.container.changeset_query_service
+
+
+def get_changeset_rollback_service(request: Request):
+    return request.app.state.container.changeset_rollback_service

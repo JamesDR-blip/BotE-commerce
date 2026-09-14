@@ -19,7 +19,7 @@ Phase 2: Closed-Loop Governance & Safety (S15 - S19)
    │  ├── S15: Data Health Command Center[Completed]
    │  ├── S16: Risk & Approval Engine[Completed]
    │  ├── S17: Shadow Mode & Simulation[Completed]
-   │  ├── S18: ChangeSet & Atomic Rollback Engine[Current Sprint]
+   │  ├── S18: ChangeSet & Atomic Rollback Engine[Completed]
    │  └── S19: Data Lineage & Audit Trail
    ▼
 Phase 3: Autonomy & Multi-Channel Sync (S20 - S23)
@@ -61,7 +61,7 @@ Phase 4: Enterprise Production & Hardening (S24 - S28)
 - [Sprint 15: Data Health Command Center](sprint-15-data-health.md) *(COMPLETE)*
 - [Sprint 16: Risk & Approval Engine](sprint-16-risk-approval.md) *(COMPLETE)*
 - [Sprint 17: Shadow Mode & Simulation](sprint-17-shadow-mode.md) *(COMPLETE)*
-- [Sprint 18: ChangeSet & Atomic Rollback Engine](sprint-18-changeset-rollback.md)
+- [Sprint 18: ChangeSet & Atomic Rollback Engine](sprint-18-changeset-rollback.md) *(COMPLETE)*
 - [Sprint 19: Data Lineage & Audit Trail](sprint-19-lineage-audit.md)
 - [Sprint 20: Autonomous Agent Operations](sprint-20-autonomous-agent-ops.md)
 - [Sprint 21: Channel Sync & Multi-Platform Connectors](sprint-21-channel-sync.md)

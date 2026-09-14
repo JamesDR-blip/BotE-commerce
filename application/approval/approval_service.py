@@ -16,10 +16,12 @@ class ApprovalService:
         *,
         workflow_executions: Any | None = None,
         workflow_queue: Any | None = None,
+        approval_changeset_service: Any | None = None,
     ):
         self.repository = repository
         self.workflow_executions = workflow_executions
         self.workflow_queue = workflow_queue
+        self.approval_changeset_service = approval_changeset_service
 
     @staticmethod
     def _hash_token(token: str) -> str:
@@ -97,14 +99,15 @@ class ApprovalService:
             return
 
         if decision == ApprovalDecision.APPROVED:
-            self.workflow_executions.release_to_queue(
-                record.execution_id
+            if self.approval_changeset_service is None:
+                raise RuntimeError(
+                    "ApprovalChangeSetService is required for "
+                    "ChangeSet-backed approvals"
+                )
+
+            self.approval_changeset_service.apply(
+                approval_id=approval_id,
             )
-            self.repository.update_decision(approval_id, decision)
-
-            if self.workflow_queue is not None:
-                self.workflow_queue.dispatch(record.execution_id)
-
             return
 
         if decision == ApprovalDecision.REJECTED:

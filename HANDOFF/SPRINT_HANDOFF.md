@@ -1,10 +1,10 @@
-# S17 Sprint Handoff
+# S18 Sprint Handoff
 
 ## Status
 
-S17 — Shadow Mode & Simulation: COMPLETE.
+S18 — ChangeSet & Atomic Rollback Engine: COMPLETE.
 
-The implementation is verified by the full regression suite and preserves the existing Clean Architecture + DDD boundaries. The simulation path is isolated from production mutation.
+The implementation establishes the production mutation boundary required for autonomous data operations. ChangeSets are immutable, candidate artifacts are materialized before approval, Apply and Rollback are transactional, and high-risk approval now applies the concrete ChangeSet rather than re-running the workflow.
 
 ## Objective
 
@@ -137,18 +137,18 @@ Provide a safe dry-run workflow execution path that can verify workflow behavior
 - Approval request creation remains separate from runtime risk assessment.
 - Existing Starlette/AnyIO TestClient deprecation warning remains.
 
-## Next Sprint
-
-S18 — ChangeSet & Rollback.
-
-S18 should establish the production mutation boundary after S17 simulation, including immutable ChangeSets, auditable mutation intent, deterministic rollback/recovery semantics, and integration with the existing S16 Risk & Approval boundary.
-
-## Handoff Notes
-
-S17 is complete at code, test, architecture, and documentation level.
-
-The key invariant for S18 is:
+## Handoff Invariant
 
 **Simulation verifies proposed behavior; ChangeSet is the only production mutation boundary.**
 
-Any future production mutation path should preserve explicit approval, auditability, rollback capability, and clear separation between simulation and mutation.
+The production lifecycle is:
+
+Detect → Diagnose → Plan → Simulate → Risk → Prepare ChangeSet → Approve → Apply → Verify → Audit
+
+Rollback is performed by atomically restoring the prior immutable dataset artifact pointer, subject to optimistic concurrency validation.
+
+## Next Sprint
+
+S19 — Data Lineage & Audit.
+
+S19 should build on the immutable ChangeSet boundary to provide complete provenance, audit events, lineage tracking, and mutation history.

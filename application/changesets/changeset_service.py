@@ -1,0 +1,339 @@
+"""Application service for preparing immutable production ChangeSets."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from datetime import datetime, timezone
+from uuid import uuid4
+
+import pandas as pd
+
+from domain.changeset import (
+    ChangeSet,
+    ChangeSetItem,
+    ChangeSetStatus,
+)
+from domain.serialization.execution_plan import ExecutionPlanSerializer
+
+
+class ChangeSetService:
+    """Prepare immutable ChangeSets without mutating the dataset pointer."""
+
+    def __init__(
+        self,
+        *,
+        workflows,
+        executions,
+        datasets,
+        dataset_storage,
+        capability_execution,
+        artifact_materializer,
+        changesets,
+    ) -> None:
+        self._workflows = workflows
+        self._executions = executions
+        self._datasets = datasets
+        self._dataset_storage = dataset_storage
+        self._capability_execution = capability_execution
+        self._artifact_materializer = artifact_materializer
+        self._changesets = changesets
+
+    def prepare(
+        self,
+        *,
+        execution_id: str,
+    ) -> ChangeSet:
+        """Prepare a ChangeSet from a completed execution.
+
+        This is the existing post-execution contract and intentionally
+        remains restricted to COMPLETED executions.
+        """
+        execution = self._get_execution(execution_id)
+
+        if execution.status != "COMPLETED":
+            raise ValueError(
+                "Only COMPLETED workflow executions can prepare "
+                f"a ChangeSet: {execution_id} ({execution.status})"
+            )
+
+        return self._prepare_from_execution(
+            execution=execution,
+        )
+
+    def prepare_candidate(
+        self,
+        *,
+        execution_id: str,
+    ) -> ChangeSet:
+        """Materialize a concrete candidate before production execution.
+
+        This method is deliberately independent from WorkflowEngine.
+        It executes the persisted plan against an isolated copy of the
+        immutable dataset and persists only the staged after artifact plus
+        immutable ChangeSet metadata. The DatasetRecord pointer is not
+        changed.
+        """
+        execution = self._get_execution(execution_id)
+
+        allowed_statuses = {
+            "CREATED",
+            "QUEUED",
+            "PENDING_APPROVAL",
+            "RUNNING",
+        }
+
+        if execution.status not in allowed_statuses:
+            raise ValueError(
+                "Candidate ChangeSet preparation requires a non-terminal "
+                f"workflow execution: {execution_id} ({execution.status})"
+            )
+
+        return self._prepare_from_execution(
+            execution=execution,
+        )
+
+    def _prepare_from_execution(
+        self,
+        *,
+        execution,
+    ) -> ChangeSet:
+        if not execution.dataset_id:
+            raise ValueError(
+                "ChangeSet preparation requires a dataset_id"
+            )
+
+        dataset = self._datasets.get(execution.dataset_id)
+
+        if dataset is None:
+            raise ValueError(
+                f"Dataset not found: {execution.dataset_id}"
+            )
+
+        if not dataset.storage_key:
+            raise ValueError(
+                f"Dataset has no persisted storage: {dataset.id}"
+            )
+
+        version = self._workflows.get_version(
+            execution.workflow_id,
+            execution.workflow_version,
+        )
+
+        if version is None:
+            raise ValueError(
+                "Workflow version not found: "
+                f"{execution.workflow_id}@{execution.workflow_version}"
+            )
+
+        plan = self._deserialize_plan(version.plan_json)
+
+        execution_metadata = plan.metadata.get("execution", {})
+        if execution_metadata.get("mode") == "streaming":
+            raise NotImplementedError(
+                "Streaming ChangeSet materialization is not yet supported"
+            )
+
+        before_frame = self._read_dataset(dataset)
+
+        inputs = (
+            json.loads(execution.inputs_json)
+            if execution.inputs_json
+            else {}
+        )
+
+        candidate_inputs = dict(inputs)
+        candidate_inputs["frame"] = before_frame.copy(deep=True)
+
+        result = self._capability_execution.execute_plan(
+            plan=plan,
+            inputs=candidate_inputs,
+            execution_id=execution.id,
+        )
+
+        outputs = getattr(result, "outputs", None)
+        if outputs is None:
+            raise RuntimeError(
+                "Capability execution returned no outputs"
+            )
+
+        after_frame = outputs.get("frame")
+
+        if not isinstance(after_frame, pd.DataFrame):
+            raise ValueError(
+                "ChangeSet preparation requires a DataFrame output "
+                "under execution output key 'frame'"
+            )
+
+        changeset_id = str(uuid4())
+
+        after_storage_key, after_content_hash = (
+            self._artifact_materializer.materialize(
+                frame=after_frame,
+                file_format=dataset.file_format or "csv",
+                changeset_id=changeset_id,
+            )
+        )
+
+        before_content_hash = dataset.content_hash
+        if not before_content_hash:
+            before_content_hash = self._hash_storage_artifact(
+                dataset.storage_key
+            )
+
+        items = self._build_items(
+            changeset_id=changeset_id,
+            before=before_frame,
+            after=after_frame,
+        )
+
+        changeset = ChangeSet(
+            id=changeset_id,
+            dataset_id=dataset.id,
+            execution_id=execution.id,
+            workflow_id=execution.workflow_id,
+            workflow_version=execution.workflow_version,
+            before_storage_key=dataset.storage_key,
+            before_content_hash=before_content_hash,
+            after_storage_key=after_storage_key,
+            after_content_hash=after_content_hash,
+            status=ChangeSetStatus.PREPARED,
+            created_at=datetime.now(timezone.utc),
+        )
+
+        return self._changesets.create(
+            changeset,
+            items,
+        )
+
+    def _get_execution(self, execution_id: str):
+        execution = self._executions.get(execution_id)
+
+        if execution is None:
+            raise ValueError(
+                f"Workflow execution not found: {execution_id}"
+            )
+
+        return execution
+
+    def _read_dataset(self, dataset) -> pd.DataFrame:
+        if not dataset.storage_key:
+            raise ValueError(
+                f"Dataset has no persisted storage: {dataset.id}"
+            )
+
+        with self._dataset_storage.open(
+            storage_key=dataset.storage_key
+        ) as source:
+            filename = dataset.filename or dataset.storage_key
+
+            suffix = (
+                dataset.file_format
+                or filename.rsplit(".", 1)[-1]
+            ).lower().lstrip(".")
+
+            if suffix == "csv":
+                return pd.read_csv(source)
+
+            if suffix == "xlsx":
+                return pd.read_excel(
+                    source,
+                    engine="openpyxl",
+                )
+
+            raise ValueError(
+                "Unsupported dataset format for ChangeSet preparation: "
+                f"{suffix}"
+            )
+
+    def _hash_storage_artifact(self, storage_key: str) -> str:
+        hasher = hashlib.sha256()
+
+        with self._dataset_storage.open(
+            storage_key=storage_key
+        ) as source:
+            while chunk := source.read(1024 * 1024):
+                hasher.update(chunk)
+
+        return hasher.hexdigest()
+
+    @staticmethod
+    def _deserialize_plan(plan_json):
+        if isinstance(plan_json, dict):
+            return ExecutionPlanSerializer.from_dict(plan_json)
+
+        if isinstance(plan_json, str):
+            return ExecutionPlanSerializer.from_dict(
+                json.loads(plan_json)
+            )
+
+        raise ValueError(
+            "Unsupported persisted workflow plan format"
+        )
+
+    @staticmethod
+    def _build_items(
+        *,
+        changeset_id: str,
+        before: pd.DataFrame,
+        after: pd.DataFrame,
+    ) -> list[ChangeSetItem]:
+        max_rows = max(len(before), len(after))
+        items: list[ChangeSetItem] = []
+
+        for row_index in range(max_rows):
+            before_snapshot = (
+                ChangeSetService._row_snapshot(
+                    before,
+                    row_index,
+                )
+                if row_index < len(before)
+                else {}
+            )
+
+            after_snapshot = (
+                ChangeSetService._row_snapshot(
+                    after,
+                    row_index,
+                )
+                if row_index < len(after)
+                else {}
+            )
+
+            if before_snapshot == after_snapshot:
+                continue
+
+            items.append(
+                ChangeSetItem(
+                    id=str(uuid4()),
+                    changeset_id=changeset_id,
+                    entity="dataset_row",
+                    record_id=str(row_index),
+                    before_snapshot=before_snapshot,
+                    after_snapshot=after_snapshot,
+                )
+            )
+
+        return items
+
+    @staticmethod
+    def _row_snapshot(
+        frame: pd.DataFrame,
+        row_index: int,
+    ) -> dict:
+        row = frame.iloc[row_index]
+
+        snapshot = {}
+
+        for column, value in row.items():
+            if pd.isna(value):
+                snapshot[str(column)] = None
+            elif hasattr(value, "item"):
+                snapshot[str(column)] = value.item()
+            else:
+                snapshot[str(column)] = value
+
+        return snapshot
+
+
+__all__ = ["ChangeSetService"]

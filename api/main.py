@@ -1,4 +1,4 @@
-"""FastAPI application factory."""
+﻿"""FastAPI application factory."""
 from __future__ import annotations
 import logging
 
@@ -13,6 +13,7 @@ from api.routes import (
     workflows_router,
     risk_router,
     approval_router,
+    changesets_router,
 )
 from configs.settings import Settings
 
@@ -55,6 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(workflows_router)
     app.include_router(risk_router)
     app.include_router(approval_router)
+    app.include_router(changesets_router)
     app.add_exception_handler(Exception, _internal_server_error)
     app.state.container = container
     app.state.authentication = container.authentication
@@ -75,4 +77,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.categories = container.registry.categories()
     instrument_fastapi(app)
     return app
+
 

@@ -23,12 +23,14 @@ class FakeApprovalRecord:
         self,
         approval_id="approval-1",
         execution_id="execution-1",
+        changeset_id="changeset-1",
         decision=None,
         expires_at=None,
         token_hash=VALID_TOKEN_HASH,
     ):
         self.approval_id = approval_id
         self.execution_id = execution_id
+        self.changeset_id = changeset_id
         self.risk_score = "HIGH"
         self.confidence_score = 0.85
         self.requested_by = "requester"
@@ -49,6 +51,7 @@ class FakeApprovalRepository:
         self.record = FakeApprovalRecord(
             approval_id=request.approval_id,
             execution_id=request.execution_id,
+            changeset_id=request.changeset_id,
             expires_at=request.expires_at,
             token_hash=token_hash,
         )
@@ -84,6 +87,14 @@ class FakeWorkflowQueue:
 
     def dispatch(self, execution_id):
         self.dispatched.append(execution_id)
+
+
+class FakeApprovalChangeSetService:
+    def __init__(self):
+        self.applied = []
+
+    def apply(self, *, approval_id):
+        self.applied.append(approval_id)
 
 
 def approver():
@@ -151,6 +162,7 @@ def test_approval_request_generates_and_persists_only_token_hash():
     request = ApprovalRequest(
         approval_id="approval-1",
         execution_id="execution-1",
+        changeset_id="changeset-1",
         risk_score="HIGH",
         confidence_score=0.85,
         requested_by="requester",
@@ -167,17 +179,19 @@ def test_approval_request_generates_and_persists_only_token_hash():
     ).hexdigest()
 
 
-def test_approval_approved_releases_and_dispatches():
+def test_approval_approved_applies_changeset_without_requeue():
     repository = FakeApprovalRepository(
         FakeApprovalRecord()
     )
     executions = FakeWorkflowExecutions()
     queue = FakeWorkflowQueue()
+    changesets = FakeApprovalChangeSetService()
 
     service = ApprovalService(
         repository,
         workflow_executions=executions,
         workflow_queue=queue,
+        approval_changeset_service=changesets,
     )
 
     service.decide(
@@ -187,13 +201,10 @@ def test_approval_approved_releases_and_dispatches():
         token=VALID_TOKEN,
     )
 
-    assert executions.released == ["execution-1"]
+    assert changesets.applied == ["approval-1"]
+    assert executions.released == []
     assert executions.cancelled == []
-    assert queue.dispatched == ["execution-1"]
-    assert repository.updated == [
-        ("approval-1", ApprovalDecision.APPROVED)
-    ]
-
+    assert queue.dispatched == []
 
 def test_approval_rejected_cancels_without_dispatch():
     repository = FakeApprovalRepository(
@@ -416,6 +427,7 @@ def test_approval_request_uses_authenticated_user_as_requester():
         json={
             "approval_id": "approval-1",
             "execution_id": "execution-1",
+            "changeset_id": "changeset-1",
             "risk_score": "HIGH",
             "confidence_score": 0.85,
             "requested_by": "attacker-supplied-user",
@@ -516,4 +528,9 @@ def test_reject_endpoint_accepts_token_in_json_body():
     assert captured["approval_id"] == "approval-1"
     assert captured["decision"] == ApprovalDecision.REJECTED
     assert captured["token"] == VALID_TOKEN
+
+
+
+
+
 

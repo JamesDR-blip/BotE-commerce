@@ -26,13 +26,13 @@
 
 ## Current Sprint
 
-- **S17 Shadow Mode & Simulation — COMPLETE**: Safe dry-run workflow simulation, bounded diff verification, read-only streaming, and zero production mutation.
+- **S18 ChangeSet & Rollback — COMPLETE**: Immutable ChangeSets, atomic production mutation, candidate artifact materialization, HITL approval integration, optimistic-concurrency guarded rollback, and owner-scoped ChangeSet APIs.
 
 ---
 
 ## Next Sprint
 
-- **S18 ChangeSet & Rollback**: Immutable change sets, automated rollbacks, and recovery transactions. This becomes the production mutation boundary following S17 simulation.
+- **S19 Data Lineage & Audit**: Full data provenance, audit trails, and event sourcing.
 
 ## Future Roadmap
 - **S19 Lineage & Audit**: Full data provenance, audit trails, and event sourcing.
