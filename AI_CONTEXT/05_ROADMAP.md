@@ -5,37 +5,36 @@
 - **S00 Architecture Audit & Baseline Refactor**: Composition root, application factory, initial audit.
 - **S01 Project Structure & Baseline Standards**: Layering foundation, pytest test harnesses.
 - **S02 Configuration & Structured Logging**: Pydantic settings, JSON structured logging.
-- **S03 Plugin Architecture**: Dynamic `ValidatorRegistry`, validator discovery, category plugins.
-- **S04 Safe YAML Rule Engine**: `yaml.safe_load`, declarative rule evaluator (required, regex, enum, range).
-- **S05 Capability Decomposition**: Independent capabilities (`Cleaning`, `Normalization`, `Extraction`, `Validation`, `QA`).
+- **S03 Plugin Architecture**: Dynamic ValidatorRegistry, validator discovery, category plugins.
+- **S04 Safe YAML Rule Engine**: yaml.safe_load, declarative rule evaluator (required, regex, enum, range).
+- **S05 Capability Decomposition**: Independent capabilities (Cleaning, Normalization, Extraction, Validation, QA).
 - **S06 LangGraph Orchestration**: Typed state transitions, dependency ordering.
 - **S07 AI Collaborator Agents**: Intent classification, requirement planning, QA, reporting, optional LLM assistant.
 - **S08 Product Attribute Extraction**: Deterministic extraction of brand, model, size, color, SKU, GTIN, UPC.
-- **S09 FastAPI Presentation Layer**: REST endpoints (`/upload`, `/validate`, `/clean`, `/extract`, `/mapping`, `/history`, `/report`).
-- **S10 Persistence & Alembic Migrations**: PostgreSQL & SQLite support, migrations up to `b05fd7d45c87`.
+- **S09 FastAPI Presentation Layer**: REST endpoints (/upload, /validate, /clean, /extract, /mapping, /history, /report).
+- **S10 Persistence & Alembic Migrations**: PostgreSQL & SQLite support.
 - **S11 Streamlit Dashboard & Client**: Decoupled HTTP client, interactive validation & report download.
-- **Clean Architecture & DDD Refactoring**: Reorganized into `domain/`, `aapplication/`, `execution/`, `infrastructure/` packages; introduced `Cache` protocol and domain serialization.
+- **Clean Architecture & DDD Refactoring**: Reorganized into domain/, application/, execution/, infrastructure/ packages; introduced Cache protocol and domain serialization.
 - **S12 RAG / Rule Intelligence**: RuleRetriever abstraction, semantic rule search, dynamic category rule packs.
 - **S13 Agent Memory & Execution Context**: Tenant-scoped persistent agent memory, correction events, execution learning, PII redaction, expiration, and memory-aware requirement parameter resolution.
 - **S14 Performance**: Streaming tabular ingestion, chunked processing, async execution workers.
 - **S15 Data Health Command Center**: Live health scores, issue tracking, and automated fix recommendations.
 - **S16 Risk & Approval Engine**: RiskPolicy domain model, confidence scoring, and human-in-the-loop approval gates.
 - **S17 Shadow Mode & Simulation**: Safe dry-run workflow simulation, bounded diff verification, read-only streaming, and zero production mutation.
-
----
+- **S18 ChangeSet & Rollback**: Immutable ChangeSets, atomic production mutation, candidate artifact materialization, HITL approval integration, optimistic-concurrency guarded rollback, and owner-scoped ChangeSet APIs.
+- **S19 Data Lineage & Audit Trail**: Capability-level lineage, SHA-256 hash-chained audit events, owner/workspace-scoped APIs, and transactional mutation auditing.
+- **S20 Autonomous Agent Operations**: Closed-loop autonomous orchestration, hard safety guardrails, low-risk auto-apply, high-risk approval routing, ChangeSet-backed mutation, verification, and execution learning.
 
 ## Current Sprint
 
-- **S18 ChangeSet & Rollback — COMPLETE**: Immutable ChangeSets, atomic production mutation, candidate artifact materialization, HITL approval integration, optimistic-concurrency guarded rollback, and owner-scoped ChangeSet APIs.
-
----
+- **S20 Autonomous Agent Operations — COMPLETE**.
 
 ## Next Sprint
 
+- **S21 Channel Sync & Multi-Platform Connectors**.
 
 ## Future Roadmap
 
-- **S21 Channel Sync**: Multi-channel connectors (Shopify, Amazon, TikTok Shop, Shopee, Lazada).
 - **S22 Copilot**: Natural language conversational assistant for dataset querying and pipeline authoring.
 - **S23 Marketplace**: Community rule packs, custom validator plugins, and connectors.
 - **S24 Enterprise Governance**: Role-based access control (RBAC), multi-tenancy quotas, audit compliance.

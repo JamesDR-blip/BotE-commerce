@@ -2,9 +2,9 @@
 
 ## Current Sprint
 
-**S19 - Data Lineage & Audit — COMPLETE**
+**S20 - Autonomous Agent Operations — COMPLETE**
 
-S19 is complete at code, test, architecture, persistence, API, security, and integration level.
+S20 is complete at code, test, architecture, security, integration, and governance level. S20 adds the autonomous closed-loop orchestration layer while preserving the S18 ChangeSet production mutation boundary and S19 lineage/audit guarantees.
 
 The platform now records capability-level data lineage for workflow executions and maintains a workspace-scoped, SHA-256 hash-chained audit trail. ChangeSet Apply, ChangeSet Rollback, and approved ChangeSet application emit audit events inside the same transaction as the corresponding production mutation.
 

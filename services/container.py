@@ -1,4 +1,4 @@
-"""Composition root: dependency injection without mutable module globals."""
+﻿"""Composition root: dependency injection without mutable module globals."""
 from __future__ import annotations
 
 from agents.extraction import ExtractionAgent
@@ -91,6 +91,9 @@ from repositories.workflows import WorkflowRepository
 from repositories.workspaces import WorkspaceRepository
 from services.authentication import AuthenticationService
 from application.workflows.simulation_service import SimulationService
+from application.autonomous.autonomous_ops_service import AutonomousOpsService
+from application.autonomous.autonomous_operations_orchestrator import AutonomousOperationsOrchestrator
+from domain.autonomous_operations import AutonomousPolicy
 from services.authorization import AuthorizationService
 from services.data_operations import DataOperationsService
 from services.validation_service import ValidationService
@@ -374,6 +377,28 @@ class Container:
             shadow_runner=self.shadow_execution_runner,
             workflows=self.workflows,
             datasets=self.datasets,
+        )
+
+        self.autonomous_ops = AutonomousOpsService(policy=AutonomousPolicy())
+        self.autonomous_operations_orchestrator = (
+            AutonomousOperationsOrchestrator(
+                data_health=self.data_health,
+                requirements=self.agents.requirements,
+                planner=self.planner,
+                risk_service=self.risk_service,
+                autonomous_ops=self.autonomous_ops,
+                changeset_service=self.changeset_service,
+                changeset_mutation=self.changeset_mutation_service,
+                changeset_rollback=self.changeset_rollback_service,
+                changesets=self.changesets,
+                datasets=self.datasets,
+                approval_service=self.approval_service,
+                workflow_authoring=self.workflow_authoring,
+                workflow_executions=self.workflow_executions,
+                simulation_service=self.simulation_service,
+                memory_service=self.agent_memory,
+                audit_service=self.audit_service,
+            )
         )
 
 

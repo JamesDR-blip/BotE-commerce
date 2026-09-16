@@ -1,5 +1,63 @@
 # CHANGELOG
 
+## S20 — Autonomous Agent Operations — COMPLETE
+
+Implemented the governed autonomous operations loop on top of the existing S18 ChangeSet and S19 lineage/audit boundaries.
+
+### Added
+
+- Added AutonomousPolicy domain contract with hard limits for operations, iterations, affected rows, ChangeSet items, blast radius, and consecutive failures.
+- Added AutonomousDecision and AutonomousEvaluation domain contracts.
+- Added AutonomousOpsService for deterministic autonomous governance.
+- Added AutonomousOperationsOrchestrator.
+- Connected existing DataHealthService, requirements, PlannerAgent, RiskService, SimulationService, ChangeSet services, ApprovalService, WorkflowAuthoringService, WorkflowExecutionRepository, and AgentMemoryService.
+- Added closed-loop Detect -> Diagnose -> Plan -> Simulate -> Risk -> Prepare ChangeSet -> Approve/Apply -> Verify -> Learn orchestration.
+- Added low-risk autonomous ChangeSet Apply path.
+- Added high/critical-risk approval routing.
+- Added fail-closed guardrails for excessive blast radius, affected rows, ChangeSet items, operations, iterations, and consecutive failures.
+- Added failed execution persistence for blocked autonomous operations.
+- Added post-Apply verification of dataset identity, storage key, and content hash.
+- Added execution learning after successful verified autonomous Apply.
+- Added targeted unit and integration coverage.
+- Wired the autonomous orchestrator through services/container.py.
+
+### Architectural Decisions
+
+- Keep ChangeSet as the only production mutation boundary.
+- Do not introduce a second planner, risk engine, approval service, verification service, or workflow engine; reuse existing application/execution abstractions.
+- Keep autonomous governance in the application layer and hard policy contracts in the domain layer.
+- Separate RiskService classification from autonomous hard guardrails.
+- Do not invoke capabilities directly from the autonomous orchestrator.
+- Use existing ChangeSet preparation, transactional Apply, Rollback, Approval, Lineage, and Audit boundaries.
+- Treat invalid or missing blast-radius data as unsafe for autonomous Apply.
+- Keep streaming autonomous mutation fail-closed because the existing ChangeSet preparation path does not support streaming.
+
+### Security / Safety
+
+- Autonomous execution is bounded by explicit operation, iteration, row, ChangeSet-item, blast-radius, and consecutive-failure ceilings.
+- High/Critical risk actions do not auto-apply and instead create approval requests.
+- Blocked operations fail closed and do not mutate production datasets.
+- Production mutations continue to emit the existing transactional audit events.
+- No direct capability or dataset mutation path was introduced.
+
+### Verification
+
+- Full regression: **638 passed**.
+- Latest full-suite runtime: **27.56 seconds**.
+- python -m compileall -q .: passed.
+- git diff --check: passed.
+- 1 existing Starlette/AnyIO TestClient deprecation warning remains.
+- No new Alembic migration was required.
+- Repository Alembic head remains 20260914_03.
+
+### Known Scope Boundaries
+
+- Streaming autonomous ChangeSet preparation is unsupported and fails closed.
+- Autonomous policy is currently instantiated in the composition root because no existing autonomous-policy configuration mechanism was available.
+- Simulation-derived affected-row and ChangeSet-item metrics require available simulation metadata; broader guardrail telemetry remains future hardening work.
+- Seven pre-existing Alembic model/schema drift operations remain outside S20 scope.
+
+---
 ## S19 — Data Lineage & Audit Trail — COMPLETE
 
 Implemented end-to-end capability-level lineage tracking and a workspace-scoped tamper-evident audit trail on top of the S18 ChangeSet mutation boundary.

@@ -1,156 +1,148 @@
-# S19 Sprint Handoff
+# S20 Sprint Handoff
 
 ## Status
 
-S19 — Data Lineage & Audit Trail: COMPLETE.
+S20 — Autonomous Agent Operations: COMPLETE.
 
-S19 establishes capability-level data lineage and a workspace-scoped, SHA-256 hash-chained audit trail on top of the S18 immutable ChangeSet production mutation boundary.
+S20 establishes a governed autonomous operations loop on top of the S18 ChangeSet production mutation boundary and S19 lineage/audit governance.
 
 ## Objective
 
-Track end-to-end provenance for workflow capability execution and provide an auditable record of user and production mutation actions without exposing sensitive credentials or customer secrets.
+Enable bounded autonomous remediation for low-risk defects while routing high-risk operations to explicit human approval and ensuring every production mutation remains represented by a ChangeSet.
 
 ## Completed Work
 
 ### Domain
 
-- Added DataLineageEvent.
-- Added AuditEvent.
-- Added canonical audit payload construction and SHA-256 event hashing.
-- Preserved framework independence of lineage and audit domain models.
+- Added AutonomousPolicy.
+- Added AutonomousDecision.
+- Added AutonomousEvaluation.
+- Added validation for hard autonomous-operation ceilings.
 
 ### Application
 
-- Added LineageTrackingService.
-- Added AuditService.
-- Added automatic lineage recording after successful capability execution.
-- Added ordered lineage chaining through previous_event_id.
-- Added sensitive metadata sanitization.
-- Added transactional audit recording for production mutations.
-- Integrated audit recording with:
-  - ChangeSet Apply
-  - ChangeSet Rollback
-  - Approval ChangeSet Apply
+- Added AutonomousOpsService.
+- Added AutonomousOperationsOrchestrator.
+- Implemented Detect -> Diagnose -> Plan -> Simulate -> Risk -> Prepare ChangeSet -> Approve/Apply -> Verify -> Learn.
+- Reused existing health, requirement, planning, simulation, risk, ChangeSet, approval, workflow persistence, and memory services.
+- Added low-risk auto-apply routing.
+- Added high/critical-risk approval routing.
+- Added fail-closed blocked execution handling.
+- Added post-Apply verification.
+- Added execution learning after successful verified autonomous Apply.
 
-### Execution
+### Execution / Mutation Boundary
 
-- Extended CapabilityExecutor with an optional lineage callback.
-- Extended CapabilityExecutionService with optional lineage context.
-- Extended WorkflowEngine to propagate dataset/workflow lineage context without breaking existing narrow test/fake execution services.
-- Preserved ExecutionTrace as runtime execution telemetry.
+- Autonomous orchestration does not directly invoke capabilities for production mutation.
+- Candidate materialization uses the existing ChangeSetService.prepare_candidate().
+- Production Apply uses the existing transactional ChangeSetMutationService.
+- Rollback uses the existing ChangeSetRollbackService.
+- Autonomous streaming mutation fails closed because the existing ChangeSet preparation path rejects streaming mode.
 
-### Infrastructure
+### Infrastructure / Composition
 
-- Added DataLineageEventRepository.
-- Added AuditEventRepository.
-- Added workspace serialization for audit hash-chain writes.
-- Added owner-scoped lineage queries.
-- Added owner-scoped and filtered audit queries.
+- Wired AutonomousOpsService and AutonomousOperationsOrchestrator through services/container.py.
+- No new repository or database model was introduced for S20.
 
-### API
+### Tests
 
-- Added GET /datasets/{dataset_id}/lineage.
-- Added GET /audit-logs.
-- Enforced authenticated owner/workspace scope.
-- Exposed audit hash-chain metadata and sanitized audit metadata.
+- Added autonomous policy unit coverage.
+- Added autonomous orchestrator integration coverage.
+- Covered low-risk auto-apply and verification.
+- Covered high-risk approval routing.
+- Covered blocked guardrail behavior.
+- Covered ChangeSet-backed mutation and verification behavior.
+- Full regression passes with **638 tests**.
 
-### Database / Migration
+## Autonomous Policy
 
-- Added 20260914_03_add_lineage_audit.py.
-- Added data_lineage_events.
-- Added audit_events.
-- Added indexed dataset/execution/workflow/workspace/resource fields.
-- Added unique SHA-256 event_hash.
-- Local database is at Alembic revision 20260914_03.
+Default hard limits:
+
+- max_operations = 1
+- max_iterations = 1
+- max_affected_rows = 100
+- max_changeset_items = 100
+- max_blast_radius = 0.1
+- max_consecutive_failures = 1
+
+Risk score classification remains the responsibility of the existing RiskService. Autonomous hard limits are an additional safety boundary and are not a replacement for RiskService classification.
 
 ## Architecture Decisions
 
-1. Keep ExecutionTrace separate from lineage and audit.
-2. Keep lineage and audit models in the Domain layer.
-3. Keep orchestration in Application services.
-4. Keep SQLAlchemy persistence in repository adapters.
-5. Emit lineage through an optional execution callback to preserve backward compatibility.
-6. Keep ChangeSet as the only production mutation boundary.
-7. Write mutation audit events in the same transaction as the production mutation.
-8. Scope lineage and audit APIs to authenticated ownership boundaries.
-9. Use SHA-256 canonical event hashing with workspace-scoped previous-event chaining.
-10. Treat the audit trail as tamper-evident rather than absolutely tamper-proof.
+1. Keep ChangeSet as the only production mutation boundary.
+2. Reuse existing PlannerAgent rather than creating an AutonomousPlannerAgent.
+3. Reuse existing RiskService rather than creating an AutonomousRiskService.
+4. Reuse existing ApprovalService rather than creating an AutonomousApprovalService.
+5. Reuse existing Workflow/ChangeSet execution boundaries rather than creating an AutonomousWorkflowEngine.
+6. Reuse existing verification and data-health signals rather than creating an AutonomousVerificationService.
+7. Keep autonomous policy evaluation in the application layer with policy contracts in the domain layer.
+8. Do not invoke capabilities directly from the autonomous orchestrator.
+9. Treat missing or invalid blast-radius information as unsafe for autonomous Apply.
+10. Keep streaming autonomous mutation fail-closed until ChangeSet candidate materialization supports streaming safely.
+11. Preserve the existing synchronous and asynchronous WorkflowEngine paths for non-autonomous execution.
 
-## Security
+## Security / Safety
 
-- Audit metadata is sanitized for credentials, access tokens, refresh tokens, ID tokens, bearer/basic authorization values, passwords, secrets, API keys, private keys, cookies, and session tokens.
-- No unsafe eval/exec execution was introduced.
+- Autonomous loops have bounded operation and iteration counts.
+- Affected rows and ChangeSet items have explicit ceilings.
+- Blast radius has an explicit maximum.
+- Consecutive failures halt autonomous routing.
+- HIGH and CRITICAL risk operations require approval.
+- BLOCKED operations are persisted as failed executions and do not proceed to Apply.
+- Production dataset mutation remains exclusively inside the ChangeSet transaction boundary.
+- Existing S19 audit events continue to record production ChangeSet mutations.
+- No unsafe eval/exec path was introduced.
 - No unsafe YAML loading was introduced.
-- No raw production mutation path bypassing ChangeSet was introduced.
-- Audit events are written transactionally with the relevant ChangeSet mutation.
-- Owner/workspace isolation is enforced at repository/API boundaries.
+- Existing owner/workspace authorization boundaries remain in force.
+
+## Database / Migration
+
+- No S20 Alembic migration was required.
+- Repository Alembic head: 20260914_03.
+- Latest migration remains 20260914_03_add_lineage_audit.py.
+- Seven pre-existing Alembic model/schema drift operations remain unrelated to S20.
+- Existing clean-from-zero Alembic baseline/bootstrap limitations remain outside S20 scope.
 
 ## Verification
 
-- Full regression: **612 passed**.
-- Latest full-suite runtime: **26.65 seconds**.
+- Full regression: **638 passed**.
+- Runtime: **27.56 seconds**.
+- python -m compileall -q .: passed.
+- git diff --check: passed.
 - 1 existing Starlette/AnyIO TestClient deprecation warning remains.
-- git diff --check: no whitespace errors; only Git LF/CRLF normalization warnings remain.
-- S19 lineage, audit, API, repository, workflow, ChangeSet, approval, and rollback integration tests pass.
 
 ## Files Added
 
-- api/routes/lineage.py
-- application/audit/
-- application/lineage/
-- database/migrations/versions/20260914_03_add_lineage_audit.py
-- domain/audit.py
-- domain/lineage.py
--
-repositories/aaudit_events.py
--
-repositories/data_lineage_events.py
-- 	tests/test_audit_service.py
-- 	tests/test_lineage_audit_api.py
+- pplication/autonomous/__init__.py
+- pplication/autonomous/autonomous_ops_service.py
+- pplication/autonomous/autonomous_operations_orchestrator.py
+- domain/autonomous_operations.py
+- 	ests/test_autonomous_ops_service.py
+- 	ests/test_autonomous_operations_orchestrator.py
 
 ## Files Modified
 
-- api/dependencies.py
-- api/main.py
-- api/routes/__init__.py
-- api/routes/changesets.py
-- application/approval/approval_changeset_service.py
-- application/approval/approval_service.py
-- application/changesets/mutation_service.py
-- application/changesets/rollback_service.py
-- data_quality.db
-- database/models.py
-- execution/capabilities/capability_execution_service.py
-- execution/capabilities/capability_executor.py
-- execution/workflow/engine.py
--
-repositories/changesets.py
-- schemas/responses.py
 - services/container.py
-- 	tests/test_approval_changeset_service.py
-- 	tests/test_changeset_mutation_service.py
-- 	tests/test_changeset_rollback_service.py
 
 ## Known Issues / Deferred Work
 
-1. Artifact-level lineage does not yet attach storage_key and content_hash to every lineage edge.
-2. Audit retention enforcement is not yet implemented.
-3. Seven pre-existing Alembic model/schema drift operations remain outside S19 scope.
-4. Existing Starlette/AnyIO TestClient deprecation warning remains.
-5. The local clean-from-zero Alembic baseline/bootstrap limitation remains outside S19 scope.
+1. Streaming autonomous ChangeSet candidate preparation is unsupported and fails closed.
+2. Simulation-derived affected-row and ChangeSet-item metrics require available simulation metadata; broader autonomous guardrail telemetry remains future hardening work.
+3. Autonomous policy configuration is currently instantiated in the composition root because no existing configuration mechanism was available.
+4. Seven pre-existing Alembic model/schema drift operations remain outside S20 scope.
+5. Existing Starlette/AnyIO TestClient deprecation warning remains.
+6. S19 artifact-level lineage and audit retention enforcement remain deferred.
 
 ## Handoff Invariant
 
 **ChangeSet remains the only production mutation boundary.**
 
-The production lifecycle is:
+The governed lifecycle is:
 
-Detect → Diagnose → Plan → Simulate → Risk → Prepare ChangeSet → Approve → Apply → Verify → Audit
-
-Lineage now records capability execution provenance across the workflow, while audit records user and production mutation actions.
+Detect -> Diagnose -> Plan -> Simulate -> Risk -> Prepare ChangeSet -> Approve/Apply -> Verify -> Audit/Learn
 
 ## Next Sprint
 
-S20 — Autonomous Agent Operations.
+S21 — Channel Sync & Multi-Platform Connectors.
 
-S20 should build on the established ChangeSet, approval, lineage, and audit governance boundaries rather than introducing an independent production mutation path.
+S21 should build on the existing autonomous governance, ChangeSet, approval, lineage, and audit boundaries rather than introducing an independent production mutation path.
