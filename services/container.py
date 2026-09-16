@@ -1,4 +1,4 @@
-﻿"""Composition root: dependency injection without mutable module globals."""
+"""Composition root: dependency injection without mutable module globals."""
 from __future__ import annotations
 
 from agents.extraction import ExtractionAgent
@@ -18,6 +18,8 @@ from agents.workflow import (
 )
 from application.approval.approval_changeset_service import ApprovalChangeSetService
 from application.audit.audit_service import AuditService
+from application.channels.canonical_product_service import CanonicalProductService
+from application.channels.channel_sync_service import ChannelSyncService
 from application.approval.approval_service import ApprovalService
 from application.changesets.changeset_service import ChangeSetService
 from application.changesets.mutation_service import ChangeSetMutationService
@@ -60,6 +62,12 @@ from execution.workflow.engine import WorkflowEngine, WorkflowExecutionWorker
 from execution.shadow_execution_runner import ShadowExecutionRunner
 from extractors.deterministic import DeterministicProductExtractor
 from infrastructure.cache.ttl import TTLCache
+from infrastructure.channels.connector_factory import ChannelConnectorFactory
+from infrastructure.security.credential_cipher import FernetCredentialCipher
+from infrastructure.security.unavailable_credential_cipher import (
+    UnavailableCredentialCipher,
+)
+from infrastructure.channels.http_client import HttpClient
 from infrastructure.persistence.approval_repository import ApprovalRepository
 from infrastructure.persistence.execution_trace import ExecutionTracePersistence
 from infrastructure.persistence.risk_repository import RiskRepository
@@ -75,6 +83,8 @@ from plugins.registry import ValidatorRegistry
 from reports.generator import ReportAgent
 from repositories.agent_memory import AgentMemoryRepository
 from repositories.audit_events import AuditEventRepository
+from repositories.channel_mappings import ChannelMappingRepository
+from repositories.channels import ChannelRepository
 from repositories.capability_execution_traces import (
     CapabilityExecutionTraceRepository,
 )
@@ -86,6 +96,7 @@ from repositories.executions import ExecutionRepository
 from repositories.projects import ProjectRepository
 from repositories.rules import RuleRepository
 from repositories.users import UserRepository
+from repositories.sync_jobs import SyncAttemptRepository, SyncJobRepository
 from repositories.workflow_executions import WorkflowExecutionRepository
 from repositories.workflows import WorkflowRepository
 from repositories.workspaces import WorkspaceRepository
@@ -238,6 +249,19 @@ class Container:
         self.workspaces = WorkspaceRepository(sessions)
         self.projects = ProjectRepository(sessions)
         self.datasets = DatasetRepository(sessions)
+        self.channels = ChannelRepository(
+            sessions,
+            credential_cipher=(
+                FernetCredentialCipher(
+                    settings.channel_credentials_encryption_key.get_secret_value()
+                )
+                if settings.channel_credentials_encryption_key is not None
+                else UnavailableCredentialCipher()
+            ),
+        ),
+        self.channel_mappings = ChannelMappingRepository(sessions)
+        self.sync_jobs = SyncJobRepository(sessions)
+        self.sync_attempts = SyncAttemptRepository(sessions)
         self.changesets = ChangeSetRepository(sessions)
         self.data_lineage_events = DataLineageEventRepository(sessions)
         self.audit_events = AuditEventRepository(sessions)
@@ -259,6 +283,11 @@ class Container:
         )
         self.dataset_storage = DatasetStorage(settings.dataset_storage_path)
 
+        self.channel_http_client = HttpClient()
+        self.channel_connector_factory = ChannelConnectorFactory(
+            http_client=self.channel_http_client,
+        )
+
         self.shadow_execution_runner = ShadowExecutionRunner(
             capability_execution=self.capability_execution,
             dataset_storage=self.dataset_storage,
@@ -273,6 +302,30 @@ class Container:
             storage=self.dataset_storage,
         )
         self.mapping = MappingService()
+        self.canonical_product_service = CanonicalProductService(
+            datasets=self.datasets,
+            storage=self.dataset_storage,
+            reader=self.uploads,
+            mapping=self.mapping,
+            normalization=self.normalization,
+        )
+
+        self.channel_sync = ChannelSyncService(
+            channels=self.channels,
+            mappings=self.channel_mappings,
+            sync_jobs=self.sync_jobs,
+            sync_attempts=self.sync_attempts,
+            canonical_products=self.canonical_product_service,
+            datasets=self.datasets,
+            projects=self.projects,
+            connector_factory=(
+                lambda channel, credentials: self.channel_connector_factory.create(
+                    channel=channel,
+                    credentials=credentials,
+                )
+            ),
+            audit_service=self.audit_service,
+        )
 
         self.data_health = DataHealthService(
             datasets=self.datasets,

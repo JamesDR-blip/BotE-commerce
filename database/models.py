@@ -1,4 +1,4 @@
-"""SQLAlchemy persistence schema."""
+﻿"""SQLAlchemy persistence schema."""
 from __future__ import annotations
 
 import uuid
@@ -85,6 +85,49 @@ class WorkspaceRecord(Base):
     projects: Mapped[list["ProjectRecord"]] = relationship(
         back_populates="workspace",
         cascade="all, delete-orphan",
+    )
+
+class ChannelRecord(Base):
+    """Persistence model for workspace-owned external channel connections."""
+    __tablename__ = "channels"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id"),
+        nullable=False,
+        index=True,
+    )
+    channel_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+    credentials_encrypted: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+    enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "channel_type",
+            "name",
+            name="uq_channels_workspace_channel_name",
+        ),
     )
 
 class ProjectRecord(Base):
@@ -210,6 +253,123 @@ class DatasetRecord(Base):
 
     project: Mapped[ProjectRecord] = relationship(
         back_populates="datasets"
+    )
+
+
+class SyncJobRecord(Base):
+    """Persistence model for an idempotent external channel sync job."""
+    __tablename__ = "sync_jobs"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id"),
+        nullable=False,
+        index=True,
+    )
+
+    dataset_id: Mapped[str] = mapped_column(
+        ForeignKey("datasets.id"),
+        nullable=False,
+        index=True,
+    )
+
+    channel_id: Mapped[str] = mapped_column(
+        ForeignKey("channels.id"),
+        nullable=False,
+        index=True,
+    )
+
+    idempotency_key: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        index=True,
+    )
+
+    error: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "idempotency_key",
+            name="uq_sync_jobs_workspace_idempotency",
+        ),
+    )
+
+
+class SyncAttemptRecord(Base):
+    """Persistence model for one bounded channel connector attempt."""
+    __tablename__ = "sync_attempts"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+    )
+
+    sync_job_id: Mapped[str] = mapped_column(
+        ForeignKey("sync_jobs.id"),
+        nullable=False,
+        index=True,
+    )
+
+    attempt_number: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        index=True,
+    )
+
+    request_hash: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+    )
+
+    external_product_id: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        default="",
+    )
+
+    error: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "sync_job_id",
+            "attempt_number",
+            name="uq_sync_attempts_job_attempt",
+        ),
     )
 
 class WorkflowRecord(Base):
@@ -1010,3 +1170,51 @@ def make_session_factory(url: str):
 
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
+
+class ChannelMappingRecord(Base):
+    """Persistence model for a canonical product's channel mapping."""
+    __tablename__ = "channel_mappings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    channel_id: Mapped[str] = mapped_column(
+        ForeignKey("channels.id"),
+        nullable=False,
+        index=True,
+    )
+    canonical_product_id: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        index=True,
+    )
+    channel_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+    external_product_id: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        default="",
+    )
+    last_synced_hash: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        default="",
+    )
+    active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+    __table_args__ = (
+        UniqueConstraint(
+            "channel_id",
+            "canonical_product_id",
+            name="uq_channel_mappings_channel_product",
+        ),
+    )

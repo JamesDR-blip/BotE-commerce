@@ -8,6 +8,8 @@ from services.authentication import AuthenticationService
 from services.authorization import AuthorizationService
 from services.data_operations import DataOperationsService
 from application.datasets.dataset_service import DatasetService
+from application.channels.canonical_product_service import CanonicalProductService
+from application.channels.channel_sync_service import ChannelSyncService
 from application.rules.rule_intelligence_service import RuleIntelligenceService
 from domain.catalog.mapping import MappingService
 from application.quality.quality_service import QualityService
@@ -21,8 +23,10 @@ from application.changesets.query_service import ChangeSetQueryService
 from application.lineage.lineage_tracking_service import LineageTrackingService
 from application.audit.audit_service import AuditService
 
+from repositories.channels import ChannelRepository
 from repositories.executions import ExecutionRepository
 from repositories.execution_traces import ExecutionTraceRepository
+from repositories.sync_jobs import SyncJobRepository
 
 
 def get_quality_service(request: Request) -> QualityService:
@@ -51,6 +55,24 @@ def get_workflow_authoring_service(request: Request) -> WorkflowAuthoringService
 
 def get_dataset_service(request: Request) -> DatasetService:
     return request.app.state.dataset_service
+
+
+def get_canonical_product_service(
+    request: Request,
+) -> CanonicalProductService:
+    return request.app.state.container.canonical_product_service
+
+
+def get_channel_repository(request: Request) -> ChannelRepository:
+    return request.app.state.container.channels
+
+
+def get_channel_sync_service(request: Request) -> ChannelSyncService:
+    return request.app.state.container.channel_sync
+
+
+def get_sync_job_repository(request: Request) -> SyncJobRepository:
+    return request.app.state.container.sync_jobs
 
 
 def get_workspace_project_service(

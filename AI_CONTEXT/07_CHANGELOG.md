@@ -1,4 +1,77 @@
-# CHANGELOG
+﻿# CHANGELOG
+
+## S21 — Channel Sync & Multi-Platform Connectors — COMPLETE
+
+### Summary
+
+S21 adds the first governed external-channel synchronization layer while preserving the existing internal production mutation boundary.
+
+### Delivered
+
+- CanonicalProduct and ChannelMapping domain contracts.
+- Channel, SyncJob, SyncAttempt and Connector contracts.
+- Deterministic canonical-product projection.
+- Idempotent sync jobs.
+- Create/update/noop delta handling using deterministic hashes.
+- Channel mapping persistence and reconciliation.
+- Encrypted channel credentials with fail-closed behavior.
+- Bounded HTTP retry/backoff.
+- Shopify connector.
+- Amazon SP-API connector.
+- Channel synchronization API.
+- Owner/workspace-scoped repository access.
+
+### Security
+
+- Credentials are encrypted at rest.
+- Credentials are excluded from API responses.
+- Missing encryption configuration fails closed.
+- No plaintext fallback.
+- No unsafe eval/exec, unsafe YAML, or arbitrary SQL path was introduced.
+
+### Database
+
+S21 migrations:
+
+- `20260916_01_add_channels.py`
+- `20260916_02_add_sync_jobs.py`
+- `20260916_03_add_channel_mappings.py`
+
+Repository Alembic head: `20260916_03`.
+
+### Architecture Decisions
+
+1. Preserve ChangeSet as the only internal production dataset mutation boundary.
+2. Treat external channel operations as a separate external side-effect boundary.
+3. Reuse existing dataset, storage, mapping and normalization abstractions for canonical projection.
+4. Keep channel contracts in Domain, orchestration in Application, and external API adapters in Infrastructure.
+5. Use injected credential encryption and fail closed when encryption is unavailable.
+6. Enforce sync idempotency in both application logic and database constraints.
+7. Use deterministic product hashes for delta/noop decisions.
+8. Implement Shopify and Amazon SP-API according to S21 verification scope.
+9. Do not fabricate Amazon SigV4 signing; production-grade signing remains deferred.
+10. Keep unsupported channel adapters explicit rather than introducing unsafe placeholders.
+
+### Verification
+
+- Full regression: **706 passed, 1 warning**.
+- S21 targeted coverage: **57 passed**.
+- S21 API coverage: **11 passed, 1 warning**.
+- `compileall`: PASS.
+- `git diff --check`: PASS.
+- Alembic current/head: `20260916_03`.
+
+### Deferred Work
+
+- TikTok Shop connector.
+- Shopee connector.
+- Lazada connector.
+- Production-grade Amazon SP-API SigV4 authentication/signing.
+- Dedicated distributed/channel-specific rate limiting.
+- Durable asynchronous channel workers.
+- Cross-product external compensation/reconciliation.
+
+---
 
 ## S20 — Autonomous Agent Operations — COMPLETE
 

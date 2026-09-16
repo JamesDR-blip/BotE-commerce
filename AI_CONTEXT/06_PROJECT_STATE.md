@@ -1,4 +1,4 @@
-# PROJECT STATE
+﻿# PROJECT STATE
 
 ## Current Sprint
 
@@ -285,3 +285,69 @@ Future S15-adjacent improvements should be introduced only when justified by pro
 - category benchmarks,
 - persisted remediation lifecycle,
 - richer timeliness/freshness signals.
+
+---
+
+## S21 Channel Sync & Multi-Platform Connectors
+
+S21 is complete for the core channel-sync framework and the Shopify/Amazon SP-API verification scope.
+
+### Delivered
+
+- CanonicalProduct.
+- ChannelMapping.
+- Channel, SyncJob and SyncAttempt aggregates.
+- Connector contracts and state transitions.
+- Deterministic canonical-product projection.
+- Idempotent SyncJob handling.
+- Create/update/noop delta decisions.
+- Channel mapping persistence.
+- Encrypted channel credentials with fail-closed behavior.
+- HTTP retry/backoff.
+- Shopify connector.
+- Amazon SP-API connector.
+- Channel synchronization API.
+- Owner/workspace-scoped repository access.
+
+### Security Invariants
+
+- Channel credentials are encrypted at rest.
+- No plaintext credential fallback exists.
+- Credentials are never exposed through API response contracts.
+- Owner/workspace boundaries remain enforced.
+- Sync idempotency is protected at application and database levels.
+- No unsafe eval/exec, unsafe YAML, or arbitrary SQL path was introduced.
+
+### Database
+
+Current Alembic head:
+
+20260916_03
+
+S21 migrations:
+
+- 20260916_01_add_channels.py
+- 20260916_02_add_sync_jobs.py
+- 20260916_03_add_channel_mappings.py
+
+### Verification
+
+- Full regression: **706 passed, 1 existing warning**.
+- S21 targeted suite: **57 passed**.
+- S21 API tests: **11 passed, 1 existing warning**.
+- compileall: PASS.
+- git diff --check: PASS.
+
+### Deferred Work
+
+- TikTok Shop connector.
+- Shopee connector.
+- Lazada connector.
+- Production-grade Amazon SP-API SigV4 authentication/signing.
+- Dedicated distributed/channel-specific rate limiting.
+- Durable asynchronous channel workers.
+- Cross-product external compensation/reconciliation.
+
+### Architectural Boundary
+
+S21 external channel synchronization is an external side-effect boundary. It does not replace or bypass the existing ChangeSet boundary for internal production dataset mutations.

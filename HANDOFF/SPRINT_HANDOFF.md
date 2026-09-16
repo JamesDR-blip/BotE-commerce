@@ -1,148 +1,160 @@
-# S20 Sprint Handoff
+# S21 Sprint Handoff
 
 ## Status
 
-S20 — Autonomous Agent Operations: COMPLETE.
+S21 — Channel Sync & Multi-Platform Connectors: COMPLETE.
 
-S20 establishes a governed autonomous operations loop on top of the S18 ChangeSet production mutation boundary and S19 lineage/audit governance.
-
-## Objective
-
-Enable bounded autonomous remediation for low-risk defects while routing high-risk operations to explicit human approval and ensuring every production mutation remains represented by a ChangeSet.
+S21 establishes the first external-channel synchronization layer while preserving the existing ChangeSet, approval, lineage, audit, and authorization boundaries.
 
 ## Completed Work
 
 ### Domain
 
-- Added AutonomousPolicy.
-- Added AutonomousDecision.
-- Added AutonomousEvaluation.
-- Added validation for hard autonomous-operation ceilings.
+- CanonicalProduct.
+- ChannelMapping.
+- Channel.
+- SyncJob.
+- SyncAttempt.
+- Connector, ConnectorRequest and ConnectorResult.
+- Explicit SyncJob state transitions.
 
 ### Application
 
-- Added AutonomousOpsService.
-- Added AutonomousOperationsOrchestrator.
-- Implemented Detect -> Diagnose -> Plan -> Simulate -> Risk -> Prepare ChangeSet -> Approve/Apply -> Verify -> Learn.
-- Reused existing health, requirement, planning, simulation, risk, ChangeSet, approval, workflow persistence, and memory services.
-- Added low-risk auto-apply routing.
-- Added high/critical-risk approval routing.
-- Added fail-closed blocked execution handling.
-- Added post-Apply verification.
-- Added execution learning after successful verified autonomous Apply.
+- CanonicalProductService.
+- ChannelSyncService.
+- Deterministic product projection and hashing.
+- Create/update/noop delta handling.
+- Sync-job idempotency.
+- SyncAttempt persistence.
+- ChannelMapping reconciliation.
+- Owner/workspace authorization.
+- Sync lifecycle audit events.
 
-### Execution / Mutation Boundary
+### Infrastructure / Security
 
-- Autonomous orchestration does not directly invoke capabilities for production mutation.
-- Candidate materialization uses the existing ChangeSetService.prepare_candidate().
-- Production Apply uses the existing transactional ChangeSetMutationService.
-- Rollback uses the existing ChangeSetRollbackService.
-- Autonomous streaming mutation fails closed because the existing ChangeSet preparation path rejects streaming mode.
+- Channel HTTP client with bounded retry/backoff.
+- Connector factory.
+- Shopify connector.
+- Amazon SP-API connector.
+- CredentialCipher abstraction.
+- Fernet credential encryption.
+- Fail-closed unavailable credential cipher.
+- Channel/sync-job/attempt/mapping repositories.
 
-### Infrastructure / Composition
+### API
 
-- Wired AutonomousOpsService and AutonomousOperationsOrchestrator through services/container.py.
-- No new repository or database model was introduced for S20.
+- `GET /channels`
+- `POST /channels/{channel_id}/sync`
+- `GET /sync-jobs/{sync_job_id}`
 
-### Tests
-
-- Added autonomous policy unit coverage.
-- Added autonomous orchestrator integration coverage.
-- Covered low-risk auto-apply and verification.
-- Covered high-risk approval routing.
-- Covered blocked guardrail behavior.
-- Covered ChangeSet-backed mutation and verification behavior.
-- Full regression passes with **638 tests**.
-
-## Autonomous Policy
-
-Default hard limits:
-
-- max_operations = 1
-- max_iterations = 1
-- max_affected_rows = 100
-- max_changeset_items = 100
-- max_blast_radius = 0.1
-- max_consecutive_failures = 1
-
-Risk score classification remains the responsibility of the existing RiskService. Autonomous hard limits are an additional safety boundary and are not a replacement for RiskService classification.
+Credentials are never exposed through API responses.
 
 ## Architecture Decisions
 
-1. Keep ChangeSet as the only production mutation boundary.
-2. Reuse existing PlannerAgent rather than creating an AutonomousPlannerAgent.
-3. Reuse existing RiskService rather than creating an AutonomousRiskService.
-4. Reuse existing ApprovalService rather than creating an AutonomousApprovalService.
-5. Reuse existing Workflow/ChangeSet execution boundaries rather than creating an AutonomousWorkflowEngine.
-6. Reuse existing verification and data-health signals rather than creating an AutonomousVerificationService.
-7. Keep autonomous policy evaluation in the application layer with policy contracts in the domain layer.
-8. Do not invoke capabilities directly from the autonomous orchestrator.
-9. Treat missing or invalid blast-radius information as unsafe for autonomous Apply.
-10. Keep streaming autonomous mutation fail-closed until ChangeSet candidate materialization supports streaming safely.
-11. Preserve the existing synchronous and asynchronous WorkflowEngine paths for non-autonomous execution.
+1. Keep ChangeSet as the only internal production dataset mutation boundary.
+2. Treat external channel API operations as an external side-effect boundary.
+3. Reuse existing dataset, storage, mapping and normalization abstractions.
+4. Keep channel contracts in Domain.
+5. Keep synchronization orchestration in Application.
+6. Keep HTTP/channel integrations in Infrastructure.
+7. Inject credential encryption rather than storing plaintext credentials.
+8. Fail closed when credential encryption is unavailable.
+9. Enforce idempotency at both application and database levels.
+10. Use deterministic product hashes for noop/delta decisions.
+11. Implement Shopify and Amazon SP-API according to S21 verification scope.
+12. Do not fabricate Amazon SigV4 signing; production-grade signing remains deferred.
+13. Keep unsupported channels explicit rather than creating unsafe placeholders.
 
 ## Security / Safety
 
-- Autonomous loops have bounded operation and iteration counts.
-- Affected rows and ChangeSet items have explicit ceilings.
-- Blast radius has an explicit maximum.
-- Consecutive failures halt autonomous routing.
-- HIGH and CRITICAL risk operations require approval.
-- BLOCKED operations are persisted as failed executions and do not proceed to Apply.
-- Production dataset mutation remains exclusively inside the ChangeSet transaction boundary.
-- Existing S19 audit events continue to record production ChangeSet mutations.
-- No unsafe eval/exec path was introduced.
-- No unsafe YAML loading was introduced.
-- Existing owner/workspace authorization boundaries remain in force.
+- Credentials encrypted at rest.
+- Credentials excluded from API responses.
+- Owner/workspace authorization enforced.
+- No plaintext credential fallback.
+- No unsafe eval/exec.
+- No unsafe YAML loading.
+- No arbitrary SQL.
+- Bounded HTTP retry/backoff.
 
 ## Database / Migration
 
-- No S20 Alembic migration was required.
-- Repository Alembic head: 20260914_03.
-- Latest migration remains 20260914_03_add_lineage_audit.py.
-- Seven pre-existing Alembic model/schema drift operations remain unrelated to S20.
-- Existing clean-from-zero Alembic baseline/bootstrap limitations remain outside S20 scope.
+- `20260916_01_add_channels.py`
+- `20260916_02_add_sync_jobs.py`
+- `20260916_03_add_channel_mappings.py`
+
+Current Alembic head: `20260916_03`.
+
+Seven pre-existing model/schema drift operations remain outside S21 scope.
 
 ## Verification
 
-- Full regression: **638 passed**.
-- Runtime: **27.56 seconds**.
-- python -m compileall -q .: passed.
-- git diff --check: passed.
-- 1 existing Starlette/AnyIO TestClient deprecation warning remains.
+- Full regression: **706 passed, 1 warning**.
+- S21 targeted coverage: **57 passed**.
+- S21 API coverage: **11 passed, 1 warning**.
+- `python -m compileall`: PASS.
+- `git diff --check`: PASS.
+- Alembic current/head: `20260916_03`.
 
 ## Files Added
 
-- pplication/autonomous/__init__.py
-- pplication/autonomous/autonomous_ops_service.py
-- pplication/autonomous/autonomous_operations_orchestrator.py
-- domain/autonomous_operations.py
-- 	ests/test_autonomous_ops_service.py
-- 	ests/test_autonomous_operations_orchestrator.py
+- `api/routes/channels.py`
+- `application/channels/__init__.py`
+- `application/channels/canonical_product_service.py`
+- `application/channels/channel_sync_service.py`
+- `application/channels/credential_cipher.py`
+- `database/migrations/versions/20260916_01_add_channels.py`
+- `database/migrations/versions/20260916_02_add_sync_jobs.py`
+- `database/migrations/versions/20260916_03_add_channel_mappings.py`
+- `domain/channel_sync.py`
+- `infrastructure/channels/__init__.py`
+- `infrastructure/channels/amazon_sp_api.py`
+- `infrastructure/channels/factory.py`
+- `infrastructure/channels/http_client.py`
+- `infrastructure/channels/shopify.py`
+- `infrastructure/security/credential_cipher.py`
+- `infrastructure/security/unavailable_credential_cipher.py`
+- `repositories/channel_mappings.py`
+- `repositories/channels.py`
+- `repositories/sync_jobs.py`
+- `tests/test_api_channels.py`
+- `tests/test_canonical_product_service.py`
+- `tests/test_channel_connectors.py`
+- `tests/test_channel_repository.py`
+- `tests/test_channel_sync_domain.py`
+- `tests/test_channel_sync_service.py`
+- `tests/test_credential_cipher.py`
+- `tests/test_sync_job_repository.py`
 
 ## Files Modified
 
-- services/container.py
+- `api/dependencies.py`
+- `api/main.py`
+- `api/routes/__init__.py`
+- `configs/settings.py`
+- `database/models.py`
+- `requirements.txt`
+- `schemas/requests.py`
+- `schemas/responses.py`
+- `services/container.py`
+
+`data_quality.db` is a tracked local database artifact advanced by the S21 migrations and should be handled according to repository database-artifact policy.
 
 ## Known Issues / Deferred Work
 
-1. Streaming autonomous ChangeSet candidate preparation is unsupported and fails closed.
-2. Simulation-derived affected-row and ChangeSet-item metrics require available simulation metadata; broader autonomous guardrail telemetry remains future hardening work.
-3. Autonomous policy configuration is currently instantiated in the composition root because no existing configuration mechanism was available.
-4. Seven pre-existing Alembic model/schema drift operations remain outside S20 scope.
-5. Existing Starlette/AnyIO TestClient deprecation warning remains.
-6. S19 artifact-level lineage and audit retention enforcement remain deferred.
-
-## Handoff Invariant
-
-**ChangeSet remains the only production mutation boundary.**
-
-The governed lifecycle is:
-
-Detect -> Diagnose -> Plan -> Simulate -> Risk -> Prepare ChangeSet -> Approve/Apply -> Verify -> Audit/Learn
+1. TikTok Shop connector remains unimplemented.
+2. Shopee connector remains unimplemented.
+3. Lazada connector remains unimplemented.
+4. Amazon SP-API SigV4 production authentication/signing remains deferred.
+5. Dedicated channel/distributed rate limiting remains deferred.
+6. Durable asynchronous channel workers remain deferred.
+7. Cross-product external compensation/reconciliation remains deferred.
+8. Streaming ChangeSet preparation remains unsupported.
+9. Seven pre-existing Alembic drift operations remain.
+10. Existing Starlette/AnyIO deprecation warning remains.
+11. S19 artifact-level lineage and audit retention enforcement remain deferred.
 
 ## Next Sprint
 
-S21 — Channel Sync & Multi-Platform Connectors.
+S22 — AI Copilot for Data Operations.
 
-S21 should build on the existing autonomous governance, ChangeSet, approval, lineage, and audit boundaries rather than introducing an independent production mutation path.
+S22 should build on the existing governed application, ChangeSet, approval, lineage, audit, and channel-sync boundaries rather than introducing a parallel mutation or authorization path.

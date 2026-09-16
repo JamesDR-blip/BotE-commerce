@@ -10,6 +10,7 @@ from .risk import router as risk_router
 from .approval import router as approval_router
 from .changesets import router as changesets_router
 from .lineage import router as lineage_router
+from .channels import router as channels_router
 
 __all__ = [
     "data_router",
@@ -24,4 +25,5 @@ __all__ = [
     "approval_router",
     "changesets_router",
     "lineage_router",
+    "channels_router",
 ]

@@ -1,4 +1,4 @@
-# SPRINTS ROADMAP: Autonomous E-commerce Data Operations Platform
+﻿# SPRINTS ROADMAP: Autonomous E-commerce Data Operations Platform
 
 This directory contains the complete sprint specifications for building and evolving the platform from an AI-assisted data quality tool into a fully **Autonomous E-commerce Data Operations Platform**.
 
@@ -63,8 +63,8 @@ Phase 4: Enterprise Production & Hardening (S24 - S28)
 - [Sprint 17: Shadow Mode & Simulation](sprint-17-shadow-mode.md) *(COMPLETE)*
 - [Sprint 18: ChangeSet & Atomic Rollback Engine](sprint-18-changeset-rollback.md) *(COMPLETE)*
 - [Sprint 19: Data Lineage & Audit Trail](sprint-19-lineage-audit.md) *(COMPLETE)*
-- [Sprint 20: Autonomous Agent Operations](sprint-20-autonomous-agent-ops.md) *(COMPLETE)* *(COMPLETE)* *(COMPLETE)*
-- [Sprint 21: Channel Sync & Multi-Platform Connectors](sprint-21-channel-sync.md)
+- [Sprint 20: Autonomous Agent Operations](sprint-20-autonomous-agent-ops.md) *(COMPLETE)*
+- [Sprint 21: Channel Sync & Multi-Platform Connectors](sprint-21-channel-sync.md) *(COMPLETE)*
 - [Sprint 22: AI Copilot for Data Operations](sprint-22-copilot.md)
 - [Sprint 23: Marketplace & Extensibility Ecosystem](sprint-23-marketplace.md)
 - [Sprint 24: Enterprise Governance & Granular RBAC](sprint-24-governance-rbac.md)

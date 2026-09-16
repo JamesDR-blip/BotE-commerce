@@ -96,3 +96,65 @@ Detect -> Diagnose -> Plan -> Simulate -> Risk -> Prepare ChangeSet -> Approve/A
 S20 is complete and ready for handoff.
 
 Proceed to S21 — Channel Sync & Multi-Platform Connectors.
+---
+
+## S21 Channel Sync & Multi-Platform Connectors
+
+S21 is complete for the core synchronization framework and the Shopify/Amazon SP-API verification scope.
+
+### Delivered
+
+- CanonicalProduct and ChannelMapping.
+- Channel, SyncJob and SyncAttempt aggregates.
+- Connector contracts and explicit sync state transitions.
+- Deterministic canonical-product projection.
+- Idempotent synchronization.
+- Create/update/noop delta handling.
+- Encrypted channel credentials with fail-closed behavior.
+- Bounded HTTP retry/backoff.
+- Shopify connector.
+- Amazon SP-API connector.
+- Channel synchronization API.
+- Owner/workspace-scoped repositories.
+
+### Security
+
+- Credentials are encrypted at rest.
+- Credentials are never exposed through API responses.
+- Missing encryption configuration fails closed.
+- No plaintext credential fallback.
+- Owner/workspace authorization remains enforced.
+
+### Database
+
+S21 migrations:
+
+- `20260916_01_add_channels.py`
+- `20260916_02_add_sync_jobs.py`
+- `20260916_03_add_channel_mappings.py`
+
+Current Alembic head: `20260916_03`.
+
+### Verification
+
+- Full regression: **706 passed, 1 existing warning**.
+- S21 targeted suite: **57 passed**.
+- S21 API tests: **11 passed, 1 existing warning**.
+- `compileall`: PASS.
+- `git diff --check`: PASS after final cleanup.
+
+### Deferred Work
+
+- TikTok Shop connector.
+- Shopee connector.
+- Lazada connector.
+- Production-grade Amazon SP-API SigV4 authentication/signing.
+- Dedicated channel/distributed rate limiting.
+- Durable asynchronous channel workers.
+- Cross-product external compensation/reconciliation.
+
+### Handoff Invariant
+
+**ChangeSet remains the only internal production dataset mutation boundary.**
+
+S21 external channel synchronization does not replace or bypass this boundary.

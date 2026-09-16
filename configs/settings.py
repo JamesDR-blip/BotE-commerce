@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, model_validator 
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     max_upload_bytes: int = Field(default=25 * 1024 * 1024, gt=0)
     enable_llm: bool = False
     google_api_key: str | None = None
+    channel_credentials_encryption_key: SecretStr | None = None
     llm_model: str = "gemini-2.5-flash"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     host: str = "0.0.0.0"

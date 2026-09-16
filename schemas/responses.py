@@ -1,9 +1,25 @@
 """HTTP response contracts."""
-from typing import Any
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel
 
+class ChannelResponse(BaseModel):
+    id: str
+    workspace_id: str
+    channel: str
+    name: str
+    enabled: bool
+
+
+class SyncJobResponse(BaseModel):
+    id: str
+    workspace_id: str
+    dataset_id: str
+    channel_id: str
+    idempotency_key: str
+    status: str
+    error: str | None = None
 
 class ValidationResponse(BaseModel):
     execution_id: str

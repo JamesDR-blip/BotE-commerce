@@ -1,4 +1,4 @@
-# ROADMAP
+﻿# ROADMAP
 
 ## Completed Sprints
 
@@ -42,3 +42,34 @@
 - **S26 DevOps**: Production Docker Compose, Helm charts, CI/CD pipeline automation.
 - **S27 Documentation**: Interactive API specs, architecture diagrams, and developer guides.
 - **S28 Hardening**: Security audit, penetration testing, fuzzing, and compliance certification.
+---
+
+## S21 — Channel Sync & Multi-Platform Connectors
+
+**Status:** COMPLETE
+
+Delivered:
+
+- CanonicalProduct and ChannelMapping domain contracts.
+- Channel, SyncJob, SyncAttempt and Connector contracts.
+- Deterministic canonical-product projection.
+- Idempotent channel synchronization.
+- Channel mapping reconciliation and delta/noop handling.
+- Encrypted channel credentials with fail-closed behavior.
+- Bounded HTTP retry/backoff.
+- Shopify connector.
+- Amazon SP-API connector.
+- Channel synchronization API.
+- Repository, service, connector and API test coverage.
+
+Deferred:
+
+- TikTok Shop connector.
+- Shopee connector.
+- Lazada connector.
+- Production-grade Amazon SP-API SigV4 authentication/signing.
+- Dedicated distributed/channel-specific rate limiting.
+- Durable asynchronous channel workers.
+- Cross-product external compensation/reconciliation.
+
+**Verification:** 706 tests passed in the full regression suite.

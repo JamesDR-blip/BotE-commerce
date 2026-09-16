@@ -16,6 +16,7 @@ from api.routes import (
     approval_router,
     changesets_router,
     lineage_router,
+    channels_router,
 )
 from configs.settings import Settings
 
@@ -74,6 +75,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(approval_router)
     app.include_router(changesets_router)
     app.include_router(lineage_router)
+    app.include_router(channels_router)
 
     app.add_exception_handler(
         Exception,
@@ -89,6 +91,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.workflow_history = container.workflow_history
     app.state.workflow_authoring = container.workflow_authoring
     app.state.dataset_service = container.dataset_service
+    app.state.canonical_product_service = container.canonical_product_service
     app.state.workspace_projects = container.workspace_projects
     app.state.workflow_runtime = container.workflow_runtime
     app.state.simulation_service = container.simulation_service
