@@ -175,3 +175,7 @@ def get_audit_service(request: Request) -> AuditService:
 
 def get_copilot_service(request: Request) -> CopilotService:
     return request.app.state.copilot
+
+
+def get_marketplace_service(request: Request):
+    return request.app.state.container.marketplace

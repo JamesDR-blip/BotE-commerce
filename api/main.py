@@ -18,6 +18,7 @@ from api.routes import (
     lineage_router,
     channels_router,
     copilot_router,
+    marketplace_router,
 )
 from configs.settings import Settings
 
@@ -78,6 +79,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(lineage_router)
     app.include_router(channels_router)
     app.include_router(copilot_router)
+    app.include_router(marketplace_router)
 
     app.add_exception_handler(
         Exception,

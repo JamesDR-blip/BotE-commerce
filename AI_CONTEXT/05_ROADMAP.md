@@ -27,23 +27,22 @@
 - **S21 Channel Sync & Multi-Platform Connectors**: Canonical product/channel sync framework, deterministic projection, idempotent synchronization, encrypted credentials, Shopify/Amazon connectors, and governed sync APIs.
 - **S22 AI Copilot for Data Operations — COMPLETE**: Conversational dataset/health queries, governed workflow authoring, simulation/execution tool dispatch, SSE streaming, Streamlit Copilot UI, and safe approval metadata presentation.
 
+- **S23 Marketplace & Extensibility Ecosystem — COMPLETE**: Signed declarative RulePack packaging, secure archive inspection, Ed25519 verification, filesystem-backed package/version lifecycle, authenticated marketplace APIs, and safe RuleEngine integration.
 ## Current Sprint
 
-- **S22 AI Copilot for Data Operations — COMPLETE**.
+- **S23 Marketplace & Extensibility Ecosystem — COMPLETE**.
 
 ## Next Sprint
 
-- **S23 Marketplace**.
+- **S24 Enterprise Governance**.
 
 ## Future Roadmap
 
-- **S23 Marketplace**: Community rule packs, custom validator plugins, and connectors.
 - **S24 Enterprise Governance**: Role-based access control (RBAC), multi-tenancy quotas, audit compliance.
 - **S25 Observability**: OpenTelemetry tracing, Prometheus metrics, and execution dashboard.
 - **S26 DevOps**: Production Docker Compose, Helm charts, CI/CD pipeline automation.
 - **S27 Documentation**: Interactive API specs, architecture diagrams, and developer guides.
 - **S28 Hardening**: Security audit, penetration testing, fuzzing, and compliance certification.
----
 
 ## S21 — Channel Sync & Multi-Platform Connectors
 

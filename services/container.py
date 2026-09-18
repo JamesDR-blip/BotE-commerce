@@ -1,4 +1,4 @@
-﻿"""Composition root: dependency injection without mutable module globals."""
+"""Composition root: dependency injection without mutable module globals."""
 from __future__ import annotations
 
 from agents.extraction import ExtractionAgent
@@ -35,6 +35,7 @@ from application.copilot.service import CopilotService
 from application.datasets.dataset_ingestion import DatasetIngestionService
 from application.datasets.dataset_service import DatasetService
 from application.lineage.lineage_tracking_service import LineageTrackingService
+from application.marketplace.marketplace_service import MarketplaceService
 from application.memory.memory_service import AgentMemoryService
 from application.quality.data_health_service import DataHealthService
 from application.quality.quality_service import QualityService
@@ -74,6 +75,9 @@ from infrastructure.security.unavailable_credential_cipher import (
     UnavailableCredentialCipher,
 )
 from infrastructure.channels.http_client import HttpClient
+from infrastructure.marketplace.catalog import MarketplacePackageCatalog
+from infrastructure.marketplace.installer import PackageInstaller
+from infrastructure.marketplace.rule_pack import MarketplaceRulePackLoader
 from infrastructure.persistence.approval_repository import ApprovalRepository
 from infrastructure.persistence.execution_trace import ExecutionTracePersistence
 from infrastructure.persistence.risk_repository import RiskRepository
@@ -288,6 +292,19 @@ class Container:
             settings.max_upload_bytes,
         )
         self.dataset_storage = DatasetStorage(settings.dataset_storage_path)
+
+        self.marketplace_catalog = MarketplacePackageCatalog(
+            root=settings.marketplace_staging_path,
+        )
+        self.marketplace_installer = PackageInstaller(
+            staging_root=settings.marketplace_staging_path,
+        )
+        self.marketplace_rule_pack_loader = MarketplaceRulePackLoader()
+        self.marketplace = MarketplaceService(
+            installer=self.marketplace_installer,
+            catalog=self.marketplace_catalog,
+            rule_pack_loader=self.marketplace_rule_pack_loader,
+        )
 
         self.channel_http_client = HttpClient()
         self.channel_connector_factory = ChannelConnectorFactory(
@@ -519,7 +536,5 @@ def build_container(
         app_settings = Settings()
 
     return Container(app_settings)
-
-
 
 

@@ -12,6 +12,7 @@ from .changesets import router as changesets_router
 from .lineage import router as lineage_router
 from .channels import router as channels_router
 from .copilot import router as copilot_router
+from .marketplace import router as marketplace_router
 
 __all__ = [
     "data_router",
@@ -28,4 +29,5 @@ __all__ = [
     "lineage_router",
     "channels_router",
     "copilot_router",
+    "marketplace_router",
 ]

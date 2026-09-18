@@ -2,15 +2,13 @@
 
 ## Current Sprint
 
-**S22 - AI Copilot for Data Operations — COMPLETE**
+**S23 Marketplace & Extensibility Ecosystem — COMPLETE**
 
-S22 is complete at code, test, architecture, security, integration, and governance level. S22 adds the governed conversational Copilot layer while preserving the existing Requirement/Planner, Workflow Runtime, ChangeSet, risk, approval, lineage, audit, and channel synchronization boundaries.
+S23 is complete for the verified signed declarative marketplace scope.
 
 ## Next Sprint
 
-**S23 - Marketplace & Extensibility Ecosystem**
-
-The next sprint should build on the existing capability registry, governed application services, workflow runtime, authorization boundaries, and external channel integration framework without introducing a parallel execution or mutation path.
+**S24 Enterprise Governance**
 
 ## Previous Sprints
 
@@ -361,6 +359,43 @@ S21 migrations:
 S21 external channel synchronization is an external side-effect boundary. It does not replace or bypass the existing ChangeSet boundary for internal production dataset mutations.
 
 ---
+
+## S23 Marketplace & Extensibility Ecosystem — COMPLETE
+
+**Delivered:**
+
+- `MarketplacePackage`, `RulePackManifest`, and `PluginManifest` domain contracts.
+- Secure ZIP/TAR archive inspection with traversal, absolute-path, unsafe-type, and duplicate-member rejection.
+- Ed25519 package signature verification and SHA-256 content hashing.
+- Signed package installation with manifest validation and safe staging.
+- Filesystem-backed installed-package catalog with package/version listing, lookup, update, and uninstall lifecycle.
+- Authenticated `GET /marketplace/packages` and `POST /marketplace/install` APIs.
+- Declarative RulePack loading through `yaml.safe_load` and the existing RuleParser.
+- Coexistence of multiple installed versions of the same package.
+
+**Security:**
+
+- Signature verification occurs before manifest parsing and package staging.
+- No marketplace path enables arbitrary Python, shell, SQL, `eval`, or `exec` execution.
+- Existing authentication and application boundaries remain authoritative.
+- Production dataset mutation remains governed by the existing ChangeSet boundary.
+
+**Verification:**
+
+- S23 targeted regression: 74 passed, 2 warnings.
+- Full project regression: 850 passed, 2 warnings.
+- Marketplace compile check: PASS.
+- `git diff --check`: PASS, with only existing LF/CRLF normalization warnings on modified Python files.
+- Database state remains Alembic `20260916_03` with a single head; S23 introduced no migration.
+
+**Known boundaries:**
+
+- The marketplace catalog is filesystem-backed; a remote public marketplace/catalog is not yet implemented.
+- Plugin and channel-connector manifests are modeled, but arbitrary executable marketplace plugins/connectors are not enabled.
+- Sandboxed executable plugin discovery/runtime remains future work.
+- Deferred S21 connector/signing/worker/rate-limit work and S19 artifact lineage/retention remain outside S23.
+- Pre-existing authentication/token-issuance limitations and seven schema/model drift operations remain outside S23.
+- Existing clean-from-zero Alembic/bootstrap limitations remain outside S23.
 
 ## S22 AI Copilot for Data Operations
 

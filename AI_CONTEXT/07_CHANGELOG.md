@@ -1,5 +1,41 @@
 # CHANGELOG
 
+## S23 — Marketplace & Extensibility Ecosystem — COMPLETE
+
+Implemented the signed declarative marketplace foundation for RulePacks.
+
+### Added
+
+- Marketplace domain contracts: `MarketplacePackage`, `RulePackManifest`, and `PluginManifest`.
+- Secure ZIP/TAR archive inspection and path/type/duplicate-member validation.
+- Ed25519 package signature verification and SHA-256 content hashing.
+- Verified package installation with safe filesystem staging.
+- Filesystem-backed installed package/version catalog and lifecycle operations.
+- Authenticated marketplace package listing and installation APIs.
+- Safe RulePack loading using `yaml.safe_load` and the existing RuleParser.
+- Multi-version package coexistence.
+
+### Security
+
+- Signature verification precedes manifest parsing and staging.
+- No arbitrary Python, shell, SQL, `eval`, or `exec` execution is introduced.
+- Existing authentication, governance, and ChangeSet mutation boundaries remain authoritative.
+
+### Verification
+
+- S23 targeted regression: 74 passed, 2 warnings.
+- Full project regression: 850 passed, 2 warnings.
+- Marketplace compile check: PASS.
+- No database migration introduced; Alembic remains at `20260916_03` with a single head.
+
+### Scope Boundary
+
+- This sprint establishes the verified signed declarative RulePack marketplace foundation.
+- Plugin and connector manifests are modeled, but arbitrary executable marketplace plugins/connectors and sandboxed runtime discovery remain future work.
+- Remote public catalog/discovery is not implemented in S23.
+
+---
+
 ## S22 — AI Copilot for Data Operations
 
 **Status:** COMPLETE

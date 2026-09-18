@@ -1,7 +1,7 @@
 # SPRINT 23: Marketplace & Extensibility Ecosystem
 
 ## Status
-Backlog
+Complete
 
 ## Objective
 Enable an ecosystem marketplace for sharing, importing, and packaging custom category rule packs, validator plugins, and channel connectors.

@@ -6,88 +6,116 @@ AI Studio E-commerce Platform
 **Product:**
 Autonomous E-commerce Data Operations Platform
 
-**Current Sprint:**
-S22 — AI Copilot for Data Operations: COMPLETE.
-
-**Next Sprint:**
-S23 — Marketplace & Extensibility Ecosystem.
-
 **Architecture:**
 Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presentation)
 
 **Composition Root:**
-services/container.py
+`services/container.py`
 
 **Tests:**
-779 / 779 passing via python -m pytest.
+850 / 850 passing via `python -m pytest`.
 
 **Latest Full Suite:**
-49.98 seconds, with 1 existing Starlette/AnyIO TestClient deprecation warning.
+53.51 seconds, with 2 existing warnings.
 
 **Database:**
-- Current local database revision: 20260916_03.
-- Repository Alembic head: 20260916_03.
-- S22 required no database migration.
-- Latest migrations are the S21 channel synchronization migrations.
-- Seven pre-existing model/schema drift operations remain outside S22 scope.
-- Existing clean-from-zero Alembic baseline/bootstrap limitations remain outside S22 scope.
+- Current local database revision: `20260916_03`.
+- Repository Alembic head: `20260916_03`.
+- S23 introduced no database migration.
+- Seven pre-existing model/schema drift operations remain outside S23 scope.
+- Existing clean-from-zero Alembic baseline/bootstrap limitations remain outside S23 scope.
 
 ---
 
-## S22 AI Copilot for Data Operations
+## Current Sprint
 
-S22 is complete at implementation, test, architecture, security, integration, and governance level.
+S23 — Marketplace & Extensibility Ecosystem: COMPLETE.
+
+S23 is complete for the verified signed declarative marketplace scope. The implementation establishes a secure filesystem-backed marketplace foundation for declarative RulePacks while preserving the existing Clean Architecture, application-service boundaries, governance controls, and ChangeSet mutation boundary.
+
+## Next Sprint
+
+S24 — Enterprise Governance.
+
+## S23 Marketplace & Extensibility Ecosystem
 
 ### Delivered
 
-- Provider-facing CopilotAgent.
-- Typed Copilot contracts and fixed tool registry.
-- Eight governed Copilot tools.
-- Owner-scoped dataset and data-health operations.
-- Natural-language workflow authoring through RequirementAgent and PlannerAgent.
-- Workflow simulation and governed execution through existing application/runtime services.
-- Safe approval metadata presentation.
-- Process-local owner-scoped Copilot sessions.
-- FastAPI SSE streaming endpoint.
-- Streamlit Copilot UI.
-- Dashboard API client support.
+- Marketplace domain contracts:
+  - `MarketplacePackage`
+  - `RulePackManifest`
+  - `PluginManifest`
+- Secure ZIP/TAR archive inspection with rejection of:
+  - absolute paths
+  - traversal paths
+  - unsafe archive member types
+  - duplicate members
+- Ed25519 package signature verification.
+- SHA-256 package content hashing.
+- Signed package installation with manifest validation and safe staging.
+- Filesystem-backed installed package catalog.
+- Package/version lifecycle:
+  - list
+  - get
+  - install
+  - update
+  - uninstall
+- Multiple versions of the same package can coexist.
+- Authenticated marketplace APIs:
+  - `GET /marketplace/packages`
+  - `POST /marketplace/install`
+- Safe declarative RulePack loading through `yaml.safe_load` and the existing RuleParser.
 
-### Security / Safety
+## Architecture
 
-- No arbitrary SQL, Python, shell, eval, or exec capability.
-- Tool access restricted to registered platform capabilities.
-- Dataset and health operations remain owner-scoped.
-- Workflow execution remains behind the existing governed runtime.
-- Approval tokens and token hashes are not exposed through Copilot events/cards.
-- ChangeSet remains the only internal production dataset mutation boundary.
-- No parallel authentication or authorization path was introduced.
+S23 extends the existing architecture without introducing a parallel execution or mutation path.
 
-### Verification
+- Domain: marketplace package and manifest contracts.
+- Application: `MarketplaceService` and marketplace ports.
+- Infrastructure: archive inspection, Ed25519 verification, installer, filesystem catalog, and RulePack loader.
+- Presentation: authenticated FastAPI marketplace routes and response schemas.
+- Composition root: marketplace dependencies are wired through `services/container.py`.
 
-- Full regression: **779 passed, 1 warning**.
-- S22 focused coverage: **37 passed, 1 warning**.
-- Broader S22 regression subset: **103 passed, 1 warning**.
-- python -m compileall: PASS.
-- Alembic current/head: 20260916_03.
-- Alembic heads: single head 20260916_03.
+Production dataset mutation remains governed by the existing ChangeSet boundary.
 
-### Known Boundaries
+## Security
 
-- Copilot sessions are process-local and not durable across process restart or multi-worker deployment.
-- Existing authentication/token-issuance limitations remain.
-- Seven pre-existing Alembic model/schema drift operations remain.
-- Existing Starlette/AnyIO TestClient deprecation warning remains.
-- Existing deferred S21 channel connector/signing/worker/rate-limit work remains outside S22.
-- S19 artifact-level lineage/retention enforcement remains deferred.
+- Package signatures are verified before manifest parsing and staging.
+- Archive paths and member types are validated before extraction.
+- Manifest paths are constrained to safe relative paths.
+- YAML parsing uses `yaml.safe_load`.
+- Marketplace installation does not introduce arbitrary Python, shell, SQL, `eval`, or `exec` execution.
+- Existing authentication and application governance boundaries remain authoritative.
+- Signature material and staging paths are not exposed through marketplace responses.
+
+## Verification
+
+- S23 targeted regression: 74 passed, 2 warnings.
+- Full project regression: 850 passed, 2 warnings.
+- Marketplace compile check: PASS.
+- `git diff --check`: PASS, with only existing LF/CRLF normalization warnings on modified Python files.
+- Alembic remains at `20260916_03` with a single head.
+- S23 introduced no database migration.
+
+## Known Boundaries
+
+- The installed-package catalog is filesystem-backed; remote public marketplace/catalog discovery is not implemented.
+- Plugin and channel-connector manifests are modeled, but arbitrary executable marketplace plugins/connectors are not enabled.
+- Sandboxed executable plugin discovery/runtime remains future work.
+- Deferred S21 connector/signing/worker/rate-limit work remains outside S23.
+- S19 artifact lineage/retention remains deferred.
+- Existing authentication/token-issuance limitations remain outside S23.
+- Seven pre-existing schema/model drift operations remain outside S23.
+- Existing clean-from-zero Alembic/bootstrap limitations remain outside S23.
 
 ## Handoff Invariant
 
-**ChangeSet remains the only internal production dataset mutation boundary.**
+ChangeSet remains the only internal production dataset mutation boundary.
 
-Copilot does not bypass ChangeSet, risk, approval, lineage, audit, or channel synchronization governance.
+Marketplace installation may add or remove marketplace package artifacts, but it must not bypass the governed dataset mutation path.
 
-## Next Step
+## Next Action
 
-S22 is complete and ready for handoff.
+S23 is complete and ready for handoff.
 
-Proceed to S23 — Marketplace & Extensibility Ecosystem.
+Proceed to S24 — Enterprise Governance, beginning with repository-first baseline inspection and the S24 sprint specification before implementation.
