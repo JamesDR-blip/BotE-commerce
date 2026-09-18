@@ -120,6 +120,17 @@ class ApprovalRepository:
         with self._sessions() as session:
             return session.get(ApprovalRecord, approval_id)
 
+    def get_by_execution_id(
+        self,
+        execution_id: str,
+    ) -> list[ApprovalRecord]:
+        with self._sessions() as session:
+            statement = (
+                select(ApprovalRecord)
+                .where(ApprovalRecord.execution_id == execution_id)
+                .order_by(ApprovalRecord.created_at.desc())
+            )
+            return list(session.scalars(statement).all())
     def list_pending(self) -> list[ApprovalRecord]:
         with self._sessions() as session:
             statement = (
@@ -128,4 +139,6 @@ class ApprovalRepository:
                 .order_by(ApprovalRecord.created_at.asc())
             )
             return list(session.scalars(statement).all())
+
+
 

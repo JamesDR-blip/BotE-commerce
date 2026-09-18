@@ -1,5 +1,73 @@
-﻿# CHANGELOG
+# CHANGELOG
 
+## S22 — AI Copilot for Data Operations
+
+**Status:** COMPLETE
+
+### Summary
+
+S22 introduces the governed conversational AI Copilot for dataset inspection, data-health diagnosis, workflow authoring, simulation, and workflow execution.
+
+### Delivered
+
+- Added `application/copilot/` application boundary.
+- Added provider-facing `CopilotAgent`.
+- Added typed Copilot contracts, tool definitions, and tool registry.
+- Added eight registered Copilot tools:
+  - `list_datasets`
+  - `get_dataset`
+  - `get_health`
+  - `get_diagnostics`
+  - `get_remediation_proposals`
+  - `author_workflow`
+  - `simulate_workflow`
+  - `execute_workflow`
+- Reused RequirementAgent and PlannerAgent for natural-language workflow authoring.
+- Reused existing Workflow Runtime for execution.
+- Added owner-scoped process-local Copilot sessions.
+- Added FastAPI SSE streaming.
+- Added Streamlit Copilot UI and dashboard client support.
+- Added safe approval metadata presentation without exposing approval tokens or token hashes.
+
+### Architecture / Security
+
+- Copilot tools are restricted to registered platform capabilities.
+- No arbitrary SQL, Python, shell, `eval`, or `exec` capability was introduced.
+- Copilot does not bypass the existing ChangeSet, risk, approval, lineage, audit, or channel-sync boundaries.
+- Existing authentication and authorization boundaries remain authoritative.
+- No new database schema or Alembic migration was required.
+
+### Database
+
+S22 adds no migration.
+
+Current Alembic revision/head:
+
+`20260916_03`
+
+Latest migrations remain the S21 channel synchronization migrations:
+
+- `database/migrations/versions/20260916_01_add_channels.py`
+- `database/migrations/versions/20260916_02_add_sync_jobs.py`
+- `database/migrations/versions/20260916_03_add_channel_mappings.py`
+
+### Verification
+
+- Full regression: **779 passed, 1 warning**.
+- S22 focused coverage: **37 passed, 1 warning**.
+- Broader S22 regression subset: **103 passed, 1 warning**.
+- `python -m compileall`: PASS.
+- Alembic current/head: `20260916_03`.
+- Single Alembic head confirmed.
+
+### Known Boundaries
+
+- Copilot sessions remain process-local.
+- Existing seven Alembic model/schema drift operations remain.
+- Existing Starlette/AnyIO TestClient deprecation warning remains.
+- Existing deferred S21 channel integration work remains outside S22.
+
+---
 ## S21 — Channel Sync & Multi-Platform Connectors — COMPLETE
 
 ### Summary

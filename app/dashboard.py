@@ -224,6 +224,127 @@ def _render_data_health(client: DashboardApiClient) -> None:
     )
 
 
+
+def _render_copilot_approval(approval: dict[str, object]) -> None:
+    st.info("Approval required before this operation can proceed.")
+
+    left, middle, right = st.columns(3)
+    left.metric("Risk", str(approval.get("risk_score", "UNKNOWN")))
+    middle.metric(
+        "Confidence",
+        f"{float(approval.get('confidence_score', 0.0)):.0%}",
+    )
+    right.metric("Status", str(approval.get("status", "UNKNOWN")))
+
+    st.caption(f"Approval ID: {approval.get('approval_id', 'unknown')}")
+    st.caption(f"Execution ID: {approval.get('execution_id', 'unknown')}")
+    st.caption(f"ChangeSet ID: {approval.get('changeset_id', 'unknown')}")
+
+    requested_by = approval.get("requested_by")
+    if requested_by:
+        st.caption(f"Requested by: {requested_by}")
+
+    expires_at = approval.get("expires_at")
+    if expires_at:
+        st.caption(f"Expires: {expires_at}")
+
+    st.caption(
+        "This card is informational. Approval decisions remain within "
+        "the governed Approval API; no approval token is exposed here."
+    )
+
+
+def _render_copilot(client: DashboardApiClient) -> None:
+    st.subheader("AI Copilot")
+    st.caption(
+        "Ask about datasets, diagnose data issues, or request governed "
+        "workflow actions. Production changes remain subject to platform "
+        "approval controls."
+    )
+
+    if "copilot_messages" not in st.session_state:
+        st.session_state["copilot_messages"] = []
+
+    if "copilot_session_id" not in st.session_state:
+        try:
+            session = client.create_copilot_session()
+            st.session_state["copilot_session_id"] = session.session_id
+        except DashboardApiError as exc:
+            st.error(f"Could not start AI Copilot session: {exc}")
+            return
+
+    for message in st.session_state["copilot_messages"]:
+        role = message["role"]
+        with st.chat_message(role):
+            st.markdown(message["content"])
+
+            approval = message.get("approval")
+            if approval is not None:
+                _render_copilot_approval(approval)
+
+    prompt = st.chat_input(
+        "Ask Copilot about your data or operations...",
+        key="copilot_prompt",
+    )
+
+    if not prompt:
+        return
+
+    st.session_state["copilot_messages"].append(
+        {
+            "role": "user",
+            "content": prompt,
+        }
+    )
+
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        response_placeholder = st.empty()
+        accumulated_text = ""
+        approvals: list[dict[str, object]] = []
+
+        try:
+            events = client.stream_copilot(
+                prompt,
+                session_id=st.session_state["copilot_session_id"],
+            )
+
+            for event in events:
+                if event.type == "text" and event.content:
+                    accumulated_text += event.content
+                    response_placeholder.markdown(accumulated_text)
+
+                elif event.type == "action":
+                    action_label = event.action or "platform action"
+                    st.caption(f"Copilot requested: `{action_label}`")
+
+                elif event.type == "approval" and event.approval:
+                    approvals.append(event.approval)
+
+        except DashboardApiError as exc:
+            st.error(f"Copilot request failed: {exc}")
+            return
+
+        if not accumulated_text:
+            response_placeholder.markdown(
+                "Copilot completed the request."
+            )
+
+        assistant_message: dict[str, object] = {
+            "role": "assistant",
+            "content": accumulated_text or "Copilot completed the request.",
+        }
+
+        if approvals:
+            assistant_message["approval"] = approvals[-1]
+
+        st.session_state["copilot_messages"].append(assistant_message)
+
+        for approval in approvals:
+            _render_copilot_approval(approval)
+
 def _render_history(client: DashboardApiClient) -> None:
     st.subheader("Execution history")
     try:
@@ -270,8 +391,13 @@ def main() -> None:
         _render_result(client, result)
 
     _render_data_health(client)
+
+    with st.expander("AI Copilot", expanded=True):
+        _render_copilot(client)
+
     _render_history(client)
 
 
 if __name__ == "__main__":
     main()
+

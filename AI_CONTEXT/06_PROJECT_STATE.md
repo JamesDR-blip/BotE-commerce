@@ -1,12 +1,16 @@
-﻿# PROJECT STATE
+# PROJECT STATE
 
 ## Current Sprint
 
-**S20 - Autonomous Agent Operations — COMPLETE**
+**S22 - AI Copilot for Data Operations — COMPLETE**
 
-S20 is complete at code, test, architecture, security, integration, and governance level. S20 adds the autonomous closed-loop orchestration layer while preserving the S18 ChangeSet production mutation boundary and S19 lineage/audit guarantees.
+S22 is complete at code, test, architecture, security, integration, and governance level. S22 adds the governed conversational Copilot layer while preserving the existing Requirement/Planner, Workflow Runtime, ChangeSet, risk, approval, lineage, audit, and channel synchronization boundaries.
 
-The platform now records capability-level data lineage for workflow executions and maintains a workspace-scoped, SHA-256 hash-chained audit trail. ChangeSet Apply, ChangeSet Rollback, and approved ChangeSet application emit audit events inside the same transaction as the corresponding production mutation.
+## Next Sprint
+
+**S23 - Marketplace & Extensibility Ecosystem**
+
+The next sprint should build on the existing capability registry, governed application services, workflow runtime, authorization boundaries, and external channel integration framework without introducing a parallel execution or mutation path.
 
 ## Previous Sprints
 
@@ -33,7 +37,7 @@ The platform now records capability-level data lineage for workflow executions a
 - S12 RAG / Semantic Rule Intelligence
 - S13 Agent Memory & Execution Context
 - S14-A Async Workflow Execution
-- Structural Refactor: Clean Architecture + DDD layers (`domain/`, `aapplication/`, `execution/`, `infrastructure/`)
+- Structural Refactor: Clean Architecture + DDD layers (`domain/`, `application/`, `execution/`, `infrastructure/`)
 
 ## Test Status
 
@@ -46,23 +50,27 @@ The platform now records capability-level data lineage for workflow executions a
 ## Database / Migration Status
 
 - **Engine:** SQLite (local dev/test), PostgreSQL (production)
-- **Current Database Revision:** 20260914_03
-- **Repository Alembic Head:** 20260914_03
-- **S19 Migration:** 20260914_03_add_lineage_audit.py
-- Added data_lineage_events and audit_events.
-- S19 database schema was verified against the migration before stamping the local database to 20260914_03.
-- Alembic check continues to report seven pre-existing model/schema drift operations unrelated to S19.
-- Existing clean-from-zero Alembic baseline/bootstrap limitations remain outside S19 scope.
+- **Current Database Revision:** 20260916_03
+- **Current local database revision:** `20260916_03`.
+- **Repository Alembic head:** `20260916_03`.
+- **Latest migrations:** S21 channel synchronization migrations:
+  - `database/migrations/versions/20260916_01_add_channels.py`
+  - `database/migrations/versions/20260916_02_add_sync_jobs.py`
+  - `database/migrations/versions/20260916_03_add_channel_mappings.py`
+- **S22 database migration:** none required.
+- Alembic currently reports a single head: `20260916_03`.
+- Seven pre-existing model/schema drift operations remain outside S22 scope.
+- Existing clean-from-zero Alembic baseline/bootstrap limitations remain outside S22 scope.
 
 ## Current Architecture
 
 - **Pattern:** Clean Architecture + Domain-Driven Design (DDD).
 - **Layers:**
   - `domain/`: Pure domain logic, entities, value objects, capability contracts, and semantic rule-retrieval contracts.
-  - `aapplication/`: Application services and use-case orchestration, including rule intelligence and agent memory services.
+  - `application/`: Application services and use-case orchestration, including rule intelligence and agent memory services.
   - `execution/`: Runtime orchestration & engine (`execution/workflow`, `execution/capabilities`, `execution/context`, `execution/planning`, `execution/tracing`).
   - `infrastructure/`: Technical adapters including Chroma semantic rule retrieval.
-  - `aapi/` & `app/`: Presentation layer (FastAPI routers, Streamlit dashboard, API client).
+  - `api/` & `app/`: Presentation layer (FastAPI routers, Streamlit dashboard, API client).
 - **Composition Root:** `services/container.py`
 
 ## S12 Implementation
@@ -351,3 +359,54 @@ S21 migrations:
 ### Architectural Boundary
 
 S21 external channel synchronization is an external side-effect boundary. It does not replace or bypass the existing ChangeSet boundary for internal production dataset mutations.
+
+---
+
+## S22 AI Copilot for Data Operations
+
+S22 is complete.
+
+### Delivered
+
+- `CopilotAgent` provider boundary with validated structured tool calling.
+- Fixed eight-tool Copilot registry restricted to registered platform capabilities.
+- Owner-scoped dataset and data-health operations.
+- Natural-language workflow authoring through the existing RequirementAgent and PlannerAgent.
+- Workflow simulation through the existing simulation service.
+- Governed workflow execution through the existing Workflow Runtime.
+- Approval metadata presentation through safe `CopilotApprovalCard` data.
+- Process-local owner-scoped Copilot sessions.
+- FastAPI SSE Copilot streaming.
+- Streamlit Copilot chat UI.
+- Dashboard API client support.
+- Comprehensive Copilot unit, application, API, schema, tool, and integration coverage.
+
+### Security / Safety
+
+- No arbitrary SQL generation or execution.
+- No arbitrary Python or shell execution.
+- Copilot tools are restricted to a fixed registered allowlist.
+- Tool names and arguments are validated at the Copilot boundary.
+- Dataset and health operations remain owner-scoped.
+- Workflow execution does not bypass existing runtime governance.
+- Approval tokens and token hashes are excluded from Copilot presentation data.
+- Existing ChangeSet remains the internal production mutation boundary.
+- No parallel authentication or authorization path was introduced.
+
+### Verification
+
+- Full regression: **779 passed, 1 warning**.
+- S22 focused coverage: **37 passed, 1 warning**.
+- Broader S22 regression subset: **103 passed, 1 warning**.
+- `python -m compileall`: PASS.
+- Alembic current/head: `20260916_03`.
+- Alembic heads: single head `20260916_03`.
+
+### Known Boundaries
+
+- Copilot sessions are process-local and are not durable across process restart or multi-worker deployment.
+- S22 introduces no Copilot persistence migration.
+- Existing authentication/token-issuance limitations remain outside S22.
+- Seven pre-existing Alembic model/schema drift operations remain outside S22 scope.
+- Existing Starlette/AnyIO TestClient deprecation warning remains.
+- Existing S21 deferred channel connector and production-signing work remains deferred.

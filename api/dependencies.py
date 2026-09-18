@@ -1,6 +1,7 @@
 """FastAPI dependency providers backed by the application composition root."""
 from domain.identity import CurrentUser
 from application.workflows.simulation_service import SimulationService
+from application.copilot.service import CopilotService
 
 from fastapi import Depends, Header, HTTPException, Request
 
@@ -170,3 +171,7 @@ def get_lineage_tracking_service(
 
 def get_audit_service(request: Request) -> AuditService:
     return request.app.state.container.audit_service
+
+
+def get_copilot_service(request: Request) -> CopilotService:
+    return request.app.state.copilot

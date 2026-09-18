@@ -127,4 +127,62 @@ def test_approval_repository_persists_changeset_id() -> None:
         assert record is not None
         assert record.changeset_id == "changeset-1"
         assert record.execution_id == "execution-1"
+def test_approval_repository_get_by_execution_id_returns_newest_first() -> None:
+    sessions = create_session()
+    create_parent_records(sessions)
+
+    repository = ApprovalRepository(sessions)
+
+    first = ApprovalRequest(
+        approval_id="approval-1",
+        execution_id="execution-1",
+        changeset_id="changeset-1",
+        risk_score="HIGH",
+        confidence_score=0.80,
+        requested_by="requester",
+        created_at=datetime(2026, 9, 16, 10, 0, tzinfo=timezone.utc),
+    )
+    second = ApprovalRequest(
+        approval_id="approval-2",
+        execution_id="execution-1",
+        changeset_id="changeset-1",
+        risk_score="CRITICAL",
+        confidence_score=0.70,
+        requested_by="requester",
+        created_at=datetime(2026, 9, 16, 11, 0, tzinfo=timezone.utc),
+    )
+
+    repository.create(first, token_hash="a" * 64)
+    repository.create(second, token_hash="b" * 64)
+
+    approvals = repository.get_by_execution_id("execution-1")
+
+    assert [approval.approval_id for approval in approvals] == [
+        "approval-2",
+        "approval-1",
+    ]
+
+
+def test_approval_repository_get_by_execution_id_is_execution_scoped() -> None:
+    sessions = create_session()
+    create_parent_records(sessions)
+
+    repository = ApprovalRepository(sessions)
+
+    request = ApprovalRequest(
+        approval_id="approval-1",
+        execution_id="execution-1",
+        changeset_id="changeset-1",
+        risk_score="HIGH",
+        confidence_score=0.85,
+        requested_by="requester",
+        created_at=datetime.now(timezone.utc),
+    )
+
+    repository.create(
+        request,
+        token_hash="t" * 64,
+    )
+
+    assert repository.get_by_execution_id("other-execution") == []
 

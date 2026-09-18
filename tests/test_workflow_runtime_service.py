@@ -1,5 +1,6 @@
 ﻿import pytest
 from application.workflows.runtime_service import WorkflowRuntimeService
+from domain.approval import ApprovalRequest
 from domain.identity import CurrentUser
 
 
@@ -170,6 +171,16 @@ class FakeChangeSetService:
         return FakeChangeSet()
 
 
+class FakeApprovalService:
+    def __init__(self):
+        self.requests = []
+
+    def request_approval(self, request):
+        assert isinstance(request, ApprovalRequest)
+        self.requests.append(request)
+        return "test-approval-token"
+
+
 def test_runtime_high_risk_enters_pending_approval():
     from application.workflows.runtime_service import WorkflowRuntimeService
     from domain.identity import CurrentUser
@@ -196,6 +207,7 @@ def test_runtime_high_risk_enters_pending_approval():
 
     engine = Engine()
     changesets = FakeChangeSetService()
+    approvals = FakeApprovalService()
 
     service = WorkflowRuntimeService(
         workflow_engine=lambda: engine,
@@ -208,6 +220,7 @@ def test_runtime_high_risk_enters_pending_approval():
         risk_assessments=lambda: assessments,
         workflow_executions=lambda: executions,
         changeset_service=lambda: changesets,
+        approval_service=lambda: approvals,
     )
 
     result = service.execute_async(
@@ -226,6 +239,79 @@ def test_runtime_high_risk_enters_pending_approval():
     assert assessments.created[0]["risk_score"] == "HIGH"
     assert assessments.created[0]["confidence_score"] == 0.75
     assert assessments.created[0]["approval_required"] is True
+
+    assert len(approvals.requests) == 1
+
+    approval = approvals.requests[0]
+    assert approval.execution_id == result.execution_id
+    assert approval.changeset_id == "changeset-1"
+    assert approval.risk_score == "HIGH"
+    assert approval.confidence_score == 0.75
+    assert approval.requested_by == "user-1"
+    assert approval.created_at is not None
+    assert approval.created_at.tzinfo is not None
+
+
+def test_runtime_sync_high_risk_creates_approval_request():
+    from application.workflows.runtime_service import WorkflowRuntimeService
+    from domain.identity import CurrentUser
+
+    plan = ExecutionPlan(
+        steps=(),
+        metadata={
+            "risk": {
+                "blast_radius": 0.8,
+            },
+        },
+    )
+
+    class Engine(FakeQueuedEngine):
+        def create_queued(self, **kwargs):
+            kwargs["plan"] = plan
+            return super().create_queued(**kwargs)
+
+    engine = Engine()
+    executions = FakeExecutions()
+    assessments = FakeRiskAssessments()
+    changesets = FakeChangeSetService()
+    approvals = FakeApprovalService()
+
+    service = WorkflowRuntimeService(
+        workflow_engine=lambda: engine,
+        workflow_history=lambda: None,
+        workflows=lambda: FakeWorkflowRepository(),
+        datasets=lambda: FakeDatasetRepository(),
+        data_health=lambda: FakeHealth(),
+        risk_service=lambda: FakeRiskService(),
+        risk_assessments=lambda: assessments,
+        workflow_executions=lambda: executions,
+        changeset_service=lambda: changesets,
+        approval_service=lambda: approvals,
+    )
+
+    result = service.execute(
+        current_user=CurrentUser(user_id="user-1"),
+        workflow_id="workflow-1",
+        inputs={},
+        dataset_id="dataset-1",
+    )
+
+    assert result.status == WorkflowExecutionStatus.PENDING_APPROVAL
+    assert result.changeset_id == "changeset-1"
+    assert changesets.calls == [result.execution_id]
+    assert executions.pending == [result.execution_id]
+    assert executions.running == []
+    assert engine.executed == []
+
+    assert len(approvals.requests) == 1
+    approval = approvals.requests[0]
+    assert approval.execution_id == result.execution_id
+    assert approval.changeset_id == "changeset-1"
+    assert approval.risk_score == "HIGH"
+    assert approval.confidence_score == 0.75
+    assert approval.requested_by == "user-1"
+    assert approval.created_at is not None
+    assert approval.created_at.tzinfo is not None
 
 
 def test_runtime_without_risk_metadata_remains_backward_compatible():
@@ -328,3 +414,56 @@ def test_runtime_rejects_invalid_plan_blast_radius():
 
 
 
+
+
+def test_runtime_high_risk_without_approval_service_fails_closed():
+    from application.workflows.runtime_service import WorkflowRuntimeService
+    from domain.identity import CurrentUser
+
+    plan = ExecutionPlan(
+        steps=(),
+        metadata={
+            "risk": {
+                "blast_radius": 0.8,
+            },
+        },
+    )
+
+    class Engine(FakeQueuedEngine):
+        def create_queued(self, **kwargs):
+            kwargs["plan"] = plan
+            return super().create_queued(**kwargs)
+
+    engine = Engine()
+    executions = FakeExecutions()
+    assessments = FakeRiskAssessments()
+    changesets = FakeChangeSetService()
+
+    service = WorkflowRuntimeService(
+        workflow_engine=lambda: engine,
+        workflow_history=lambda: None,
+        workflow_queue=lambda: FakeWorkflowQueue(),
+        workflows=lambda: FakeWorkflowRepository(),
+        datasets=lambda: FakeDatasetRepository(),
+        data_health=lambda: FakeHealth(),
+        risk_service=lambda: FakeRiskService(),
+        risk_assessments=lambda: assessments,
+        workflow_executions=lambda: executions,
+        changeset_service=lambda: changesets,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="Approval service is required before entering PENDING_APPROVAL",
+    ):
+        service.execute_async(
+            current_user=CurrentUser(user_id="user-1"),
+            workflow_id="workflow-1",
+            inputs={},
+            dataset_id="dataset-1",
+        )
+
+    assert changesets.calls
+    assert executions.pending == []
+    assert executions.running == []
+    assert engine.executed == []

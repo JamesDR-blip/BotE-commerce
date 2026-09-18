@@ -1,4 +1,4 @@
-import hashlib
+﻿import hashlib
 import inspect
 import secrets
 from datetime import datetime, timezone
@@ -132,6 +132,17 @@ class ApprovalService:
     def list_pending(self) -> list[Any]:
         return self.repository.list_pending()
 
+    def get_for_execution(self, execution_id: str) -> Any | None:
+        approvals = self.repository.get_by_execution_id(execution_id)
+
+        for approval in approvals:
+            if approval.decision is None:
+                return approval
+
+        return None
     def get(self, approval_id: str) -> Any:
         return self.repository.get(approval_id)
+
+
+
 

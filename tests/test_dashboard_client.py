@@ -1,11 +1,17 @@
-﻿import httpx
+import httpx
 import pytest
 
-from app.api_client import DashboardApiClient, DashboardApiError
+from app.api_client import CopilotEvent, DashboardApiClient, DashboardApiError
 
 
 def _client(handler) -> DashboardApiClient:
-    return DashboardApiClient("http://api.test", httpx.Client(transport=httpx.MockTransport(handler), base_url="http://api.test"))
+    return DashboardApiClient(
+        "http://api.test",
+        httpx.Client(
+            transport=httpx.MockTransport(handler),
+            base_url="http://api.test",
+        ),
+    )
 
 
 def test_dashboard_client_calls_fastapi_endpoints() -> None:
@@ -13,22 +19,54 @@ def test_dashboard_client_calls_fastapi_endpoints() -> None:
         if request.url.path == "/categories":
             return httpx.Response(200, json={"categories": ["Fashion"]})
         if request.url.path == "/validate":
-            return httpx.Response(200, json={"execution_id": "id", "category": "Fashion", "health_score": 90, "reports": {"json": "/report/id/json"}, "cached": False})
+            return httpx.Response(
+                200,
+                json={
+                    "execution_id": "id",
+                    "category": "Fashion",
+                    "health_score": 90,
+                    "reports": {"json": "/report/id/json"},
+                    "cached": False,
+                },
+            )
         if request.url.path == "/history":
-            return httpx.Response(200, json={"items": [{"id": "id", "category": "Fashion", "health_score": 90, "created_at": "2026-01-01T00:00:00Z"}]})
+            return httpx.Response(
+                200,
+                json={
+                    "items": [
+                        {
+                            "id": "id",
+                            "category": "Fashion",
+                            "health_score": 90,
+                            "created_at": "2026-01-01T00:00:00Z",
+                        }
+                    ]
+                },
+            )
         return httpx.Response(200, content=b"report")
 
     client = _client(handler)
     assert client.categories() == ["Fashion"]
-    assert client.validate("items.csv", b"Size\nM\n", "text/csv", "Fashion").health_score == 90
+    assert client.validate(
+        "items.csv",
+        b"Size\nM\n",
+        "text/csv",
+        "Fashion",
+    ).health_score == 90
     assert client.history()[0]["id"] == "id"
     assert client.download_report("/report/id/json") == b"report"
 
 
 def test_dashboard_client_exposes_backend_error_detail() -> None:
-    client = _client(lambda request: httpx.Response(422, json={"detail": "Unsupported category"}))
+    client = _client(
+        lambda request: httpx.Response(
+            422,
+            json={"detail": "Unsupported category"},
+        )
+    )
     with pytest.raises(DashboardApiError, match="Unsupported category"):
         client.categories()
+
 
 def test_dashboard_client_loads_s15_health_endpoints() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
@@ -114,3 +152,141 @@ def test_dashboard_client_loads_s15_health_endpoints() -> None:
     diagnostics = client.diagnostics("dataset-1")
     assert diagnostics.diagnostics[0].code == "invalid_price"
     assert diagnostics.remediation_proposals[0].status == "PROPOSED"
+
+
+def test_dashboard_client_creates_copilot_session() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/copilot/sessions"
+        return httpx.Response(200, json={"session_id": "session-1"})
+
+    client = _client(handler)
+
+    session = client.create_copilot_session()
+
+    assert session.session_id == "session-1"
+
+
+def test_dashboard_client_streams_copilot_text_events() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/copilot/chat"
+        assert request.read() == b'{"message":"hello","session_id":"session-1"}'
+        return httpx.Response(
+            200,
+            text="""\
+: heartbeat
+
+data: {"type":"text","content":"Hello"}
+
+data: {"type":"text","content":" world"}
+
+""",
+            headers={"content-type": "text/event-stream"},
+        )
+
+    client = _client(handler)
+
+    events = list(
+        client.stream_copilot(
+            "hello",
+            session_id="session-1",
+        )
+    )
+
+    assert events == [
+        CopilotEvent(type="text", content="Hello"),
+        CopilotEvent(type="text", content=" world"),
+    ]
+
+
+def test_dashboard_client_streams_copilot_action_events() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            text="""\
+data: {"type":"action","action":"get_health","arguments":{"dataset_id":"dataset-1"}}
+
+""",
+            headers={"content-type": "text/event-stream"},
+        )
+
+    client = _client(handler)
+
+    events = list(client.stream_copilot("check health"))
+
+    assert events == [
+        CopilotEvent(
+            type="action",
+            action="get_health",
+            arguments={"dataset_id": "dataset-1"},
+        )
+    ]
+
+
+def test_dashboard_client_copilot_http_error() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            401,
+            json={"detail": "Authentication required"},
+        )
+
+    client = _client(handler)
+
+    with pytest.raises(DashboardApiError, match="Authentication required"):
+        list(client.stream_copilot("hello"))
+
+
+def test_dashboard_client_ignores_malformed_and_non_data_sse_lines() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            text="""\
+: comment
+event: ignored
+data: not-json
+data: {"type":"text","content":"ok"}
+
+""",
+            headers={"content-type": "text/event-stream"},
+        )
+
+    client = _client(handler)
+
+    events = list(client.stream_copilot("hello"))
+
+    assert events == [
+        CopilotEvent(type="text", content="ok"),
+    ]
+
+
+def test_dashboard_client_streams_copilot_approval_events() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            text="""data: {"type":"approval","approval":{"approval_id":"approval-1","execution_id":"execution-1","changeset_id":"changeset-1","risk_score":"HIGH","confidence_score":0.85,"requested_by":"owner-1","created_at":"2026-09-18T10:00:00+00:00","expires_at":null,"status":"PENDING"}}
+
+""",
+            headers={"content-type": "text/event-stream"},
+        )
+
+    client = _client(handler)
+
+    events = list(client.stream_copilot("execute workflow"))
+
+    assert events == [
+        CopilotEvent(
+            type="approval",
+            approval={
+                "approval_id": "approval-1",
+                "execution_id": "execution-1",
+                "changeset_id": "changeset-1",
+                "risk_score": "HIGH",
+                "confidence_score": 0.85,
+                "requested_by": "owner-1",
+                "created_at": "2026-09-18T10:00:00+00:00",
+                "expires_at": None,
+                "status": "PENDING",
+            },
+        )
+    ]

@@ -1,4 +1,4 @@
-﻿# ROADMAP
+# ROADMAP
 
 ## Completed Sprints
 
@@ -23,19 +23,20 @@
 - **S17 Shadow Mode & Simulation**: Safe dry-run workflow simulation, bounded diff verification, read-only streaming, and zero production mutation.
 - **S18 ChangeSet & Rollback**: Immutable ChangeSets, atomic production mutation, candidate artifact materialization, HITL approval integration, optimistic-concurrency guarded rollback, and owner-scoped ChangeSet APIs.
 - **S19 Data Lineage & Audit Trail**: Capability-level lineage, SHA-256 hash-chained audit events, owner/workspace-scoped APIs, and transactional mutation auditing.
-- **S20 Autonomous Agent Operations**: Closed-loop autonomous orchestration, hard safety guardrails, low-risk auto-apply, high-risk approval routing, ChangeSet-backed mutation, verification, and execution learning.
+- **S20 Autonomous Agent Operations**: Governed closed-loop operations with deterministic guardrails, risk evaluation, ChangeSet preparation, approval/apply, verification, and learning.
+- **S21 Channel Sync & Multi-Platform Connectors**: Canonical product/channel sync framework, deterministic projection, idempotent synchronization, encrypted credentials, Shopify/Amazon connectors, and governed sync APIs.
+- **S22 AI Copilot for Data Operations — COMPLETE**: Conversational dataset/health queries, governed workflow authoring, simulation/execution tool dispatch, SSE streaming, Streamlit Copilot UI, and safe approval metadata presentation.
 
 ## Current Sprint
 
-- **S20 Autonomous Agent Operations — COMPLETE**.
+- **S22 AI Copilot for Data Operations — COMPLETE**.
 
 ## Next Sprint
 
-- **S21 Channel Sync & Multi-Platform Connectors**.
+- **S23 Marketplace**.
 
 ## Future Roadmap
 
-- **S22 Copilot**: Natural language conversational assistant for dataset querying and pipeline authoring.
 - **S23 Marketplace**: Community rule packs, custom validator plugins, and connectors.
 - **S24 Enterprise Governance**: Role-based access control (RBAC), multi-tenancy quotas, audit compliance.
 - **S25 Observability**: OpenTelemetry tracing, Prometheus metrics, and execution dashboard.

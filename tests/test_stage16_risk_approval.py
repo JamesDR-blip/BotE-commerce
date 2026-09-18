@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+﻿from datetime import datetime, timedelta, timezone
 import hashlib
 
 import pytest
@@ -154,6 +154,51 @@ def test_risk_service_rejects_invalid_confidence():
             confidence=1.1,
         )
 
+
+def test_approval_service_get_for_execution_returns_pending_approval():
+    first = FakeApprovalRecord()
+    first.approval_id = "approval-1"
+    first.execution_id = "execution-1"
+    first.decision = "APPROVED"
+
+    second = FakeApprovalRecord()
+    second.approval_id = "approval-2"
+    second.execution_id = "execution-1"
+    second.decision = None
+
+    class Repository(FakeApprovalRepository):
+        def __init__(self):
+            super().__init__()
+            self.records = [second, first]
+
+        def get_by_execution_id(self, execution_id):
+            return [
+                record
+                for record in self.records
+                if record.execution_id == execution_id
+            ]
+
+    service = ApprovalService(Repository())
+
+    approval = service.get_for_execution("execution-1")
+
+    assert approval is second
+
+
+def test_approval_service_get_for_execution_returns_none_without_pending():
+    record = FakeApprovalRecord()
+    record.execution_id = "execution-1"
+    record.decision = "REJECTED"
+
+    class Repository(FakeApprovalRepository):
+        def get_by_execution_id(self, execution_id):
+            if execution_id == record.execution_id:
+                return [record]
+            return []
+
+    service = ApprovalService(Repository())
+
+    assert service.get_for_execution("execution-1") is None
 
 def test_approval_request_generates_and_persists_only_token_hash():
     repository = FakeApprovalRepository()
@@ -528,6 +573,7 @@ def test_reject_endpoint_accepts_token_in_json_body():
     assert captured["approval_id"] == "approval-1"
     assert captured["decision"] == ApprovalDecision.REJECTED
     assert captured["token"] == VALID_TOKEN
+
 
 
 

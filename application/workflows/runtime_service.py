@@ -1,11 +1,14 @@
-"""Application boundary for running and inspecting Studio workflows."""
+﻿"""Application boundary for running and inspecting Studio workflows."""
 
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import datetime, timezone
 from typing import Any, Callable
 from uuid import uuid4
 
+from application.approval.approval_service import ApprovalService
+from domain.approval import ApprovalRequest
 from domain.identity import CurrentUser
 from domain.studio.runtime import WorkflowExecution
 
@@ -26,6 +29,7 @@ class WorkflowRuntimeService:
         risk_assessments: Callable[[], Any] | None = None,
         workflow_executions: Callable[[], Any] | None = None,
         changeset_service: Callable[[], Any] | None = None,
+        approval_service: Callable[[], ApprovalService] | None = None,
     ) -> None:
         self._workflow_engine = workflow_engine
         self._workflow_history = workflow_history
@@ -37,6 +41,7 @@ class WorkflowRuntimeService:
         self._risk_assessments = risk_assessments
         self._workflow_executions = workflow_executions
         self._changeset_service = changeset_service
+        self._approval_service = approval_service
 
     def _validate_execution_scope(
         self,
@@ -188,6 +193,37 @@ class WorkflowRuntimeService:
             changeset_id=changeset.id,
         )
 
+    def _request_approval(
+        self,
+        *,
+        execution: WorkflowExecution,
+        risk_score: Any,
+        confidence_score: float,
+        current_user: CurrentUser,
+    ) -> None:
+        if self._approval_service is None:
+            raise RuntimeError(
+                "Approval service is required before entering "
+                "PENDING_APPROVAL"
+            )
+
+        if execution.changeset_id is None:
+            raise RuntimeError(
+                "ChangeSet is required before requesting approval"
+            )
+
+        request = ApprovalRequest(
+            approval_id=str(uuid4()),
+            execution_id=execution.execution_id,
+            changeset_id=execution.changeset_id,
+            risk_score=str(getattr(risk_score, "value", risk_score)),
+            confidence_score=confidence_score,
+            requested_by=current_user.user_id,
+            created_at=datetime.now(timezone.utc),
+        )
+
+        self._approval_service().request_approval(request)
+
     def _pending_execution(
         self,
         execution: WorkflowExecution,
@@ -244,6 +280,12 @@ class WorkflowRuntimeService:
             execution = self._prepare_candidate(
                 execution=execution,
             )
+            self._request_approval(
+                execution=execution,
+                risk_score=result.risk_score,
+                confidence_score=result.confidence.value,
+                current_user=current_user,
+            )
             return self._pending_execution(execution)
 
         self._workflow_executions().mark_running(
@@ -299,6 +341,12 @@ class WorkflowRuntimeService:
             execution = self._prepare_candidate(
                 execution=execution,
             )
+            self._request_approval(
+                execution=execution,
+                risk_score=result.risk_score,
+                confidence_score=result.confidence.value,
+                current_user=current_user,
+            )
             return self._pending_execution(execution)
 
         self._workflow_queue().dispatch(
@@ -314,3 +362,4 @@ class WorkflowRuntimeService:
         return self._workflow_history().get_workflow_execution_detail(
             execution_id
         )
+

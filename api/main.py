@@ -17,6 +17,7 @@ from api.routes import (
     changesets_router,
     lineage_router,
     channels_router,
+    copilot_router,
 )
 from configs.settings import Settings
 
@@ -76,6 +77,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(changesets_router)
     app.include_router(lineage_router)
     app.include_router(channels_router)
+    app.include_router(copilot_router)
 
     app.add_exception_handler(
         Exception,
@@ -100,6 +102,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.upload_reader = container.uploads
     app.state.rule_intelligence = container.rule_intelligence
     app.state.categories = container.registry.categories()
+    app.state.copilot = container.copilot
     instrument_fastapi(app)
 
     return app

@@ -1,4 +1,4 @@
-"""Composition root: dependency injection without mutable module globals."""
+﻿"""Composition root: dependency injection without mutable module globals."""
 from __future__ import annotations
 
 from agents.extraction import ExtractionAgent
@@ -26,6 +26,12 @@ from application.changesets.mutation_service import ChangeSetMutationService
 from application.changesets.rollback_service import ChangeSetRollbackService
 from application.changesets.query_service import ChangeSetQueryService
 from application.datasets.artifact_materializer import DatasetArtifactMaterializer
+from application.copilot.agent import CopilotAgent
+from application.copilot.application_tools import (
+    CopilotToolServices,
+    build_copilot_tools,
+)
+from application.copilot.service import CopilotService
 from application.datasets.dataset_ingestion import DatasetIngestionService
 from application.datasets.dataset_service import DatasetService
 from application.lineage.lineage_tracking_service import LineageTrackingService
@@ -425,12 +431,62 @@ class Container:
             risk_assessments=lambda: self.risk_assessment_repository,
             workflow_executions=lambda: self.workflow_executions,
             changeset_service=lambda: self.changeset_service,
+            approval_service=lambda: self.approval_service,
         )
         self.simulation_service = SimulationService(
             shadow_runner=self.shadow_execution_runner,
             workflows=self.workflows,
             datasets=self.datasets,
         )
+
+
+        copilot_service_ref: dict[str, CopilotService] = {}
+
+        def author_workflow_handler(
+            *,
+            current_user,
+            arguments,
+        ):
+            service = copilot_service_ref.get("service")
+            if service is None:
+                raise RuntimeError("CopilotService is not initialized")
+            return service.author_workflow(
+                current_user=current_user,
+                project_id=arguments.project_id,
+                name=arguments.name,
+                user_request=arguments.user_request,
+            )
+
+        self.copilot_tools = build_copilot_tools(
+            services=CopilotToolServices(
+                dataset_service=self.dataset_service,
+                data_health=self.data_health,
+                simulation_service=self.simulation_service,
+                workflow_runtime=self.workflow_runtime,
+                approval_service=self.approval_service,
+            ),
+            author_workflow_handler=author_workflow_handler,
+        )
+
+        self.copilot_agent = None
+        if settings.enable_llm and settings.google_api_key:
+            from google import genai
+
+            client = genai.Client(api_key=settings.google_api_key)
+            self.copilot_agent = CopilotAgent(
+                model=client.models,
+                model_name=settings.llm_model,
+                tool_registry=self.copilot_tools,
+            )
+
+        self.copilot = CopilotService(
+            requirements=self.agents.requirements,
+            planner=self.planner,
+            projects=self.projects,
+            tools=self.copilot_tools,
+            agent=self.copilot_agent,
+        )
+        copilot_service_ref["service"] = self.copilot
 
         self.autonomous_ops = AutonomousOpsService(policy=AutonomousPolicy())
         self.autonomous_operations_orchestrator = (
@@ -445,12 +501,12 @@ class Container:
                 changeset_rollback=self.changeset_rollback_service,
                 changesets=self.changesets,
                 datasets=self.datasets,
-                approval_service=self.approval_service,
                 workflow_authoring=self.workflow_authoring,
                 workflow_executions=self.workflow_executions,
                 simulation_service=self.simulation_service,
                 memory_service=self.agent_memory,
                 audit_service=self.audit_service,
+                approval_service=self.approval_service,
             )
         )
 
@@ -463,3 +519,7 @@ def build_container(
         app_settings = Settings()
 
     return Container(app_settings)
+
+
+
+

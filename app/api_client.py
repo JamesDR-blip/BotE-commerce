@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 
 import httpx
 
@@ -72,6 +73,20 @@ class Diagnostics:
     dataset_id: str
     diagnostics: list[Diagnostic]
     remediation_proposals: list[RemediationProposal]
+
+
+@dataclass(frozen=True)
+class CopilotSession:
+    session_id: str
+
+
+@dataclass(frozen=True)
+class CopilotEvent:
+    type: str
+    content: str | None = None
+    action: str | None = None
+    arguments: dict[str, object] | None = None
+    approval: dict[str, object] | None = None
 
 
 class DashboardApiClient:
@@ -166,6 +181,53 @@ class DashboardApiClient:
 
     def download_report(self, path: str) -> bytes:
         return self._request("GET", path).content
+
+    def create_copilot_session(self) -> CopilotSession:
+        payload = self._request("POST", "/copilot/sessions").json()
+        return CopilotSession(session_id=payload["session_id"])
+
+    def stream_copilot(
+        self,
+        message: str,
+        *,
+        session_id: str | None = None,
+        authorization: str | None = None,
+    ):
+        headers = {"Authorization": authorization} if authorization else None
+
+        try:
+            with self._client.stream(
+                "POST",
+                "/copilot/chat",
+                json={"message": message, "session_id": session_id},
+                headers=headers,
+            ) as response:
+                response.raise_for_status()
+
+                for line in response.iter_lines():
+                    if not line.startswith("data: "):
+                        continue
+
+                    try:
+                        payload = json.loads(line[6:])
+                    except json.JSONDecodeError:
+                        continue
+
+                    yield CopilotEvent(
+                        type=payload["type"],
+                        content=payload.get("content"),
+                        action=payload.get("action"),
+                        arguments=payload.get("arguments"),
+                        approval=payload.get("approval"),
+                    )
+        except httpx.HTTPError as exc:
+            detail = ""
+            if isinstance(exc, httpx.HTTPStatusError):
+                try:
+                    detail = exc.response.json().get("detail", "")
+                except ValueError:
+                    detail = exc.response.text
+            raise DashboardApiError(detail or "Could not communicate with the FastAPI backend") from exc
 
     def _request(self, method: str, path: str, **kwargs) -> httpx.Response:
         try:

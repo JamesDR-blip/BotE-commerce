@@ -11,6 +11,7 @@ from .approval import router as approval_router
 from .changesets import router as changesets_router
 from .lineage import router as lineage_router
 from .channels import router as channels_router
+from .copilot import router as copilot_router
 
 __all__ = [
     "data_router",
@@ -26,4 +27,5 @@ __all__ = [
     "changesets_router",
     "lineage_router",
     "channels_router",
+    "copilot_router",
 ]
