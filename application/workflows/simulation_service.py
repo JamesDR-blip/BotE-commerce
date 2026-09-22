@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from domain.identity import CurrentUser
+from services.authorization import AuthorizationService
 
 
 class SimulationService:
@@ -16,10 +17,66 @@ class SimulationService:
         shadow_runner,
         workflows,
         datasets,
+        projects=None,
+        workspaces=None,
+        authorization: AuthorizationService | None = None,
     ) -> None:
         self._shadow_runner = shadow_runner
         self._workflows = workflows
         self._datasets = datasets
+        self._projects = projects
+        self._workspaces = workspaces
+        self._authorization = authorization
+
+    def _organization_id_for_workflow(
+        self,
+        *,
+        workflow,
+        owner_id: str,
+    ) -> str | None:
+        if self._authorization is None:
+            return None
+
+        if self._projects is None or self._workspaces is None:
+            raise RuntimeError(
+                "Project and workspace repositories are required for simulation authorization"
+            )
+
+        project = self._projects.get_for_owner(
+            project_id=workflow.project_id,
+            owner_id=owner_id,
+        )
+        if project is None:
+            raise ValueError(
+                f"Project not found: {workflow.project_id}"
+            )
+
+        workspace = self._workspaces.get_for_owner(
+            workspace_id=project.workspace_id,
+            owner_id=owner_id,
+        )
+        if workspace is None:
+            raise ValueError(
+                f"Workspace not found: {project.workspace_id}"
+            )
+
+        return workspace.organization_id
+
+    def _authorize(
+        self,
+        *,
+        current_user: CurrentUser,
+        organization_id: str | None,
+    ) -> None:
+        if self._authorization is None or organization_id is None:
+            return
+
+        self._authorization.authorize(
+            user=current_user,
+            resource="workflow",
+            action="read",
+            organization_id=organization_id,
+        )
 
     def simulate(
         self,
@@ -39,6 +96,15 @@ class SimulationService:
             raise ValueError(
                 f"Workflow not found: {workflow_id}"
             )
+
+        organization_id = self._organization_id_for_workflow(
+            workflow=workflow,
+            owner_id=current_user.user_id,
+        )
+        self._authorize(
+            current_user=current_user,
+            organization_id=organization_id,
+        )
 
         dataset = None
 

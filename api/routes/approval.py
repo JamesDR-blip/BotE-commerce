@@ -106,10 +106,11 @@ def decide_approval(
 @router.get("/approvals/pending")
 def list_pending_approvals(
     approval_service: ApprovalService = Depends(get_approval_service),
+    current_user=Depends(get_current_user),
 ):
     return [
         _approval_response(record)
-        for record in approval_service.list_pending()
+        for record in approval_service.list_pending(user=current_user)
     ]
 
 

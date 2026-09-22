@@ -11,6 +11,7 @@ from application.approval.approval_service import ApprovalService
 from domain.approval import ApprovalRequest
 from domain.identity import CurrentUser
 from domain.studio.runtime import WorkflowExecution
+from services.authorization import AuthorizationService
 
 
 class WorkflowRuntimeService:
@@ -24,6 +25,9 @@ class WorkflowRuntimeService:
         workflow_queue: Callable[[], Any] | None = None,
         workflows: Callable[[], Any] | None = None,
         datasets: Callable[[], Any] | None = None,
+        projects: Callable[[], Any] | None = None,
+        workspaces: Callable[[], Any] | None = None,
+        authorization: AuthorizationService | None = None,
         data_health: Callable[[], Any] | None = None,
         risk_service: Callable[[], Any] | None = None,
         risk_assessments: Callable[[], Any] | None = None,
@@ -36,6 +40,9 @@ class WorkflowRuntimeService:
         self._workflow_queue = workflow_queue
         self._workflows = workflows
         self._datasets = datasets
+        self._projects = projects
+        self._workspaces = workspaces
+        self._authorization = authorization
         self._data_health = data_health
         self._risk_service = risk_service
         self._risk_assessments = risk_assessments
@@ -80,6 +87,57 @@ class WorkflowRuntimeService:
             raise ValueError(
                 f"Dataset does not belong to workflow project: {dataset_id}"
             )
+
+    def _organization_id_for_workflow(
+        self,
+        *,
+        workflow,
+        owner_id: str,
+    ) -> str | None:
+        if self._authorization is None:
+            return None
+
+        if self._projects is None or self._workspaces is None:
+            raise RuntimeError(
+                "Project and workspace repositories are required "
+                "for workflow authorization"
+            )
+
+        project = self._projects().get_for_owner(
+            project_id=workflow.project_id,
+            owner_id=owner_id,
+        )
+        if project is None:
+            raise ValueError(
+                f"Project not found: {workflow.project_id}"
+            )
+
+        workspace = self._workspaces().get_for_owner(
+            workspace_id=project.workspace_id,
+            owner_id=owner_id,
+        )
+        if workspace is None:
+            raise ValueError(
+                f"Workspace not found: {project.workspace_id}"
+            )
+
+        return workspace.organization_id
+
+    def _authorize_execution(
+        self,
+        *,
+        current_user: CurrentUser,
+        organization_id: str | None,
+    ) -> None:
+        if self._authorization is None or organization_id is None:
+            return
+
+        self._authorization.authorize(
+            user=current_user,
+            resource="workflow",
+            action="execute",
+            organization_id=organization_id,
+        )
 
     def _risk_gate_enabled(self) -> bool:
         return (
@@ -247,6 +305,27 @@ class WorkflowRuntimeService:
             dataset_id=dataset_id,
         )
 
+        organization_id = None
+        if self._authorization is not None:
+            workflow = self._workflows().get_for_owner(
+                workflow_id=workflow_id,
+                owner_id=current_user.user_id,
+            )
+            if workflow is None:
+                raise ValueError(
+                    f"Workflow not found: {workflow_id}"
+                )
+
+            organization_id = self._organization_id_for_workflow(
+                workflow=workflow,
+                owner_id=current_user.user_id,
+            )
+
+        self._authorize_execution(
+            current_user=current_user,
+            organization_id=organization_id,
+        )
+
         engine = self._workflow_engine()
 
         # Preserve legacy fake/test engines that only implement execute().
@@ -313,6 +392,27 @@ class WorkflowRuntimeService:
             current_user=current_user,
             workflow_id=workflow_id,
             dataset_id=dataset_id,
+        )
+
+        organization_id = None
+        if self._authorization is not None:
+            workflow = self._workflows().get_for_owner(
+                workflow_id=workflow_id,
+                owner_id=current_user.user_id,
+            )
+            if workflow is None:
+                raise ValueError(
+                    f"Workflow not found: {workflow_id}"
+                )
+
+            organization_id = self._organization_id_for_workflow(
+                workflow=workflow,
+                owner_id=current_user.user_id,
+            )
+
+        self._authorize_execution(
+            current_user=current_user,
+            organization_id=organization_id,
         )
 
         engine = self._workflow_engine()

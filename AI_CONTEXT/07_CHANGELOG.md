@@ -1,5 +1,76 @@
 # CHANGELOG
 
+# Changelog
+
+## S24 — Enterprise Governance & Granular RBAC — IN PROGRESS
+### 2026-09-22
+
+Implemented the verified S24 RBAC and multi-tenancy foundation while preserving existing ownership and production mutation boundaries.
+
+### Added
+
+- Added persistent `Organization` model.
+- Added persistent `Role` model.
+- Added persistent `Permission` model.
+- Added persistent role-permission assignments.
+- Added persistent organization memberships.
+- Added Admin, Data Engineer, Reviewer, and Viewer role definitions.
+- Added `AuthorizationService` with persisted RBAC support.
+- Added backward-compatible legacy role authorization fallback.
+- Added organization-scoped repository access for workspaces.
+- Added organization-scoped repository access for projects.
+- Added organization-scoped repository access for datasets.
+- Added organization-scoped repository access for workflows and workflow versions.
+- Added organization-scoped approval repository access.
+- Added authenticated organization-scoped pending approval access.
+- Added workspace-to-organization tenant lineage.
+- Added authorization coverage for existing workspace, dataset, workflow, and approval resources.
+
+### Security
+
+- Preserved existing resource ownership boundaries.
+- Enforced tenant filtering at repository boundaries.
+- Prevented unscoped pending approval access through the API.
+- Preserved ChangeSet as the only internal production dataset mutation boundary.
+- No arbitrary Python, shell, `eval`, `exec`, unsafe YAML, or arbitrary SQL execution path was introduced.
+- Approval tokens remain protected from API exposure.
+
+### Database
+
+Added migration:
+
+- `database/migrations/versions/20260916_04_add_enterprise_rbac.py`
+
+The migration adds:
+
+- organizations
+- roles
+- permissions
+- role_permissions
+- memberships
+- `workspaces.organization_id`
+
+Alembic current/head:
+
+`20260916_04`
+
+Single Alembic head confirmed.
+
+### Verification
+
+- Full regression: **887 passed, 2 warnings**.
+- Full-suite runtime: **56.86 seconds**.
+- `git diff --check`: no whitespace errors; only existing line-ending normalization warnings.
+
+### Remaining S24 Scope
+
+The following S24 objective items remain:
+
+- Organization quotas.
+- Compliance policy enforcement.
+
+S24 is therefore not yet marked COMPLETE.
+
 ## S23 — Marketplace & Extensibility Ecosystem — COMPLETE
 
 Implemented the signed declarative marketplace foundation for RulePacks.

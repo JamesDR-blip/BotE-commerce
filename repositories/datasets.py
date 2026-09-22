@@ -1,4 +1,4 @@
-"""Repository for dataset persistence."""
+﻿"""Repository for dataset persistence."""
 
 from __future__ import annotations
 
@@ -19,7 +19,6 @@ class DatasetRepository:
     ) -> None:
         self._sessions = sessions
 
-
     def create(
         self,
         *,
@@ -39,13 +38,11 @@ class DatasetRepository:
     ) -> DatasetRecord:
 
         with self._sessions() as session:
-
             record = DatasetRecord(
                 id=dataset_id,
                 project_id=project_id,
                 name=name,
                 source_type=source_type,
-
                 filename=filename,
                 file_format=file_format,
                 size_bytes=size_bytes,
@@ -54,7 +51,6 @@ class DatasetRepository:
                 row_count=row_count,
                 column_count=column_count,
                 status=status,
-
                 metadata_json=metadata,
             )
 
@@ -63,7 +59,6 @@ class DatasetRepository:
             session.refresh(record)
 
             return record
-
 
     def _to_domain(self, record: DatasetRecord) -> Dataset:
         return Dataset(
@@ -89,10 +84,7 @@ class DatasetRepository:
     ) -> Dataset | None:
 
         with self._sessions() as session:
-            record = session.get(
-                DatasetRecord,
-                dataset_id,
-            )
+            record = session.get(DatasetRecord, dataset_id)
 
             if record is None:
                 return None
@@ -111,13 +103,11 @@ class DatasetRepository:
                 select(DatasetRecord)
                 .join(
                     ProjectRecord,
-                    DatasetRecord.project_id
-                    == ProjectRecord.id,
+                    DatasetRecord.project_id == ProjectRecord.id,
                 )
                 .join(
                     WorkspaceRecord,
-                    ProjectRecord.workspace_id
-                    == WorkspaceRecord.id,
+                    ProjectRecord.workspace_id == WorkspaceRecord.id,
                 )
                 .where(
                     DatasetRecord.id == dataset_id,
@@ -130,6 +120,65 @@ class DatasetRepository:
 
             return self._to_domain(record)
 
+    def get_for_organization(
+        self,
+        *,
+        dataset_id: str,
+        organization_id: str,
+    ) -> Dataset | None:
+
+        with self._sessions() as session:
+            record = session.scalar(
+                select(DatasetRecord)
+                .join(
+                    ProjectRecord,
+                    DatasetRecord.project_id == ProjectRecord.id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id == WorkspaceRecord.id,
+                )
+                .where(
+                    DatasetRecord.id == dataset_id,
+                    WorkspaceRecord.organization_id == organization_id,
+                )
+            )
+
+            if record is None:
+                return None
+
+            return self._to_domain(record)
+
+    def get_for_owner_in_organization(
+        self,
+        *,
+        dataset_id: str,
+        owner_id: str,
+        organization_id: str,
+    ) -> Dataset | None:
+
+        with self._sessions() as session:
+            record = session.scalar(
+                select(DatasetRecord)
+                .join(
+                    ProjectRecord,
+                    DatasetRecord.project_id == ProjectRecord.id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id == WorkspaceRecord.id,
+                )
+                .where(
+                    DatasetRecord.id == dataset_id,
+                    WorkspaceRecord.owner_id == owner_id,
+                    WorkspaceRecord.organization_id == organization_id,
+                )
+            )
+
+            if record is None:
+                return None
+
+            return self._to_domain(record)
 
     def list_by_project(
         self,
@@ -139,17 +188,13 @@ class DatasetRepository:
         with self._sessions() as session:
             records = list(
                 session.scalars(
-                    select(DatasetRecord)
-                    .where(
+                    select(DatasetRecord).where(
                         DatasetRecord.project_id == project_id
                     )
                 )
             )
 
-            return [
-                self._to_domain(record)
-                for record in records
-            ]
+            return [self._to_domain(record) for record in records]
 
     def list_by_project_for_owner(
         self,
@@ -164,13 +209,11 @@ class DatasetRepository:
                     select(DatasetRecord)
                     .join(
                         ProjectRecord,
-                        DatasetRecord.project_id
-                        == ProjectRecord.id,
+                        DatasetRecord.project_id == ProjectRecord.id,
                     )
                     .join(
                         WorkspaceRecord,
-                        ProjectRecord.workspace_id
-                        == WorkspaceRecord.id,
+                        ProjectRecord.workspace_id == WorkspaceRecord.id,
                     )
                     .where(
                         DatasetRecord.project_id == project_id,
@@ -179,7 +222,62 @@ class DatasetRepository:
                 )
             )
 
-            return [
-                self._to_domain(record)
-                for record in records
-            ]
+            return [self._to_domain(record) for record in records]
+
+    def list_by_project_for_organization(
+        self,
+        *,
+        project_id: str,
+        organization_id: str,
+    ) -> list[Dataset]:
+
+        with self._sessions() as session:
+            records = list(
+                session.scalars(
+                    select(DatasetRecord)
+                    .join(
+                        ProjectRecord,
+                        DatasetRecord.project_id == ProjectRecord.id,
+                    )
+                    .join(
+                        WorkspaceRecord,
+                        ProjectRecord.workspace_id == WorkspaceRecord.id,
+                    )
+                    .where(
+                        DatasetRecord.project_id == project_id,
+                        WorkspaceRecord.organization_id == organization_id,
+                    )
+                )
+            )
+
+            return [self._to_domain(record) for record in records]
+
+    def list_by_project_for_owner_in_organization(
+        self,
+        *,
+        project_id: str,
+        owner_id: str,
+        organization_id: str,
+    ) -> list[Dataset]:
+
+        with self._sessions() as session:
+            records = list(
+                session.scalars(
+                    select(DatasetRecord)
+                    .join(
+                        ProjectRecord,
+                        DatasetRecord.project_id == ProjectRecord.id,
+                    )
+                    .join(
+                        WorkspaceRecord,
+                        ProjectRecord.workspace_id == WorkspaceRecord.id,
+                    )
+                    .where(
+                        DatasetRecord.project_id == project_id,
+                        WorkspaceRecord.owner_id == owner_id,
+                        WorkspaceRecord.organization_id == organization_id,
+                    )
+                )
+            )
+
+            return [self._to_domain(record) for record in records]

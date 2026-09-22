@@ -452,13 +452,15 @@ def execute_workflow_async(
 )
 def workflow_execution_status(
     execution_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
     history_service: WorkflowHistoryService = Depends(
         get_workflow_history
     ),
 ) -> WorkflowExecutionStatusResponse:
     try:
         data = history_service.get_workflow_execution_detail(
-            execution_id
+            execution_id,
+            current_user=current_user,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -484,13 +486,15 @@ def workflow_execution_status(
 )
 def workflow_execution_detail(
     execution_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
     history_service: WorkflowHistoryService = Depends(
         get_workflow_history
     ),
 ) -> WorkflowExecutionDetailResponse:
     try:
         data = history_service.get_workflow_execution_detail(
-            execution_id
+            execution_id,
+            current_user=current_user,
         )
     except ValueError as exc:
         raise HTTPException(

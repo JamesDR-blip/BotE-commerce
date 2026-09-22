@@ -34,11 +34,13 @@ def create_workspace(
         current_user=current_user,
         workspace_id=payload.id,
         name=payload.name,
+        organization_id=payload.organization_id,
     )
 
     return WorkspaceResponse(
         id=workspace.id,
         name=workspace.name,
+        organization_id=workspace.organization_id,
         created_at=workspace.created_at,
     )
 

@@ -4,7 +4,13 @@ from typing import Callable, Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from database.models import ApprovalRecord
+from database.models import (
+    ApprovalRecord,
+    ProjectRecord,
+    WorkflowExecutionRecord,
+    WorkflowRecord,
+    WorkspaceRecord,
+)
 from domain.approval import ApprovalDecision, ApprovalRequest
 
 
@@ -120,6 +126,40 @@ class ApprovalRepository:
         with self._sessions() as session:
             return session.get(ApprovalRecord, approval_id)
 
+    def get_for_organization(
+        self,
+        approval_id: str,
+        *,
+        organization_id: str,
+    ) -> Optional[ApprovalRecord]:
+        with self._sessions() as session:
+            statement = (
+                select(ApprovalRecord)
+                .join(
+                    WorkflowExecutionRecord,
+                    WorkflowExecutionRecord.id
+                    == ApprovalRecord.execution_id,
+                )
+                .join(
+                    WorkflowRecord,
+                    WorkflowRecord.id
+                    == WorkflowExecutionRecord.workflow_id,
+                )
+                .join(
+                    ProjectRecord,
+                    ProjectRecord.id == WorkflowRecord.project_id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    WorkspaceRecord.id == ProjectRecord.workspace_id,
+                )
+                .where(
+                    ApprovalRecord.approval_id == approval_id,
+                    WorkspaceRecord.organization_id == organization_id,
+                )
+            )
+            return session.scalars(statement).first()
+
     def get_by_execution_id(
         self,
         execution_id: str,
@@ -131,6 +171,42 @@ class ApprovalRepository:
                 .order_by(ApprovalRecord.created_at.desc())
             )
             return list(session.scalars(statement).all())
+
+    def get_by_execution_id_for_organization(
+        self,
+        execution_id: str,
+        *,
+        organization_id: str,
+    ) -> list[ApprovalRecord]:
+        with self._sessions() as session:
+            statement = (
+                select(ApprovalRecord)
+                .join(
+                    WorkflowExecutionRecord,
+                    WorkflowExecutionRecord.id
+                    == ApprovalRecord.execution_id,
+                )
+                .join(
+                    WorkflowRecord,
+                    WorkflowRecord.id
+                    == WorkflowExecutionRecord.workflow_id,
+                )
+                .join(
+                    ProjectRecord,
+                    ProjectRecord.id == WorkflowRecord.project_id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    WorkspaceRecord.id == ProjectRecord.workspace_id,
+                )
+                .where(
+                    ApprovalRecord.execution_id == execution_id,
+                    WorkspaceRecord.organization_id == organization_id,
+                )
+                .order_by(ApprovalRecord.created_at.desc())
+            )
+            return list(session.scalars(statement).all())
+
     def list_pending(self) -> list[ApprovalRecord]:
         with self._sessions() as session:
             statement = (
@@ -140,5 +216,36 @@ class ApprovalRepository:
             )
             return list(session.scalars(statement).all())
 
-
-
+    def list_pending_for_organization(
+        self,
+        *,
+        organization_id: str,
+    ) -> list[ApprovalRecord]:
+        with self._sessions() as session:
+            statement = (
+                select(ApprovalRecord)
+                .join(
+                    WorkflowExecutionRecord,
+                    WorkflowExecutionRecord.id
+                    == ApprovalRecord.execution_id,
+                )
+                .join(
+                    WorkflowRecord,
+                    WorkflowRecord.id
+                    == WorkflowExecutionRecord.workflow_id,
+                )
+                .join(
+                    ProjectRecord,
+                    ProjectRecord.id == WorkflowRecord.project_id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    WorkspaceRecord.id == ProjectRecord.workspace_id,
+                )
+                .where(
+                    ApprovalRecord.decision.is_(None),
+                    WorkspaceRecord.organization_id == organization_id,
+                )
+                .order_by(ApprovalRecord.created_at.asc())
+            )
+            return list(session.scalars(statement).all())

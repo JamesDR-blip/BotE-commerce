@@ -168,3 +168,19 @@ def test_list_projects_requires_owned_workspace():
         raise AssertionError(
             "Expected project listing to be rejected"
         )
+
+def test_create_workspace_can_assign_organization():
+
+    service = build_service()
+    user = CurrentUser(user_id="user-1")
+
+    workspace = service.create_workspace(
+        current_user=user,
+        workspace_id="ws-org-1",
+        name="Organization Workspace",
+        organization_id="org-1",
+    )
+
+    assert workspace.id == "ws-org-1"
+    assert workspace.owner_id == "user-1"
+    assert workspace.organization_id == "org-1"

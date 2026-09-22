@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 
 import pytest
@@ -9,6 +9,8 @@ from api.main import create_app
 from application.approval.approval_service import ApprovalService
 from application.risk.risk_service import RiskService
 from configs.settings import Settings
+from repositories.rbac import RBACRepository
+from services.authorization import AuthorizationService
 from domain.approval import ApprovalDecision, ApprovalRequest
 from domain.identity import CurrentUser
 from domain.risk import RiskPolicy, RiskScore
@@ -199,6 +201,68 @@ def test_approval_service_get_for_execution_returns_none_without_pending():
     service = ApprovalService(Repository())
 
     assert service.get_for_execution("execution-1") is None
+
+def test_approval_service_list_pending_enforces_rbac_organization_scope():
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from database.models import Base
+
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    sessions = sessionmaker(bind=engine, expire_on_commit=False)
+    rbac = RBACRepository(sessions)
+
+    rbac.create_role(
+        role_id="role-reviewer",
+        name="reviewer",
+    )
+    rbac.create_permission(
+        permission_id="permission-approval-read",
+        resource="approval",
+        action="read",
+    )
+    rbac.assign_permission_to_role(
+        role_id="role-reviewer",
+        permission_id="permission-approval-read",
+    )
+    rbac.create_membership(
+        membership_id="membership-org-1",
+        user_id="user-1",
+        organization_id="org-1",
+        role_id="role-reviewer",
+    )
+    rbac.create_role(
+        role_id="role-viewer",
+        name="viewer",
+    )
+    rbac.create_membership(
+        membership_id="membership-org-2",
+        user_id="user-1",
+        organization_id="org-2",
+        role_id="role-viewer",
+    )
+
+    class Repository:
+        def __init__(self):
+            self.organizations = []
+
+        def list_pending_for_organization(self, *, organization_id):
+            self.organizations.append(organization_id)
+            return [f"approval-{organization_id}"]
+
+        def list_pending(self):
+            raise AssertionError("unscoped list_pending must not be called")
+
+    repository = Repository()
+    service = ApprovalService(
+        repository,
+        authorization=AuthorizationService(rbac),
+    )
+
+    approvals = service.list_pending(user=CurrentUser(user_id="user-1"))
+
+    assert approvals == ["approval-org-1"]
+    assert repository.organizations == ["org-1"]
 
 def test_approval_request_generates_and_persists_only_token_hash():
     repository = FakeApprovalRepository()
@@ -488,11 +552,15 @@ def test_pending_approval_response_does_not_expose_token_or_hash():
     app = create_app(Settings(database_url="sqlite://"))
 
     class FakeApprovalService:
-        def list_pending(self):
+        def list_pending(self, *, user):
+            assert user == CurrentUser(user_id="authenticated-user")
             return [
                 FakeApprovalRecord()
             ]
 
+    app.dependency_overrides[get_current_user] = (
+        lambda: CurrentUser(user_id="authenticated-user")
+    )
     app.dependency_overrides[get_approval_service] = (
         lambda: FakeApprovalService()
     )
@@ -507,7 +575,6 @@ def test_pending_approval_response_does_not_expose_token_or_hash():
     assert len(body) == 1
     assert "token" not in body[0]
     assert "token_hash" not in body[0]
-
 
 def test_approve_endpoint_accepts_token_in_json_body():
     app = create_app(Settings(database_url="sqlite://"))

@@ -30,6 +30,136 @@ class Base(DeclarativeBase):
     pass
 
 
+class OrganizationRecord(Base):
+    __tablename__ = "organizations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+
+    memberships: Mapped[list["MembershipRecord"]] = relationship(
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+    workspaces: Mapped[list["WorkspaceRecord"]] = relationship(
+        back_populates="organization",
+    )
+
+
+class RoleRecord(Base):
+    __tablename__ = "roles"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    description: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    permissions: Mapped[list["RolePermissionRecord"]] = relationship(
+        back_populates="role",
+        cascade="all, delete-orphan",
+    )
+    memberships: Mapped[list["MembershipRecord"]] = relationship(
+        back_populates="role",
+    )
+
+
+class PermissionRecord(Base):
+    __tablename__ = "permissions"
+    __table_args__ = (
+        UniqueConstraint(
+            "resource",
+            "action",
+            name="uq_permissions_resource_action",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    resource: Mapped[str] = mapped_column(String(100), nullable=False)
+    action: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    roles: Mapped[list["RolePermissionRecord"]] = relationship(
+        back_populates="permission",
+        cascade="all, delete-orphan",
+    )
+
+
+class RolePermissionRecord(Base):
+    __tablename__ = "role_permissions"
+    __table_args__ = (
+        UniqueConstraint(
+            "role_id",
+            "permission_id",
+            name="uq_role_permissions_role_permission",
+        ),
+    )
+
+    role_id: Mapped[str] = mapped_column(
+        ForeignKey("roles.id"),
+        primary_key=True,
+    )
+    permission_id: Mapped[str] = mapped_column(
+        ForeignKey("permissions.id"),
+        primary_key=True,
+    )
+
+    role: Mapped["RoleRecord"] = relationship(
+        back_populates="permissions",
+    )
+    permission: Mapped["PermissionRecord"] = relationship(
+        back_populates="roles",
+    )
+
+
+class MembershipRecord(Base):
+    __tablename__ = "memberships"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "organization_id",
+            "role_id",
+            name="uq_memberships_user_org_role",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+    organization_id: Mapped[str] = mapped_column(
+        ForeignKey("organizations.id"),
+        nullable=False,
+        index=True,
+    )
+    role_id: Mapped[str] = mapped_column(
+        ForeignKey("roles.id"),
+        nullable=False,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+
+    user: Mapped["UserRecord"] = relationship()
+    organization: Mapped["OrganizationRecord"] = relationship(
+        back_populates="memberships",
+    )
+    role: Mapped["RoleRecord"] = relationship(
+        back_populates="memberships",
+    )
+
+
 class UserRecord(Base):
     __tablename__ = "users"
 
@@ -67,6 +197,12 @@ class WorkspaceRecord(Base):
         index=True,
     )
 
+    organization_id: Mapped[str | None] = mapped_column(
+        ForeignKey("organizations.id"),
+        nullable=True,
+        index=True,
+    )
+
     name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
@@ -80,6 +216,10 @@ class WorkspaceRecord(Base):
 
     owner: Mapped[UserRecord] = relationship(
         back_populates="workspaces"
+    )
+
+    organization: Mapped["OrganizationRecord | None"] = relationship(
+        back_populates="workspaces",
     )
 
     projects: Mapped[list["ProjectRecord"]] = relationship(

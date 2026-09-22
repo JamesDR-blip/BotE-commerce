@@ -25,16 +25,15 @@
 - **S19 Data Lineage & Audit Trail**: Capability-level lineage, SHA-256 hash-chained audit events, owner/workspace-scoped APIs, and transactional mutation auditing.
 - **S20 Autonomous Agent Operations**: Governed closed-loop operations with deterministic guardrails, risk evaluation, ChangeSet preparation, approval/apply, verification, and learning.
 - **S21 Channel Sync & Multi-Platform Connectors**: Canonical product/channel sync framework, deterministic projection, idempotent synchronization, encrypted credentials, Shopify/Amazon connectors, and governed sync APIs.
-- **S22 AI Copilot for Data Operations — COMPLETE**: Conversational dataset/health queries, governed workflow authoring, simulation/execution tool dispatch, SSE streaming, Streamlit Copilot UI, and safe approval metadata presentation.
-
-- **S23 Marketplace & Extensibility Ecosystem — COMPLETE**: Signed declarative RulePack packaging, secure archive inspection, Ed25519 verification, filesystem-backed package/version lifecycle, authenticated marketplace APIs, and safe RuleEngine integration.
+- **S22 AI Copilot for Data Operations**: Conversational dataset/health queries, governed workflow authoring, simulation/execution tool dispatch, SSE streaming, Streamlit Copilot UI, and safe approval metadata presentation.
+- **S23 Marketplace & Extensibility Ecosystem**: Signed declarative RulePack packaging, secure archive inspection, Ed25519 verification, filesystem-backed package/version lifecycle, authenticated marketplace APIs, and safe RuleEngine integration.
 ## Current Sprint
 
-- **S23 Marketplace & Extensibility Ecosystem — COMPLETE**.
+- **S24 Enterprise Governance — IN PROGRESS**.
 
 ## Next Sprint
 
-- **S24 Enterprise Governance**.
+- **S25 Observability**.
 
 ## Future Roadmap
 
@@ -44,32 +43,25 @@
 - **S27 Documentation**: Interactive API specs, architecture diagrams, and developer guides.
 - **S28 Hardening**: Security audit, penetration testing, fuzzing, and compliance certification.
 
-## S21 — Channel Sync & Multi-Platform Connectors
+### S24 — Enterprise Governance & Granular RBAC — IN PROGRESS
 
-**Status:** COMPLETE
+S24 has completed the verified RBAC and multi-tenancy authorization foundation.
 
-Delivered:
+Implemented:
 
-- CanonicalProduct and ChannelMapping domain contracts.
-- Channel, SyncJob, SyncAttempt and Connector contracts.
-- Deterministic canonical-product projection.
-- Idempotent channel synchronization.
-- Channel mapping reconciliation and delta/noop handling.
-- Encrypted channel credentials with fail-closed behavior.
-- Bounded HTTP retry/backoff.
-- Shopify connector.
-- Amazon SP-API connector.
-- Channel synchronization API.
-- Repository, service, connector and API test coverage.
+- Persistent organizations, roles, permissions, role-permission assignments, and memberships.
+- Admin, Data Engineer, Reviewer, and Viewer role definitions.
+- Organization-scoped authorization through the existing AuthorizationService.
+- Authorization coverage for existing workspace, dataset, workflow, and approval resources.
+- Organization-aware repository boundaries across workspace, project, dataset, workflow, workflow version, and approval access.
+- Workspace organization ownership lineage for tenant isolation.
+- Authenticated and organization-scoped pending approval access.
+- Backward-compatible legacy role authorization fallback.
+- Alembic migration `20260916_04_add_enterprise_rbac.py`.
 
-Deferred:
+Remaining S24 scope:
 
-- TikTok Shop connector.
-- Shopee connector.
-- Lazada connector.
-- Production-grade Amazon SP-API SigV4 authentication/signing.
-- Dedicated distributed/channel-specific rate limiting.
-- Durable asynchronous channel workers.
-- Cross-product external compensation/reconciliation.
+- Organization quotas.
+- Compliance policy enforcement.
 
-**Verification:** 706 tests passed in the full regression suite.
+S24 must not be marked COMPLETE until the remaining objective scope is implemented and verified.

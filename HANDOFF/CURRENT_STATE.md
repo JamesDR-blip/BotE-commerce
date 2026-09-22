@@ -13,109 +13,114 @@ Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presen
 `services/container.py`
 
 **Tests:**
-850 / 850 passing via `python -m pytest`.
+887 / 887 passing via `python -m pytest`.
 
 **Latest Full Suite:**
-53.51 seconds, with 2 existing warnings.
+56.86 seconds, with 2 warnings.
 
 **Database:**
-- Current local database revision: `20260916_03`.
-- Repository Alembic head: `20260916_03`.
-- S23 introduced no database migration.
-- Seven pre-existing model/schema drift operations remain outside S23 scope.
-- Existing clean-from-zero Alembic baseline/bootstrap limitations remain outside S23 scope.
+- Current local database revision: `20260916_04`.
+- Repository Alembic head: `20260916_04`.
+- Single Alembic head confirmed.
+- S24 introduced `20260916_04_add_enterprise_rbac.py`.
+- Existing schema/model drift and bootstrap limitations remain outside the verified S24 scope.
 
 ---
 
 ## Current Sprint
 
-S23 — Marketplace & Extensibility Ecosystem: COMPLETE.
+S24 — Enterprise Governance & Granular RBAC: IN PROGRESS.
 
-S23 is complete for the verified signed declarative marketplace scope. The implementation establishes a secure filesystem-backed marketplace foundation for declarative RulePacks while preserving the existing Clean Architecture, application-service boundaries, governance controls, and ChangeSet mutation boundary.
+The verified implementation establishes persistent RBAC and organization-scoped tenant isolation across the existing workspace, dataset, workflow, and approval boundaries.
 
-## Next Sprint
+S24 is not yet complete because organization quotas and compliance policy enforcement remain outstanding.
 
-S24 — Enterprise Governance.
+## S24 Delivered
 
-## S23 Marketplace & Extensibility Ecosystem
+### Identity / RBAC
 
-### Delivered
+- Organizations.
+- Roles.
+- Permissions.
+- Role-permission assignments.
+- User memberships.
+- Admin role.
+- Data Engineer role.
+- Reviewer role.
+- Viewer role.
+- Persisted RBAC authorization through `AuthorizationService`.
+- Backward-compatible legacy role fallback.
 
-- Marketplace domain contracts:
-  - `MarketplacePackage`
-  - `RulePackManifest`
-  - `PluginManifest`
-- Secure ZIP/TAR archive inspection with rejection of:
-  - absolute paths
-  - traversal paths
-  - unsafe archive member types
-  - duplicate members
-- Ed25519 package signature verification.
-- SHA-256 package content hashing.
-- Signed package installation with manifest validation and safe staging.
-- Filesystem-backed installed package catalog.
-- Package/version lifecycle:
-  - list
-  - get
-  - install
-  - update
-  - uninstall
-- Multiple versions of the same package can coexist.
-- Authenticated marketplace APIs:
-  - `GET /marketplace/packages`
-  - `POST /marketplace/install`
-- Safe declarative RulePack loading through `yaml.safe_load` and the existing RuleParser.
+### Tenant Isolation
 
-## Architecture
+- Workspace organization ownership.
+- Organization-aware workspace repository access.
+- Organization-aware project access.
+- Organization-aware dataset access.
+- Organization-aware workflow access.
+- Organization-aware workflow-version access.
+- Organization-aware approval access.
+- Organization-scoped pending approval queries.
 
-S23 extends the existing architecture without introducing a parallel execution or mutation path.
+### API / Application Authorization
 
-- Domain: marketplace package and manifest contracts.
-- Application: `MarketplaceService` and marketplace ports.
-- Infrastructure: archive inspection, Ed25519 verification, installer, filesystem catalog, and RulePack loader.
-- Presentation: authenticated FastAPI marketplace routes and response schemas.
-- Composition root: marketplace dependencies are wired through `services/container.py`.
+Authorization coverage is established for:
 
-Production dataset mutation remains governed by the existing ChangeSet boundary.
+- `workspace`
+- `dataset`
+- `workflow`
+- `approval`
+
+The existing resource ownership boundary remains authoritative in addition to organization authorization.
+
+`GET /approvals/pending` now requires the authenticated user context and uses organization-scoped authorization rather than an unscoped pending-approval query.
+
+## Architecture Decisions
+
+1. Preserve Clean Architecture + DDD.
+2. Keep domain authorization contracts framework-independent.
+3. Reuse the existing `AuthorizationService` and repository boundaries rather than introducing parallel authorization infrastructure.
+4. Keep resource ownership separate from organization membership.
+5. Treat persisted RBAC as authoritative when the RBAC repository is configured.
+6. Preserve legacy role-based behavior for backwards compatibility.
+7. Enforce tenant filtering at repository boundaries.
+8. Keep ChangeSet as the only internal production dataset mutation boundary.
+9. Do not introduce new permissions for resources without contract evidence.
+10. Do not convert the existing ownership model into organization-wide collaboration.
 
 ## Security
 
-- Package signatures are verified before manifest parsing and staging.
-- Archive paths and member types are validated before extraction.
-- Manifest paths are constrained to safe relative paths.
-- YAML parsing uses `yaml.safe_load`.
-- Marketplace installation does not introduce arbitrary Python, shell, SQL, `eval`, or `exec` execution.
-- Existing authentication and application governance boundaries remain authoritative.
-- Signature material and staging paths are not exposed through marketplace responses.
+- No arbitrary SQL execution path introduced.
+- No `eval` or `exec`.
+- No unsafe YAML path introduced.
+- No unrestricted tool execution introduced.
+- Approval tokens remain protected.
+- Tenant-scoped approval queries prevent cross-organization pending approval access.
+- Domain layer remains free of FastAPI/SQLAlchemy dependencies.
 
 ## Verification
 
-- S23 targeted regression: 74 passed, 2 warnings.
-- Full project regression: 850 passed, 2 warnings.
-- Marketplace compile check: PASS.
-- `git diff --check`: PASS, with only existing LF/CRLF normalization warnings on modified Python files.
-- Alembic remains at `20260916_03` with a single head.
-- S23 introduced no database migration.
+- Full regression: **887 passed, 2 warnings**.
+- Full-suite runtime: **56.86 seconds**.
+- Alembic current/head: `20260916_04`.
+- Single Alembic head confirmed.
+- `git diff --check`: no whitespace errors; existing LF/CRLF normalization warnings remain.
 
 ## Known Boundaries
 
-- The installed-package catalog is filesystem-backed; remote public marketplace/catalog discovery is not implemented.
-- Plugin and channel-connector manifests are modeled, but arbitrary executable marketplace plugins/connectors are not enabled.
-- Sandboxed executable plugin discovery/runtime remains future work.
-- Deferred S21 connector/signing/worker/rate-limit work remains outside S23.
-- S19 artifact lineage/retention remains deferred.
-- Existing authentication/token-issuance limitations remain outside S23.
-- Seven pre-existing schema/model drift operations remain outside S23.
-- Existing clean-from-zero Alembic/bootstrap limitations remain outside S23.
+- Organization quotas are not implemented.
+- Compliance policy enforcement is not implemented.
+- Existing Starlette/AnyIO TestClient deprecation warning remains.
+- Existing marketplace installer duplicate `rules/fashion.yaml` warning remains.
+- Existing pre-S24 schema/model drift/bootstrap limitations remain outside this scope.
 
-## Handoff Invariant
+## Next Work
 
-ChangeSet remains the only internal production dataset mutation boundary.
+Complete the remaining S24 objective:
 
-Marketplace installation may add or remove marketplace package artifacts, but it must not bypass the governed dataset mutation path.
-
-## Next Action
-
-S23 is complete and ready for handoff.
-
-Proceed to S24 — Enterprise Governance, beginning with repository-first baseline inspection and the S24 sprint specification before implementation.
+1. Define and implement organization quota contracts and enforcement.
+2. Define and implement compliance policy enforcement.
+3. Add focused unit/integration/API coverage.
+4. Re-run the complete regression suite.
+5. Re-review tenant isolation, security, migration state, and documentation.
+6. Mark S24 COMPLETE only after the full objective is verified.

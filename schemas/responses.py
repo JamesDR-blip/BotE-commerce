@@ -90,6 +90,7 @@ class ExecutionDetailResponse(BaseModel):
 class WorkspaceResponse(BaseModel):
     id: str
     name: str
+    organization_id: str | None = None
     created_at: datetime
 
 

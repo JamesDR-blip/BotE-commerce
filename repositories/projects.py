@@ -1,4 +1,4 @@
-"""Repository for project persistence."""
+﻿"""Repository for project persistence."""
 
 from __future__ import annotations
 
@@ -18,7 +18,6 @@ class ProjectRepository:
     ) -> None:
         self._sessions = sessions
 
-
     def create(
         self,
         *,
@@ -29,7 +28,6 @@ class ProjectRepository:
     ) -> ProjectRecord:
 
         with self._sessions() as session:
-
             record = ProjectRecord(
                 id=project_id,
                 workspace_id=workspace_id,
@@ -43,7 +41,6 @@ class ProjectRepository:
 
             return record
 
-
     def get(
         self,
         project_id: str,
@@ -54,7 +51,7 @@ class ProjectRepository:
                 ProjectRecord,
                 project_id,
             )
-        
+
     def get_for_owner(
         self,
         *,
@@ -67,8 +64,7 @@ class ProjectRepository:
                 select(ProjectRecord)
                 .join(
                     WorkspaceRecord,
-                    ProjectRecord.workspace_id
-                    == WorkspaceRecord.id,
+                    ProjectRecord.workspace_id == WorkspaceRecord.id,
                 )
                 .where(
                     ProjectRecord.id == project_id,
@@ -76,6 +72,47 @@ class ProjectRepository:
                 )
             )
 
+    def get_for_organization(
+        self,
+        *,
+        project_id: str,
+        organization_id: str,
+    ) -> ProjectRecord | None:
+
+        with self._sessions() as session:
+            return session.scalar(
+                select(ProjectRecord)
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id == WorkspaceRecord.id,
+                )
+                .where(
+                    ProjectRecord.id == project_id,
+                    WorkspaceRecord.organization_id == organization_id,
+                )
+            )
+
+    def get_for_owner_in_organization(
+        self,
+        *,
+        project_id: str,
+        owner_id: str,
+        organization_id: str,
+    ) -> ProjectRecord | None:
+
+        with self._sessions() as session:
+            return session.scalar(
+                select(ProjectRecord)
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id == WorkspaceRecord.id,
+                )
+                .where(
+                    ProjectRecord.id == project_id,
+                    WorkspaceRecord.owner_id == owner_id,
+                    WorkspaceRecord.organization_id == organization_id,
+                )
+            )
 
     def list_by_workspace(
         self,
@@ -85,10 +122,8 @@ class ProjectRepository:
         with self._sessions() as session:
             return list(
                 session.scalars(
-                    select(ProjectRecord)
-                    .where(
-                        ProjectRecord.workspace_id
-                        == workspace_id
+                    select(ProjectRecord).where(
+                        ProjectRecord.workspace_id == workspace_id
                     )
                 )
             )

@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 class WorkspaceCreateRequest(BaseModel):
     id: str
     name: str
+    organization_id: str | None = None
 
 
 class ProjectCreateRequest(BaseModel):

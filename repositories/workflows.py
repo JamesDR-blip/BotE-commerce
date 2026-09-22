@@ -1,4 +1,4 @@
-"""Repository for workflow persistence."""
+﻿"""Repository for workflow persistence."""
 
 from __future__ import annotations
 
@@ -24,7 +24,6 @@ class WorkflowRepository:
     ) -> None:
         self._sessions = sessions
 
-
     def create(
         self,
         *,
@@ -36,7 +35,6 @@ class WorkflowRepository:
     ) -> WorkflowRecord:
 
         with self._sessions() as session:
-
             workflow = WorkflowRecord(
                 id=workflow_id,
                 project_id=project_id,
@@ -55,12 +53,10 @@ class WorkflowRepository:
             )
 
             session.add(workflow_version)
-
             session.commit()
             session.refresh(workflow)
 
             return workflow
-
 
     def get(
         self,
@@ -68,11 +64,8 @@ class WorkflowRepository:
     ) -> WorkflowRecord | None:
 
         with self._sessions() as session:
-            return session.get(
-                WorkflowRecord,
-                workflow_id,
-            )
-        
+            return session.get(WorkflowRecord, workflow_id)
+
     def get_version(
         self,
         workflow_id: str,
@@ -99,9 +92,7 @@ class WorkflowRepository:
                     .where(
                         WorkflowVersionRecord.workflow_id == workflow_id
                     )
-                    .order_by(
-                        WorkflowVersionRecord.created_at
-                    )
+                    .order_by(WorkflowVersionRecord.created_at)
                 )
             )
 
@@ -118,26 +109,85 @@ class WorkflowRepository:
                     select(WorkflowVersionRecord)
                     .join(
                         WorkflowRecord,
-                        WorkflowVersionRecord.workflow_id
-                        == WorkflowRecord.id,
+                        WorkflowVersionRecord.workflow_id == WorkflowRecord.id,
                     )
                     .join(
                         ProjectRecord,
-                        WorkflowRecord.project_id
-                        == ProjectRecord.id,
+                        WorkflowRecord.project_id == ProjectRecord.id,
                     )
                     .join(
                         WorkspaceRecord,
-                        ProjectRecord.workspace_id
-                        == WorkspaceRecord.id,
+                        ProjectRecord.workspace_id == WorkspaceRecord.id,
                     )
                     .where(
                         WorkflowVersionRecord.workflow_id == workflow_id,
                         WorkspaceRecord.owner_id == owner_id,
                     )
-                    .order_by(
-                        WorkflowVersionRecord.created_at
+                    .order_by(WorkflowVersionRecord.created_at)
+                )
+            )
+
+    def list_versions_for_organization(
+        self,
+        *,
+        workflow_id: str,
+        organization_id: str,
+    ) -> list[WorkflowVersionRecord]:
+
+        with self._sessions() as session:
+            return list(
+                session.scalars(
+                    select(WorkflowVersionRecord)
+                    .join(
+                        WorkflowRecord,
+                        WorkflowVersionRecord.workflow_id == WorkflowRecord.id,
                     )
+                    .join(
+                        ProjectRecord,
+                        WorkflowRecord.project_id == ProjectRecord.id,
+                    )
+                    .join(
+                        WorkspaceRecord,
+                        ProjectRecord.workspace_id == WorkspaceRecord.id,
+                    )
+                    .where(
+                        WorkflowVersionRecord.workflow_id == workflow_id,
+                        WorkspaceRecord.organization_id == organization_id,
+                    )
+                    .order_by(WorkflowVersionRecord.created_at)
+                )
+            )
+
+    def list_versions_for_owner_in_organization(
+        self,
+        *,
+        workflow_id: str,
+        owner_id: str,
+        organization_id: str,
+    ) -> list[WorkflowVersionRecord]:
+
+        with self._sessions() as session:
+            return list(
+                session.scalars(
+                    select(WorkflowVersionRecord)
+                    .join(
+                        WorkflowRecord,
+                        WorkflowVersionRecord.workflow_id == WorkflowRecord.id,
+                    )
+                    .join(
+                        ProjectRecord,
+                        WorkflowRecord.project_id == ProjectRecord.id,
+                    )
+                    .join(
+                        WorkspaceRecord,
+                        ProjectRecord.workspace_id == WorkspaceRecord.id,
+                    )
+                    .where(
+                        WorkflowVersionRecord.workflow_id == workflow_id,
+                        WorkspaceRecord.owner_id == owner_id,
+                        WorkspaceRecord.organization_id == organization_id,
+                    )
+                    .order_by(WorkflowVersionRecord.created_at)
                 )
             )
 
@@ -150,7 +200,6 @@ class WorkflowRepository:
     ) -> WorkflowVersionRecord:
 
         with self._sessions() as session:
-
             existing = session.scalar(
                 select(WorkflowVersionRecord).where(
                     WorkflowVersionRecord.workflow_id == workflow_id,
@@ -183,18 +232,13 @@ class WorkflowRepository:
     ) -> WorkflowVersionRecord | None:
 
         with self._sessions() as session:
-
-            workflow = session.get(
-                WorkflowRecord,
-                workflow_id,
-            )
+            workflow = session.get(WorkflowRecord, workflow_id)
 
             if workflow is None:
                 return None
 
             return session.scalar(
-                select(WorkflowVersionRecord)
-                .where(
+                select(WorkflowVersionRecord).where(
                     WorkflowVersionRecord.workflow_id == workflow_id,
                     WorkflowVersionRecord.version == workflow.active_version,
                 )
@@ -207,11 +251,7 @@ class WorkflowRepository:
     ) -> WorkflowRecord:
 
         with self._sessions() as session:
-
-            workflow = session.get(
-                WorkflowRecord,
-                workflow_id,
-            )
+            workflow = session.get(WorkflowRecord, workflow_id)
 
             if workflow is None:
                 raise ValueError(
@@ -219,8 +259,7 @@ class WorkflowRepository:
                 )
 
             version_record = session.scalar(
-                select(WorkflowVersionRecord)
-                .where(
+                select(WorkflowVersionRecord).where(
                     WorkflowVersionRecord.workflow_id == workflow_id,
                     WorkflowVersionRecord.version == version,
                 )
@@ -244,72 +283,11 @@ class WorkflowRepository:
     ) -> list[WorkflowRecord]:
 
         with self._sessions() as session:
-
             return list(
                 session.scalars(
-                    select(WorkflowRecord)
-                    .where(
-                        WorkflowRecord.project_id
-                        == project_id
+                    select(WorkflowRecord).where(
+                        WorkflowRecord.project_id == project_id
                     )
-                )
-            )
-
-    def get_for_owner(
-        self,
-        *,
-        workflow_id: str,
-        owner_id: str,
-    ) -> WorkflowRecord | None:
-
-        with self._sessions() as session:
-            return session.scalar(
-                select(WorkflowRecord)
-                .join(
-                    ProjectRecord,
-                    WorkflowRecord.project_id
-                    == ProjectRecord.id,
-                )
-                .join(
-                    WorkspaceRecord,
-                    ProjectRecord.workspace_id
-                    == WorkspaceRecord.id,
-                )
-                .where(
-                    WorkflowRecord.id == workflow_id,
-                    WorkspaceRecord.owner_id == owner_id,
-                )
-            )
-
-    def get_version_for_owner(
-        self,
-        *,
-        workflow_id: str,
-        version: str,
-        owner_id: str,
-    ):
-        with self._sessions() as session:
-            return session.scalar(
-                select(WorkflowVersionRecord)
-                .join(
-                    WorkflowRecord,
-                    WorkflowVersionRecord.workflow_id
-                    == WorkflowRecord.id,
-                )
-                .join(
-                    ProjectRecord,
-                    WorkflowRecord.project_id
-                    == ProjectRecord.id,
-                )
-                .join(
-                    WorkspaceRecord,
-                    ProjectRecord.workspace_id
-                    == WorkspaceRecord.id,
-                )
-                .where(
-                    WorkflowVersionRecord.workflow_id == workflow_id,
-                    WorkflowVersionRecord.version == version,
-                    WorkspaceRecord.owner_id == owner_id,
                 )
             )
 
@@ -326,17 +304,235 @@ class WorkflowRepository:
                     select(WorkflowRecord)
                     .join(
                         ProjectRecord,
-                        WorkflowRecord.project_id
-                        == ProjectRecord.id,
+                        WorkflowRecord.project_id == ProjectRecord.id,
                     )
                     .join(
                         WorkspaceRecord,
-                        ProjectRecord.workspace_id
-                        == WorkspaceRecord.id,
+                        ProjectRecord.workspace_id == WorkspaceRecord.id,
                     )
                     .where(
                         WorkflowRecord.project_id == project_id,
                         WorkspaceRecord.owner_id == owner_id,
                     )
+                )
+            )
+
+    def list_by_project_for_organization(
+        self,
+        *,
+        project_id: str,
+        organization_id: str,
+    ) -> list[WorkflowRecord]:
+
+        with self._sessions() as session:
+            return list(
+                session.scalars(
+                    select(WorkflowRecord)
+                    .join(
+                        ProjectRecord,
+                        WorkflowRecord.project_id == ProjectRecord.id,
+                    )
+                    .join(
+                        WorkspaceRecord,
+                        ProjectRecord.workspace_id == WorkspaceRecord.id,
+                    )
+                    .where(
+                        WorkflowRecord.project_id == project_id,
+                        WorkspaceRecord.organization_id == organization_id,
+                    )
+                )
+            )
+
+    def list_by_project_for_owner_in_organization(
+        self,
+        *,
+        project_id: str,
+        owner_id: str,
+        organization_id: str,
+    ) -> list[WorkflowRecord]:
+
+        with self._sessions() as session:
+            return list(
+                session.scalars(
+                    select(WorkflowRecord)
+                    .join(
+                        ProjectRecord,
+                        WorkflowRecord.project_id == ProjectRecord.id,
+                    )
+                    .join(
+                        WorkspaceRecord,
+                        ProjectRecord.workspace_id == WorkspaceRecord.id,
+                    )
+                    .where(
+                        WorkflowRecord.project_id == project_id,
+                        WorkspaceRecord.owner_id == owner_id,
+                        WorkspaceRecord.organization_id == organization_id,
+                    )
+                )
+            )
+
+    def get_for_owner(
+        self,
+        *,
+        workflow_id: str,
+        owner_id: str,
+    ) -> WorkflowRecord | None:
+
+        with self._sessions() as session:
+            return session.scalar(
+                select(WorkflowRecord)
+                .join(
+                    ProjectRecord,
+                    WorkflowRecord.project_id == ProjectRecord.id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id == WorkspaceRecord.id,
+                )
+                .where(
+                    WorkflowRecord.id == workflow_id,
+                    WorkspaceRecord.owner_id == owner_id,
+                )
+            )
+
+    def get_for_organization(
+        self,
+        *,
+        workflow_id: str,
+        organization_id: str,
+    ) -> WorkflowRecord | None:
+
+        with self._sessions() as session:
+            return session.scalar(
+                select(WorkflowRecord)
+                .join(
+                    ProjectRecord,
+                    WorkflowRecord.project_id == ProjectRecord.id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id == WorkspaceRecord.id,
+                )
+                .where(
+                    WorkflowRecord.id == workflow_id,
+                    WorkspaceRecord.organization_id == organization_id,
+                )
+            )
+
+    def get_for_owner_in_organization(
+        self,
+        *,
+        workflow_id: str,
+        owner_id: str,
+        organization_id: str,
+    ) -> WorkflowRecord | None:
+
+        with self._sessions() as session:
+            return session.scalar(
+                select(WorkflowRecord)
+                .join(
+                    ProjectRecord,
+                    WorkflowRecord.project_id == ProjectRecord.id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id == WorkspaceRecord.id,
+                )
+                .where(
+                    WorkflowRecord.id == workflow_id,
+                    WorkspaceRecord.owner_id == owner_id,
+                    WorkspaceRecord.organization_id == organization_id,
+                )
+            )
+
+    def get_version_for_owner(
+        self,
+        *,
+        workflow_id: str,
+        version: str,
+        owner_id: str,
+    ) -> WorkflowVersionRecord | None:
+
+        with self._sessions() as session:
+            return session.scalar(
+                select(WorkflowVersionRecord)
+                .join(
+                    WorkflowRecord,
+                    WorkflowVersionRecord.workflow_id == WorkflowRecord.id,
+                )
+                .join(
+                    ProjectRecord,
+                    WorkflowRecord.project_id == ProjectRecord.id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id == WorkspaceRecord.id,
+                )
+                .where(
+                    WorkflowVersionRecord.workflow_id == workflow_id,
+                    WorkflowVersionRecord.version == version,
+                    WorkspaceRecord.owner_id == owner_id,
+                )
+            )
+
+    def get_version_for_organization(
+        self,
+        *,
+        workflow_id: str,
+        version: str,
+        organization_id: str,
+    ) -> WorkflowVersionRecord | None:
+
+        with self._sessions() as session:
+            return session.scalar(
+                select(WorkflowVersionRecord)
+                .join(
+                    WorkflowRecord,
+                    WorkflowVersionRecord.workflow_id == WorkflowRecord.id,
+                )
+                .join(
+                    ProjectRecord,
+                    WorkflowRecord.project_id == ProjectRecord.id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id == WorkspaceRecord.id,
+                )
+                .where(
+                    WorkflowVersionRecord.workflow_id == workflow_id,
+                    WorkflowVersionRecord.version == version,
+                    WorkspaceRecord.organization_id == organization_id,
+                )
+            )
+
+    def get_version_for_owner_in_organization(
+        self,
+        *,
+        workflow_id: str,
+        version: str,
+        owner_id: str,
+        organization_id: str,
+    ) -> WorkflowVersionRecord | None:
+
+        with self._sessions() as session:
+            return session.scalar(
+                select(WorkflowVersionRecord)
+                .join(
+                    WorkflowRecord,
+                    WorkflowVersionRecord.workflow_id == WorkflowRecord.id,
+                )
+                .join(
+                    ProjectRecord,
+                    WorkflowRecord.project_id == ProjectRecord.id,
+                )
+                .join(
+                    WorkspaceRecord,
+                    ProjectRecord.workspace_id == WorkspaceRecord.id,
+                )
+                .where(
+                    WorkflowVersionRecord.workflow_id == workflow_id,
+                    WorkflowVersionRecord.version == version,
+                    WorkspaceRecord.owner_id == owner_id,
+                    WorkspaceRecord.organization_id == organization_id,
                 )
             )

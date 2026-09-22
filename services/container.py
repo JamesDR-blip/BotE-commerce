@@ -104,6 +104,8 @@ from repositories.changesets import ChangeSetRepository
 from repositories.execution_traces import ExecutionTraceRepository
 from repositories.executions import ExecutionRepository
 from repositories.projects import ProjectRepository
+from repositories.organizations import OrganizationRepository
+from repositories.rbac import RBACRepository
 from repositories.rules import RuleRepository
 from repositories.users import UserRepository
 from repositories.sync_jobs import SyncAttemptRepository, SyncJobRepository
@@ -124,10 +126,15 @@ class Container:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.authentication = AuthenticationService()
-        self.authorization = AuthorizationService()
 
         sessions = make_session_factory(settings.database_url)
         self.sessions = sessions
+
+        self.rbac = RBACRepository(sessions)
+        self.authorization = AuthorizationService(
+            rbac_repository=self.rbac,
+        )
+
         self.registry = ValidatorRegistry()
         self.rules = RuleRepository(settings.rules_path)
 
@@ -255,6 +262,7 @@ class Container:
         )
         self.workflow_executions = WorkflowExecutionRepository(sessions)
         self.users = UserRepository(sessions)
+        self.organizations = OrganizationRepository(sessions)
         self.workflows = WorkflowRepository(sessions)
         self.workspaces = WorkspaceRepository(sessions)
         self.projects = ProjectRepository(sessions)
@@ -371,11 +379,14 @@ class Container:
         self.dataset_service = DatasetService(
             datasets=self.datasets,
             projects=self.projects,
+            workspaces=self.workspaces,
             ingestion=self.dataset_ingestion,
+            authorization=self.authorization,
         )
         self.workspace_projects = WorkspaceProjectService(
             workspaces=self.workspaces,
             projects=self.projects,
+            authorization=self.authorization,
         )
         self.workflow_engine = WorkflowEngine(
             workflows=self.workflows,
@@ -416,6 +427,10 @@ class Container:
         self.workflow_history = WorkflowHistoryService(
             executions=self.workflow_executions,
             traces=self.workflow_capability_traces,
+            workflows=self.workflows,
+            projects=self.projects,
+            workspaces=self.workspaces,
+            authorization=self.authorization,
         )
         self.workflow_worker = WorkflowExecutionWorker(
             executions=self.workflow_executions,
@@ -436,6 +451,7 @@ class Container:
             workflow_executions=self.workflow_executions,
             workflow_queue=self.workflow_queue,
             approval_changeset_service=self.approval_changeset_service,
+            authorization=self.authorization,
         )
         self.workflow_runtime = WorkflowRuntimeService(
             workflow_engine=lambda: self.workflow_engine,
