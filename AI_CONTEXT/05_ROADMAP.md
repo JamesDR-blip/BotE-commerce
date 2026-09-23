@@ -29,7 +29,7 @@
 - **S23 Marketplace & Extensibility Ecosystem**: Signed declarative RulePack packaging, secure archive inspection, Ed25519 verification, filesystem-backed package/version lifecycle, authenticated marketplace APIs, and safe RuleEngine integration.
 ## Current Sprint
 
-- **S24 Enterprise Governance — IN PROGRESS**.
+- **S24 Enterprise Governance — COMPLETE**.
 
 ## Next Sprint
 
@@ -37,15 +37,15 @@
 
 ## Future Roadmap
 
-- **S24 Enterprise Governance**: Role-based access control (RBAC), multi-tenancy quotas, audit compliance.
+- **S24 Enterprise Governance**: Role-based access control (RBAC), multi-tenancy quotas, deterministic compliance policy enforcement, tenant isolation, and governance verification.
 - **S25 Observability**: OpenTelemetry tracing, Prometheus metrics, and execution dashboard.
 - **S26 DevOps**: Production Docker Compose, Helm charts, CI/CD pipeline automation.
 - **S27 Documentation**: Interactive API specs, architecture diagrams, and developer guides.
 - **S28 Hardening**: Security audit, penetration testing, fuzzing, and compliance certification.
 
-### S24 — Enterprise Governance & Granular RBAC — IN PROGRESS
+### S24 — Enterprise Governance & Granular RBAC — COMPLETE
 
-S24 has completed the verified RBAC and multi-tenancy authorization foundation.
+S24 has completed and verified the RBAC, multi-tenancy authorization, organization quota, and compliance policy enforcement foundation.
 
 Implemented:
 
@@ -59,9 +59,8 @@ Implemented:
 - Backward-compatible legacy role authorization fallback.
 - Alembic migration `20260916_04_add_enterprise_rbac.py`.
 
-Remaining S24 scope:
+Organization quota implementation and verification are complete for the currently defined quota contract.
 
-- Organization quotas.
-- Compliance policy enforcement.
+Compliance policy enforcement is complete: organization-scoped deterministic compliance policies are persisted and enforced at dataset, ChangeSet, and workflow execution boundaries.
 
-S24 must not be marked COMPLETE until the remaining objective scope is implemented and verified.
+S24 is COMPLETE.

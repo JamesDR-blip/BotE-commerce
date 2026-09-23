@@ -13,27 +13,30 @@ Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presen
 `services/container.py`
 
 **Tests:**
-887 / 887 passing via `python -m pytest`.
+920 / 920 passing via `python -m pytest`.
 
 **Latest Full Suite:**
-56.86 seconds, with 2 warnings.
+56.18 seconds, with 2 warnings.
 
 **Database:**
-- Current local database revision: `20260916_04`.
-- Repository Alembic head: `20260916_04`.
+- Current local database revision: `20260923_01`.
+- Repository Alembic head: `20260923_01`.
 - Single Alembic head confirmed.
-- S24 introduced `20260916_04_add_enterprise_rbac.py`.
+- S24 migrations:
+  - `20260916_04_add_enterprise_rbac.py`
+  - `20260922_01_add_organization_quotas.py`
+  - `20260923_01_add_compliance_policies.py`.
 - Existing schema/model drift and bootstrap limitations remain outside the verified S24 scope.
 
 ---
 
 ## Current Sprint
 
-S24 — Enterprise Governance & Granular RBAC: IN PROGRESS.
+S25 — Observability, Metrics & Telemetry.
 
-The verified implementation establishes persistent RBAC and organization-scoped tenant isolation across the existing workspace, dataset, workflow, and approval boundaries.
+The verified implementation establishes persistent RBAC, organization-scoped tenant isolation, organization quotas, and deterministic compliance policy enforcement across the existing workspace, dataset, workflow, approval, and ChangeSet boundaries.
 
-S24 is not yet complete because organization quotas and compliance policy enforcement remain outstanding.
+S24 is COMPLETE. RBAC, tenant isolation, organization quotas, and deterministic compliance policy enforcement are implemented and verified.
 
 ## S24 Delivered
 
@@ -87,6 +90,8 @@ The existing resource ownership boundary remains authoritative in addition to or
 8. Keep ChangeSet as the only internal production dataset mutation boundary.
 9. Do not introduce new permissions for resources without contract evidence.
 10. Do not convert the existing ownership model into organization-wide collaboration.
+11. Keep compliance evaluation deterministic and repository-backed; do not use LLM output as a governance decision.
+12. Enforce compliance before governed mutation, quota consumption, or workflow queue/engine mutation.
 
 ## Security
 
@@ -100,27 +105,26 @@ The existing resource ownership boundary remains authoritative in addition to or
 
 ## Verification
 
-- Full regression: **887 passed, 2 warnings**.
-- Full-suite runtime: **56.86 seconds**.
-- Alembic current/head: `20260916_04`.
+- Full regression: **920 passed, 2 warnings**.
+- Full-suite runtime: **56.18 seconds**.
+- Alembic current/head: `20260923_01`.
 - Single Alembic head confirmed.
 - `git diff --check`: no whitespace errors; existing LF/CRLF normalization warnings remain.
 
 ## Known Boundaries
 
-- Organization quotas are not implemented.
-- Compliance policy enforcement is not implemented.
+- Organization quota implementation and verification are complete for the defined quota contract.
+- Compliance policy persistence and deterministic enforcement are implemented and verified.
 - Existing Starlette/AnyIO TestClient deprecation warning remains.
 - Existing marketplace installer duplicate `rules/fashion.yaml` warning remains.
 - Existing pre-S24 schema/model drift/bootstrap limitations remain outside this scope.
 
 ## Next Work
 
-Complete the remaining S24 objective:
+S24 is complete. Continue with S25 Observability:
 
-1. Define and implement organization quota contracts and enforcement.
-2. Define and implement compliance policy enforcement.
-3. Add focused unit/integration/API coverage.
-4. Re-run the complete regression suite.
-5. Re-review tenant isolation, security, migration state, and documentation.
-6. Mark S24 COMPLETE only after the full objective is verified.
+1. Define the S25 observability contract and telemetry boundaries.
+2. Implement OpenTelemetry tracing at the established execution boundaries.
+3. Add Prometheus-compatible metrics for workflow execution and governance outcomes.
+4. Add execution observability/dashboard coverage.
+5. Preserve existing Clean Architecture, DDD, tenant, and ChangeSet boundaries.

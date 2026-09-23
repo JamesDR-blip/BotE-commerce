@@ -29,7 +29,7 @@ Phase 3: Autonomy & Multi-Channel Sync (S20 - S23)
    │  └── S23: Marketplace & Extensibility Ecosystem
    ▼
 Phase 4: Enterprise Production & Hardening (S24 - S28)
-      ├── S24: Enterprise Governance & Granular RBAC [In Progress]
+      ├── S24: Enterprise Governance & Granular RBAC [Completed]
       ├── S25: Observability, Metrics & Telemetry
       ├── S26: Production DevOps & CI/CD Automation
       ├── S27: Developer Documentation & API Specifications
@@ -67,7 +67,7 @@ Phase 4: Enterprise Production & Hardening (S24 - S28)
 - [Sprint 21: Channel Sync & Multi-Platform Connectors](sprint-21-channel-sync.md) *(COMPLETE)*
 - [Sprint 22: AI Copilot for Data Operations](sprint-22-copilot.md) *(COMPLETE)*
 - [Sprint 23: Marketplace & Extensibility Ecosystem](sprint-23-marketplace.md)
-- [Sprint 24: Enterprise Governance & Granular RBAC](sprint-24-governance-rbac.md) *(IN PROGRESS — RBAC & multi-tenancy implemented; quotas/compliance remaining)*
+- [Sprint 24: Enterprise Governance & Granular RBAC](sprint-24-governance-rbac.md) *(COMPLETE — RBAC, multi-tenancy, organization quotas, and deterministic compliance policy enforcement verified)*
 - [Sprint 25: Observability, Metrics & Telemetry](sprint-25-observability.md)
 - [Sprint 26: Production DevOps & CI/CD Automation](sprint-26-devops.md)
 - [Sprint 27: Developer Documentation & API Specifications](sprint-27-documentation.md)

@@ -10,6 +10,9 @@ from repositories.workspaces import WorkspaceRepository
 from application.datasets.dataset_ingestion import DatasetIngestionService
 from domain.identity import CurrentUser
 from services.authorization import AuthorizationService
+from services.compliance import ComplianceService
+from services.quota import QuotaService
+from domain.quota import QuotaDimension
 
 class DatasetService:
     def __init__(
@@ -20,12 +23,16 @@ class DatasetService:
         workspaces: WorkspaceRepository | None = None,
         ingestion: DatasetIngestionService | None = None,
         authorization: AuthorizationService | None = None,
+        quota_service: QuotaService | None = None,
+        compliance_service: ComplianceService | None = None,
     ) -> None:
         self.datasets = datasets
         self.projects = projects
         self.workspaces = workspaces
         self.ingestion = ingestion
         self.authorization = authorization
+        self.quota_service = quota_service
+        self.compliance_service = compliance_service
 
     def _authorize(
         self,
@@ -81,6 +88,46 @@ class DatasetService:
 
         return workspace.organization_id
 
+    def _check_compliance(
+        self,
+        *,
+        organization_id: str | None,
+        action: str,
+        context: dict[str, str],
+    ) -> None:
+        if self.compliance_service is None or organization_id is None:
+            return
+
+        self.compliance_service.check(
+            organization_id=organization_id,
+            resource="dataset",
+            action=action,
+            context=context,
+        )
+
+    def _check_quota(
+        self,
+        *,
+        organization_id: str | None,
+        dimension: QuotaDimension,
+        requested_usage: int,
+    ) -> None:
+        if self.quota_service is None:
+            return
+
+        self.quota_service.check(
+            organization_id=organization_id,
+            dimension=dimension,
+            requested_usage=requested_usage,
+        )
+
+    def _stream_size(self, source) -> int:
+        current_position = source.tell()
+        source.seek(0, 2)
+        size = source.tell()
+        source.seek(current_position)
+        return size
+
     def create_dataset(
         self,
         *,
@@ -101,13 +148,27 @@ class DatasetService:
                 f"Project not found: {project_id}"
             )
 
+        organization_id = self._organization_id_for_project(
+            project_id=project_id,
+            owner_id=current_user.user_id,
+        )
+
         self._authorize(
             current_user=current_user,
             action="write",
-            organization_id=self._organization_id_for_project(
-                project_id=project_id,
-                owner_id=current_user.user_id,
-            ),
+            organization_id=organization_id,
+        )
+
+        self._check_compliance(
+            organization_id=organization_id,
+            action="write",
+            context={"source_type": source_type},
+        )
+
+        self._check_quota(
+            organization_id=organization_id,
+            dimension=QuotaDimension.DATASET_COUNT,
+            requested_usage=1,
         )
 
         return self.datasets.create(
@@ -139,13 +200,32 @@ class DatasetService:
                 f"Project not found: {project_id}"
             )
 
+        organization_id = self._organization_id_for_project(
+            project_id=project_id,
+            owner_id=current_user.user_id,
+        )
+
         self._authorize(
             current_user=current_user,
             action="write",
-            organization_id=self._organization_id_for_project(
-                project_id=project_id,
-                owner_id=current_user.user_id,
-            ),
+            organization_id=organization_id,
+        )
+
+        self._check_compliance(
+            organization_id=organization_id,
+            action="write",
+            context={"source_type": source_type},
+        )
+
+        self._check_quota(
+            organization_id=organization_id,
+            dimension=QuotaDimension.DATASET_COUNT,
+            requested_usage=1,
+        )
+        self._check_quota(
+            organization_id=organization_id,
+            dimension=QuotaDimension.STORAGE_BYTES,
+            requested_usage=len(content),
         )
 
         if self.ingestion is None:
@@ -183,14 +263,36 @@ class DatasetService:
                 f"Project not found: {project_id}"
             )
 
+        organization_id = self._organization_id_for_project(
+            project_id=project_id,
+            owner_id=current_user.user_id,
+        )
+
         self._authorize(
             current_user=current_user,
             action="write",
-            organization_id=self._organization_id_for_project(
-                project_id=project_id,
-                owner_id=current_user.user_id,
-            ),
+            organization_id=organization_id,
         )
+
+        self._check_compliance(
+            organization_id=organization_id,
+            action="write",
+            context={"source_type": source_type},
+        )
+
+        if self.quota_service is not None:
+            stream_size = self._stream_size(source)
+
+            self._check_quota(
+                organization_id=organization_id,
+                dimension=QuotaDimension.DATASET_COUNT,
+                requested_usage=1,
+            )
+            self._check_quota(
+                organization_id=organization_id,
+                dimension=QuotaDimension.STORAGE_BYTES,
+                requested_usage=stream_size,
+            )
 
         if self.ingestion is None:
             raise RuntimeError(

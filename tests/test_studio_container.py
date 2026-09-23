@@ -91,3 +91,18 @@ def test_container_wires_copilot_agent_into_service(monkeypatch):
 
     assert isinstance(container.copilot_agent, CopilotAgent)
     assert container.copilot._agent is container.copilot_agent
+
+
+def test_container_wires_governance_dependencies():
+    settings = Settings(database_url="sqlite://")
+
+    container = Container(settings)
+
+    assert container.workflow_runtime._authorization() is container.authorization
+    assert container.workflow_runtime._projects() is container.projects
+    assert container.workflow_runtime._workspaces() is container.workspaces
+
+    assert container.approval_service.authorization is container.authorization
+    assert container.approval_service.workflows is container.workflows
+    assert container.approval_service.projects is container.projects
+    assert container.approval_service.workspaces is container.workspaces

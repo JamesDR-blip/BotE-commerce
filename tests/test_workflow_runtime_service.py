@@ -2,6 +2,8 @@
 from application.workflows.runtime_service import WorkflowRuntimeService
 from domain.approval import ApprovalRequest
 from domain.identity import CurrentUser
+from domain.exceptions import QuotaExceededError
+from domain.quota import QuotaDimension
 
 
 class FakeEngine:
@@ -467,3 +469,195 @@ def test_runtime_high_risk_without_approval_service_fails_closed():
     assert executions.pending == []
     assert executions.running == []
     assert engine.executed == []
+
+class FakeWorkflowQuotaService:
+    def __init__(self, error=None):
+        self.calls = []
+        self.error = error
+
+    def check(self, *, organization_id, dimension, requested_usage):
+        self.calls.append(
+            {
+                "organization_id": organization_id,
+                "dimension": dimension,
+                "requested_usage": requested_usage,
+            }
+        )
+        if self.error is not None:
+            raise self.error
+
+
+class FakeQuotaProjectRepository:
+    class Project:
+        workspace_id = "workspace-1"
+
+    def get_for_owner(self, *, project_id, owner_id):
+        assert project_id == "project-1"
+        assert owner_id == "user-1"
+        return self.Project()
+
+
+class FakeQuotaWorkspaceRepository:
+    class Workspace:
+        organization_id = "org-1"
+
+    def get_for_owner(self, *, workspace_id, owner_id):
+        assert workspace_id == "workspace-1"
+        assert owner_id == "user-1"
+        return self.Workspace()
+
+
+class FakeQuotaAuthorization:
+    def authorize(self, **kwargs):
+        return None
+
+
+def test_runtime_service_checks_workflow_execution_quota():
+    engine = FakeEngine()
+    quota = FakeWorkflowQuotaService()
+
+    service = WorkflowRuntimeService(
+        workflow_engine=lambda: engine,
+        workflow_history=FakeHistory,
+        workflows=lambda: FakeWorkflowRepository(),
+        projects=lambda: FakeQuotaProjectRepository(),
+        workspaces=lambda: FakeQuotaWorkspaceRepository(),
+        authorization=FakeQuotaAuthorization(),
+        quota_service=lambda: quota,
+    )
+
+    result = service.execute(
+        current_user=CurrentUser(user_id="user-1"),
+        workflow_id="workflow-1",
+        inputs={"source": "catalog"},
+    )
+
+    assert result == "runtime"
+    assert quota.calls == [
+        {
+            "organization_id": "org-1",
+            "dimension": QuotaDimension.WORKFLOW_EXECUTION_COUNT,
+            "requested_usage": 1,
+        }
+    ]
+    assert engine.calls
+
+
+def test_runtime_service_stops_before_engine_when_workflow_quota_exceeded():
+    quota = FakeWorkflowQuotaService(
+        error=QuotaExceededError(
+            dimension=QuotaDimension.WORKFLOW_EXECUTION_COUNT.value,
+            current_usage=1,
+            requested_usage=1,
+            limit=1,
+        )
+    )
+
+    class Engine:
+        def execute(self, **kwargs):
+            raise AssertionError("workflow engine must not execute")
+
+    service = WorkflowRuntimeService(
+        workflow_engine=lambda: Engine(),
+        workflow_history=FakeHistory,
+        workflows=lambda: FakeWorkflowRepository(),
+        projects=lambda: FakeQuotaProjectRepository(),
+        workspaces=lambda: FakeQuotaWorkspaceRepository(),
+        authorization=FakeQuotaAuthorization(),
+        quota_service=lambda: quota,
+    )
+
+    with pytest.raises(QuotaExceededError):
+        service.execute(
+            current_user=CurrentUser(user_id="user-1"),
+            workflow_id="workflow-1",
+            inputs={"source": "catalog"},
+        )
+
+    assert quota.calls == [
+        {
+            "organization_id": "org-1",
+            "dimension": QuotaDimension.WORKFLOW_EXECUTION_COUNT,
+            "requested_usage": 1,
+        }
+    ]
+
+def test_runtime_service_checks_async_workflow_execution_quota():
+    engine = FakeQueuedEngine()
+    queue = FakeWorkflowQueue()
+    quota = FakeWorkflowQuotaService()
+    plan = ExecutionPlan(steps=(), metadata={})
+
+    class Engine(FakeQueuedEngine):
+        def create_queued(self, **kwargs):
+            kwargs["plan"] = plan
+            return super().create_queued(**kwargs)
+
+    engine = Engine()
+
+    service = WorkflowRuntimeService(
+        workflow_engine=lambda: engine,
+        workflow_history=lambda: None,
+        workflows=lambda: FakeWorkflowRepository(),
+        workflow_queue=lambda: queue,
+        projects=lambda: FakeQuotaProjectRepository(),
+        workspaces=lambda: FakeQuotaWorkspaceRepository(),
+        authorization=FakeQuotaAuthorization(),
+        quota_service=lambda: quota,
+    )
+
+    result = service.execute_async(
+        current_user=CurrentUser(user_id="user-1"),
+        workflow_id="workflow-1",
+        inputs={"source": "catalog"},
+    )
+
+    assert result.execution_id in engine.executions
+    assert quota.calls == [
+        {
+            "organization_id": "org-1",
+            "dimension": QuotaDimension.WORKFLOW_EXECUTION_COUNT,
+            "requested_usage": 1,
+        }
+    ]
+
+
+def test_runtime_service_stops_before_queue_when_async_workflow_quota_exceeded():
+    engine = FakeQueuedEngine()
+    queue = FakeWorkflowQueue()
+    quota = FakeWorkflowQuotaService(
+        error=QuotaExceededError(
+            dimension=QuotaDimension.WORKFLOW_EXECUTION_COUNT.value,
+            current_usage=1,
+            requested_usage=1,
+            limit=1,
+        )
+    )
+
+    service = WorkflowRuntimeService(
+        workflow_engine=lambda: engine,
+        workflow_history=lambda: None,
+        workflows=lambda: FakeWorkflowRepository(),
+        workflow_queue=lambda: queue,
+        projects=lambda: FakeQuotaProjectRepository(),
+        workspaces=lambda: FakeQuotaWorkspaceRepository(),
+        authorization=FakeQuotaAuthorization(),
+        quota_service=lambda: quota,
+    )
+
+    with pytest.raises(QuotaExceededError):
+        service.execute_async(
+            current_user=CurrentUser(user_id="user-1"),
+            workflow_id="workflow-1",
+            inputs={"source": "catalog"},
+        )
+
+    assert quota.calls == [
+        {
+            "organization_id": "org-1",
+            "dimension": QuotaDimension.WORKFLOW_EXECUTION_COUNT,
+            "requested_usage": 1,
+        }
+    ]
+    assert engine.executions == {}
+    assert queue.dispatched == []

@@ -49,7 +49,40 @@ class OrganizationRecord(Base):
     workspaces: Mapped[list["WorkspaceRecord"]] = relationship(
         back_populates="organization",
     )
+    quotas: Mapped[list["OrganizationQuotaRecord"]] = relationship(
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
 
+
+class OrganizationQuotaRecord(Base):
+    __tablename__ = "organization_quotas"
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "dimension",
+            name="uq_organization_quota_dimension",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    organization_id: Mapped[str] = mapped_column(
+        ForeignKey("organizations.id"),
+        nullable=False,
+        index=True,
+    )
+    dimension: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+    limit: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+
+    organization: Mapped["OrganizationRecord"] = relationship(
+        back_populates="quotas",
+    )
 
 class RoleRecord(Base):
     __tablename__ = "roles"
@@ -68,6 +101,30 @@ class RoleRecord(Base):
     memberships: Mapped[list["MembershipRecord"]] = relationship(
         back_populates="role",
     )
+
+
+class CompliancePolicyRecord(Base):
+    __tablename__ = "compliance_policies"
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "name",
+            name="uq_compliance_policy_organization_name",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    organization_id: Mapped[str] = mapped_column(
+        ForeignKey("organizations.id"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    resource: Mapped[str] = mapped_column(String(100), nullable=False)
+    action: Mapped[str] = mapped_column(String(100), nullable=False)
+    condition: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
 class PermissionRecord(Base):

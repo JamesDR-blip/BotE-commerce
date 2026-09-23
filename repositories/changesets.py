@@ -248,6 +248,30 @@ class ChangeSetRepository:
             changeset_id,
         )
 
+    def get_organization_id_in_transaction(
+        self,
+        session: Session,
+        changeset_id: str,
+    ) -> str | None:
+        return session.scalar(
+            select(WorkspaceRecord.organization_id)
+            .join(
+                ProjectRecord,
+                ProjectRecord.workspace_id == WorkspaceRecord.id,
+            )
+            .join(
+                DatasetRecord,
+                DatasetRecord.project_id == ProjectRecord.id,
+            )
+            .join(
+                ChangeSetRecord,
+                ChangeSetRecord.dataset_id == DatasetRecord.id,
+            )
+            .where(
+                ChangeSetRecord.id == changeset_id,
+            )
+        )
+
     def get_workspace_id_in_transaction(
         self,
         session: Session,

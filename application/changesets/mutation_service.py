@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from application.audit.audit_service import AuditService
 from domain.changeset import ChangeSet
+from services.compliance import ComplianceService
 
 
 class ChangeSetMutationService:
@@ -15,10 +16,12 @@ class ChangeSetMutationService:
         sessions,
         changesets,
         audit_service: AuditService | None = None,
+        compliance_service: ComplianceService | None = None,
     ) -> None:
         self._sessions = sessions
         self._changesets = changesets
         self._audit_service = audit_service
+        self._compliance_service = compliance_service
 
     def apply(
         self,
@@ -43,6 +46,24 @@ class ChangeSetMutationService:
                         "Only PREPARED ChangeSets can be applied: "
                         f"{changeset_id} ({record.status})"
                     )
+
+                if self._compliance_service is not None:
+                    organization_id = (
+                        self._changesets.get_organization_id_in_transaction(
+                            session,
+                            changeset_id,
+                        )
+                    )
+
+                    if organization_id is not None:
+                        self._compliance_service.check(
+                            organization_id=organization_id,
+                            resource="changeset",
+                            action="apply",
+                            context={
+                                "workflow_id": record.workflow_id,
+                            },
+                        )
 
                 applied = self._changesets.apply_in_transaction(
                     session,

@@ -1,8 +1,11 @@
-import pytest
+﻿import pytest
 from io import BytesIO
+from types import SimpleNamespace
 
 from database.models import Base
 
+from domain.exceptions import QuotaExceededError
+from domain.quota import QuotaDimension
 from domain.identity import CurrentUser
 from domain.plans import ExecutionPlan
 
@@ -271,3 +274,235 @@ def test_ingest_dataset_stream_rejects_other_users_project():
             filename="catalog.csv",
             source=BytesIO(b"id,value\n1,100\n"),
         )
+
+class FakeAuthorization:
+    def authorize(self, **kwargs):
+        return None
+
+
+class FakeQuotaService:
+    def __init__(self, error=None):
+        self.calls = []
+        self.error = error
+
+    def check(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.error is not None:
+            raise self.error
+
+
+def test_create_dataset_checks_dataset_quota():
+    class FakeProjects:
+        def get_for_owner(self, *, project_id, owner_id):
+            assert project_id == "p-1"
+            assert owner_id == "user-1"
+            return SimpleNamespace(id="p-1", workspace_id="ws-1")
+
+    class FakeWorkspaces:
+        def get_for_owner(self, *, workspace_id, owner_id):
+            assert workspace_id == "ws-1"
+            assert owner_id == "user-1"
+            return SimpleNamespace(organization_id="org-1")
+
+    class FakeDatasets:
+        def __init__(self):
+            self.kwargs = None
+
+        def create(self, **kwargs):
+            self.kwargs = kwargs
+            return SimpleNamespace(id="d-1", **kwargs)
+
+    quota = FakeQuotaService()
+    datasets = FakeDatasets()
+
+    dataset_service = DatasetService(
+        datasets=datasets,
+        projects=FakeProjects(),
+        workspaces=FakeWorkspaces(),
+        authorization=FakeAuthorization(),
+        quota_service=quota,
+    )
+
+    result = dataset_service.create_dataset(
+        current_user=CurrentUser(user_id="user-1"),
+        dataset_id="d-1",
+        project_id="p-1",
+        name="catalog.csv",
+        source_type="upload",
+        metadata={},
+    )
+
+    assert result.id == "d-1"
+    assert datasets.kwargs is not None
+    assert quota.calls == [
+        {
+            "organization_id": "org-1",
+            "dimension": QuotaDimension.DATASET_COUNT,
+            "requested_usage": 1,
+        }
+    ]
+
+
+def test_create_dataset_stops_before_mutation_when_quota_exceeded():
+    class FakeProjects:
+        def get_for_owner(self, *, project_id, owner_id):
+            return SimpleNamespace(id="p-1", workspace_id="ws-1")
+
+    class FakeWorkspaces:
+        def get_for_owner(self, *, workspace_id, owner_id):
+            return SimpleNamespace(organization_id="org-1")
+
+    class FakeDatasets:
+        def __init__(self):
+            self.called = False
+
+        def create(self, **kwargs):
+            self.called = True
+            raise AssertionError("dataset mutation must not occur")
+
+    quota = FakeQuotaService(
+        error=QuotaExceededError(
+            dimension=QuotaDimension.DATASET_COUNT.value,
+            current_usage=1,
+            requested_usage=1,
+            limit=1,
+        )
+    )
+    datasets = FakeDatasets()
+
+    dataset_service = DatasetService(
+        datasets=datasets,
+        projects=FakeProjects(),
+        workspaces=FakeWorkspaces(),
+        authorization=FakeAuthorization(),
+        quota_service=quota,
+    )
+
+    with pytest.raises(QuotaExceededError):
+        dataset_service.create_dataset(
+            current_user=CurrentUser(user_id="user-1"),
+            dataset_id="d-1",
+            project_id="p-1",
+            name="catalog.csv",
+            source_type="upload",
+            metadata={},
+        )
+
+    assert datasets.called is False
+    assert quota.calls == [
+        {
+            "organization_id": "org-1",
+            "dimension": QuotaDimension.DATASET_COUNT,
+            "requested_usage": 1,
+        }
+    ]
+
+
+def test_ingest_dataset_checks_dataset_and_storage_quotas():
+    class FakeProjects:
+        def get_for_owner(self, *, project_id, owner_id):
+            return SimpleNamespace(id="p-1", workspace_id="ws-1")
+
+    class FakeWorkspaces:
+        def get_for_owner(self, *, workspace_id, owner_id):
+            return SimpleNamespace(organization_id="org-1")
+
+    class FakeIngestion:
+        def __init__(self):
+            self.kwargs = None
+
+        def ingest(self, **kwargs):
+            self.kwargs = kwargs
+            return {"status": "READY"}
+
+    quota = FakeQuotaService()
+    ingestion = FakeIngestion()
+    content = b"id,value\n1,100\n"
+
+    dataset_service = DatasetService(
+        datasets=None,
+        projects=FakeProjects(),
+        workspaces=FakeWorkspaces(),
+        ingestion=ingestion,
+        authorization=FakeAuthorization(),
+        quota_service=quota,
+    )
+
+    result = dataset_service.ingest_dataset(
+        dataset_id="d-1",
+        project_id="p-1",
+        name="catalog",
+        current_user=CurrentUser(user_id="user-1"),
+        filename="catalog.csv",
+        content=content,
+    )
+
+    assert result == {"status": "READY"}
+    assert ingestion.kwargs is not None
+    assert quota.calls == [
+        {
+            "organization_id": "org-1",
+            "dimension": QuotaDimension.DATASET_COUNT,
+            "requested_usage": 1,
+        },
+        {
+            "organization_id": "org-1",
+            "dimension": QuotaDimension.STORAGE_BYTES,
+            "requested_usage": len(content),
+        },
+    ]
+
+
+def test_ingest_dataset_stream_checks_exact_storage_size():
+    class FakeProjects:
+        def get_for_owner(self, *, project_id, owner_id):
+            return SimpleNamespace(id="p-1", workspace_id="ws-1")
+
+    class FakeWorkspaces:
+        def get_for_owner(self, *, workspace_id, owner_id):
+            return SimpleNamespace(organization_id="org-1")
+
+    class FakeIngestion:
+        def __init__(self):
+            self.kwargs = None
+
+        def ingest_streaming(self, **kwargs):
+            self.kwargs = kwargs
+            return {"status": "READY"}
+
+    quota = FakeQuotaService()
+    ingestion = FakeIngestion()
+    source = BytesIO(b"id,value\n1,100\n2,200\n")
+
+    dataset_service = DatasetService(
+        datasets=None,
+        projects=FakeProjects(),
+        workspaces=FakeWorkspaces(),
+        ingestion=ingestion,
+        authorization=FakeAuthorization(),
+        quota_service=quota,
+    )
+
+    result = dataset_service.ingest_dataset_stream(
+        dataset_id="d-1",
+        project_id="p-1",
+        name="catalog",
+        current_user=CurrentUser(user_id="user-1"),
+        filename="catalog.csv",
+        source=source,
+    )
+
+    assert result == {"status": "READY"}
+    assert ingestion.kwargs["source"] is source
+    assert quota.calls == [
+        {
+            "organization_id": "org-1",
+            "dimension": QuotaDimension.DATASET_COUNT,
+            "requested_usage": 1,
+        },
+        {
+            "organization_id": "org-1",
+            "dimension": QuotaDimension.STORAGE_BYTES,
+            "requested_usage": len(b"id,value\n1,100\n2,200\n"),
+        },
+    ]

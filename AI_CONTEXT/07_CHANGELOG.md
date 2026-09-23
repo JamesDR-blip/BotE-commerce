@@ -2,7 +2,67 @@
 
 # Changelog
 
-## S24 — Enterprise Governance & Granular RBAC — IN PROGRESS
+# S24 — Enterprise Governance & Granular RBAC — COMPLETE
+### 2026-09-23
+
+Completed and verified the remaining S24 governance scope: organization quotas and deterministic compliance policy enforcement.
+
+### Added
+
+- Added framework-independent CompliancePolicy domain contract.
+- Added deterministic ComplianceDecision contract.
+- Added organization-scoped persistent compliance policy repository.
+- Added ComplianceService for deterministic policy evaluation.
+- Added ComplianceViolationError.
+- Added organization quota persistence and service integration.
+- Added compliance enforcement to dataset creation and ingestion paths.
+- Added compliance enforcement to ChangeSet Apply.
+- Added compliance enforcement to synchronous and asynchronous workflow execution.
+- Added tenant-aware compliance resolution through existing organization lineage.
+- Preserved legacy/unscoped resource compatibility.
+
+### Database
+
+Added migrations:
+
+- database/migrations/versions/20260922_01_add_organization_quotas.py
+- database/migrations/versions/20260923_01_add_compliance_policies.py
+
+Alembic current/head:
+
+20260923_01
+
+Single Alembic head confirmed.
+
+### Security / Safety
+
+- Compliance decisions are deterministic and repository-backed.
+- No LLM output is treated as executable compliance policy.
+- No eval or exec introduced.
+- No unsafe YAML path introduced.
+- No arbitrary SQL execution path introduced.
+- Enforcement occurs before governed mutation/execution boundaries.
+- Organization scope is enforced through existing tenant lineage and repository/application boundaries.
+- Legacy unscoped resources remain compatible.
+
+### Verification
+
+- Full regression: **920 passed, 2 warnings**.
+- Governance-focused tests: **24 passed**.
+- Governance py_compile: PASS.
+- git diff --check: PASS; only LF/CRLF normalization warnings remain.
+
+### S24 Status
+
+All currently defined S24 objectives are implemented and verified.
+
+S24 is **COMPLETE**.
+
+Next sprint: **S25 — Observability, Metrics & Telemetry**.
+
+---
+
+## S24 — Enterprise Governance & Granular RBAC — COMPLETE
 ### 2026-09-22
 
 Implemented the verified S24 RBAC and multi-tenancy foundation while preserving existing ownership and production mutation boundaries.
@@ -66,7 +126,7 @@ Single Alembic head confirmed.
 
 The following S24 objective items remain:
 
-- Organization quotas.
+- Organization quota implementation and verification for the currently defined quota contract.
 - Compliance policy enforcement.
 
 S24 is therefore not yet marked COMPLETE.

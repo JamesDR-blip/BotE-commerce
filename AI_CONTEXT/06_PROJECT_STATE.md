@@ -2,12 +2,12 @@
 
 ## Current Sprint
 
-**S24 — Enterprise Governance & Granular RBAC: IN PROGRESS**
+**S25 — Observability, Metrics & Telemetry**
 
 
 ## Next Sprint
 
-**S24 Enterprise Governance & Granular RBAC**
+**S26 ? DevOps & Platform Reliability**
 
 ## Previous Sprints
 
@@ -47,24 +47,23 @@
 
 ## Test Status
 
-- **Test Suite:** 612 / 612 passing via python -m pytest
-- **Latest Full Suite Runtime:** 26.65 seconds
-- **Warnings:** 1 existing Starlette/AnyIO TestClient deprecation warning.
+- **Test Suite:** 920 / 920 passing via python -m pytest
+- **Latest Full Suite Runtime:** 56.18 seconds
+- **Warnings:** 2 existing warnings: Starlette/AnyIO TestClient deprecation and duplicate `rules/fashion.yaml` test fixture warning.
 - S19 lineage, audit, API, ChangeSet, approval, rollback, repository, and workflow integration tests all pass.
 - git diff --check: no whitespace errors; remaining messages are Git LF/CRLF normalization warnings.
 
 ## Database / Migration Status
 
 - **Engine:** SQLite (local dev/test), PostgreSQL (production)
-- **Current Database Revision:** 20260916_03
-- **Current local database revision:** `20260916_03`.
-- **Repository Alembic head:** `20260916_03`.
-- **Latest migrations:** S21 channel synchronization migrations:
-  - `database/migrations/versions/20260916_01_add_channels.py`
-  - `database/migrations/versions/20260916_02_add_sync_jobs.py`
-  - `database/migrations/versions/20260916_03_add_channel_mappings.py`
-- **S22 database migration:** none required.
-- Alembic currently reports a single head: `20260916_03`.
+- **Current Database Revision:** `20260923_01`
+- **Current local database revision:** `20260923_01`.
+- **Repository Alembic head:** `20260923_01`.
+- **Latest migrations:** S24 governance migrations:
+  - `database/migrations/versions/20260916_04_add_enterprise_rbac.py`
+  - `database/migrations/versions/20260922_01_add_organization_quotas.py`
+  - `database/migrations/versions/20260923_01_add_compliance_policies.py`
+- Alembic currently reports a single head: `20260923_01`.
 - Seven pre-existing model/schema drift operations remain outside S22 scope.
 - Existing clean-from-zero Alembic baseline/bootstrap limitations remain outside S22 scope.
 
@@ -81,11 +80,11 @@
 
 ## Current Sprint
 
-S24 — Enterprise Governance & Granular RBAC: IN PROGRESS.
+S24 — Enterprise Governance & Granular RBAC: COMPLETE.
 
-The verified S24 implementation currently covers persistent RBAC, organization membership, tenant-scoped repository access, and authorization enforcement across the existing workspace, dataset, workflow, and approval resources.
+The verified S24 implementation covers persistent RBAC, organization membership, tenant-scoped repository access, organization quotas, deterministic compliance policies, and authorization/compliance enforcement across the governed workspace, dataset, workflow, approval, and ChangeSet boundaries.
 
-Organization quotas and compliance policy enforcement remain outstanding S24 scope.
+Organization quota implementation and deterministic compliance policy enforcement are complete for the currently defined S24 governance contract.
 
 ## S24 Governance & RBAC
 
@@ -136,25 +135,75 @@ S24 adds:
 Migration:
 
 `database/migrations/versions/20260916_04_add_enterprise_rbac.py`
+`database/migrations/versions/20260922_01_add_organization_quotas.py`
+`database/migrations/versions/20260923_01_add_compliance_policies.py`
 
 Current Alembic revision/head:
 
-`20260916_04`
+`20260923_01`
 
 A single Alembic head is confirmed.
 
 ### Verification
 
-- Full regression: **887 passed, 2 warnings**.
-- Latest full-suite runtime: **56.86 seconds**.
-- `git diff --check`: no whitespace errors; existing LF/CRLF normalization warnings remain.
-- Alembic current/head: `20260916_04`.
+- Full regression: **920 passed, 2 warnings**.
+- Latest full-suite runtime: **56.18 seconds**.
+- `python -m py_compile` governance files: PASS.
+- `git diff --check`: no content whitespace errors; Git reports only LF/CRLF normalization warnings.
+- Alembic current/head: `20260923_01`.
 - Single Alembic head confirmed.
 
+
+### S24 Quotas & Compliance
+
+#### Organization Quotas
+
+Verified quota dimensions:
+
+- STORAGE_BYTES
+- DATASET_COUNT
+- WORKFLOW_EXECUTION_COUNT
+
+Quota limits are organization-scoped, non-negative integers, and unlimited when no limit is configured. Dataset creation/ingestion and synchronous/asynchronous workflow execution enforce the applicable quota before mutation or queue/engine mutation.
+
+#### Compliance Policies
+
+Added framework-independent CompliancePolicy and ComplianceDecision domain contracts plus persistent organization-scoped compliance policies.
+
+Supported policy shape:
+
+- organization scope
+- resource
+- action
+- string context conditions
+- deterministic deny reason
+- enabled/disabled state
+
+Verified enforcement points:
+
+- dataset create
+- dataset ingest
+- streaming dataset ingest
+- ChangeSet Apply
+- synchronous workflow execution
+- asynchronous workflow execution
+
+A matching enabled policy raises ComplianceViolationError before the governed mutation/execution proceeds.
+
+Legacy resources without organization scope bypass organization governance checks to preserve backward compatibility.
+
+### S24 Verification
+
+- Full regression: **920 passed, 2 warnings**.
+- Governance-focused verification: **24 passed**.
+- Governance files py_compile: PASS.
+- git diff --check: PASS; only LF/CRLF normalization warnings remain.
+- Alembic current/head: **20260923_01**.
+- Single Alembic head confirmed.
 ### Known Boundaries
 
-- Organization quotas are not yet implemented.
-- Compliance policy enforcement is not yet implemented.
+- Organization quota implementation and verification are complete for the currently defined quota contract.
+- Audit retention and post-persistence audit-chain verification remain undefined/deferred because no verified contract establishes those requirements.
 - Existing Starlette/AnyIO TestClient deprecation warning remains.
 - Existing marketplace installer duplicate `rules/fashion.yaml` warning remains.
 - Existing pre-S24 schema/model drift and bootstrap limitations remain outside S24 scope where applicable.

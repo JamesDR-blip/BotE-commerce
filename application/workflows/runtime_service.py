@@ -11,7 +11,10 @@ from application.approval.approval_service import ApprovalService
 from domain.approval import ApprovalRequest
 from domain.identity import CurrentUser
 from domain.studio.runtime import WorkflowExecution
+from domain.quota import QuotaDimension
 from services.authorization import AuthorizationService
+from services.compliance import ComplianceService
+from services.quota import QuotaService
 
 
 class WorkflowRuntimeService:
@@ -34,6 +37,8 @@ class WorkflowRuntimeService:
         workflow_executions: Callable[[], Any] | None = None,
         changeset_service: Callable[[], Any] | None = None,
         approval_service: Callable[[], ApprovalService] | None = None,
+        quota_service: Callable[[], QuotaService] | None = None,
+        compliance_service: Callable[[], ComplianceService] | None = None,
     ) -> None:
         self._workflow_engine = workflow_engine
         self._workflow_history = workflow_history
@@ -49,6 +54,8 @@ class WorkflowRuntimeService:
         self._workflow_executions = workflow_executions
         self._changeset_service = changeset_service
         self._approval_service = approval_service
+        self._quota_service = quota_service
+        self._compliance_service = compliance_service
 
     def _validate_execution_scope(
         self,
@@ -137,6 +144,44 @@ class WorkflowRuntimeService:
             resource="workflow",
             action="execute",
             organization_id=organization_id,
+        )
+
+    def _check_execution_compliance(
+        self,
+        *,
+        organization_id: str | None,
+        workflow_id: str,
+        dataset_id: str | None,
+    ) -> None:
+        if self._compliance_service is None or organization_id is None:
+            return
+
+        context = {
+            "workflow_id": workflow_id,
+        }
+
+        if dataset_id is not None:
+            context["dataset_id"] = dataset_id
+
+        self._compliance_service().check(
+            organization_id=organization_id,
+            resource="workflow",
+            action="execute",
+            context=context,
+        )
+
+    def _check_execution_quota(
+        self,
+        *,
+        organization_id: str | None,
+    ) -> None:
+        if self._quota_service is None:
+            return
+
+        self._quota_service().check(
+            organization_id=organization_id,
+            dimension=QuotaDimension.WORKFLOW_EXECUTION_COUNT,
+            requested_usage=1,
         )
 
     def _risk_gate_enabled(self) -> bool:
@@ -325,6 +370,14 @@ class WorkflowRuntimeService:
             current_user=current_user,
             organization_id=organization_id,
         )
+        self._check_execution_compliance(
+            organization_id=organization_id,
+            workflow_id=workflow_id,
+            dataset_id=dataset_id,
+        )
+        self._check_execution_quota(
+            organization_id=organization_id,
+        )
 
         engine = self._workflow_engine()
 
@@ -412,6 +465,14 @@ class WorkflowRuntimeService:
 
         self._authorize_execution(
             current_user=current_user,
+            organization_id=organization_id,
+        )
+        self._check_execution_compliance(
+            organization_id=organization_id,
+            workflow_id=workflow_id,
+            dataset_id=dataset_id,
+        )
+        self._check_execution_quota(
             organization_id=organization_id,
         )
 

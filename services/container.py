@@ -108,6 +108,8 @@ from repositories.organizations import OrganizationRepository
 from repositories.rbac import RBACRepository
 from repositories.rules import RuleRepository
 from repositories.users import UserRepository
+from repositories.quotas import QuotaRepository
+from repositories.compliance_policies import CompliancePolicyRepository
 from repositories.sync_jobs import SyncAttemptRepository, SyncJobRepository
 from repositories.workflow_executions import WorkflowExecutionRepository
 from repositories.workflows import WorkflowRepository
@@ -119,6 +121,8 @@ from application.autonomous.autonomous_operations_orchestrator import Autonomous
 from domain.autonomous_operations import AutonomousPolicy
 from services.authorization import AuthorizationService
 from services.data_operations import DataOperationsService
+from services.quota import QuotaService
+from services.compliance import ComplianceService
 from services.validation_service import ValidationService
 
 
@@ -131,6 +135,14 @@ class Container:
         self.sessions = sessions
 
         self.rbac = RBACRepository(sessions)
+        self.quotas = QuotaRepository(sessions)
+        self.compliance_policies = CompliancePolicyRepository(sessions)
+        self.quota_service = QuotaService(
+            quotas=self.quotas,
+        )
+        self.compliance_service = ComplianceService(
+            policies=self.compliance_policies,
+        )
         self.authorization = AuthorizationService(
             rbac_repository=self.rbac,
         )
@@ -382,6 +394,8 @@ class Container:
             workspaces=self.workspaces,
             ingestion=self.dataset_ingestion,
             authorization=self.authorization,
+            quota_service=self.quota_service,
+            compliance_service=self.compliance_service,
         )
         self.workspace_projects = WorkspaceProjectService(
             workspaces=self.workspaces,
@@ -413,6 +427,7 @@ class Container:
             sessions=self.sessions,
             changesets=self.changesets,
             audit_service=self.audit_service,
+            compliance_service=self.compliance_service,
         )
 
         self.changeset_rollback_service = ChangeSetRollbackService(
@@ -451,6 +466,9 @@ class Container:
             workflow_executions=self.workflow_executions,
             workflow_queue=self.workflow_queue,
             approval_changeset_service=self.approval_changeset_service,
+            workflows=self.workflows,
+            projects=self.projects,
+            workspaces=self.workspaces,
             authorization=self.authorization,
         )
         self.workflow_runtime = WorkflowRuntimeService(
@@ -459,12 +477,17 @@ class Container:
             workflow_queue=lambda: self.workflow_queue,
             workflows=lambda: self.workflows,
             datasets=lambda: self.datasets,
+            projects=lambda: self.projects,
+            workspaces=lambda: self.workspaces,
+            authorization=lambda: self.authorization,
             data_health=lambda: self.data_health,
             risk_service=lambda: self.risk_service,
             risk_assessments=lambda: self.risk_assessment_repository,
             workflow_executions=lambda: self.workflow_executions,
             changeset_service=lambda: self.changeset_service,
             approval_service=lambda: self.approval_service,
+            quota_service=lambda: self.quota_service,
+            compliance_service=lambda: self.compliance_service,
         )
         self.simulation_service = SimulationService(
             shadow_runner=self.shadow_execution_runner,
