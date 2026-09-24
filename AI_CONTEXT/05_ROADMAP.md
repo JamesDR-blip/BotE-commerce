@@ -27,40 +27,51 @@
 - **S21 Channel Sync & Multi-Platform Connectors**: Canonical product/channel sync framework, deterministic projection, idempotent synchronization, encrypted credentials, Shopify/Amazon connectors, and governed sync APIs.
 - **S22 AI Copilot for Data Operations**: Conversational dataset/health queries, governed workflow authoring, simulation/execution tool dispatch, SSE streaming, Streamlit Copilot UI, and safe approval metadata presentation.
 - **S23 Marketplace & Extensibility Ecosystem**: Signed declarative RulePack packaging, secure archive inspection, Ed25519 verification, filesystem-backed package/version lifecycle, authenticated marketplace APIs, and safe RuleEngine integration.
+- **S24 Enterprise Governance**: Role-based access control (RBAC), multi-tenancy quotas, deterministic compliance policy enforcement, tenant isolation, and governance verification.
+- **S25 Observability**: OpenTelemetry tracing, Prometheus metrics, and execution dashboard.
 ## Current Sprint
 
-- **S24 Enterprise Governance — COMPLETE**.
+- **S25 Observability — COMPLETE**.
 
 ## Next Sprint
 
-- **S25 Observability**.
+- **S26 DevOps**.
 
 ## Future Roadmap
 
-- **S24 Enterprise Governance**: Role-based access control (RBAC), multi-tenancy quotas, deterministic compliance policy enforcement, tenant isolation, and governance verification.
-- **S25 Observability**: OpenTelemetry tracing, Prometheus metrics, and execution dashboard.
 - **S26 DevOps**: Production Docker Compose, Helm charts, CI/CD pipeline automation.
 - **S27 Documentation**: Interactive API specs, architecture diagrams, and developer guides.
 - **S28 Hardening**: Security audit, penetration testing, fuzzing, and compliance certification.
 
-### S24 — Enterprise Governance & Granular RBAC — COMPLETE
+### S25 — Observability, Metrics & Telemetry — COMPLETE
 
-S24 has completed and verified the RBAC, multi-tenancy authorization, organization quota, and compliance policy enforcement foundation.
+Delivered:
 
-Implemented:
+- OpenTelemetry tracing.
+- Prometheus-compatible workflow, capability, and governance metrics.
+- Workflow state-transition spans.
+- Agent reasoning spans with payload-safe telemetry.
+- Prometheus `/metrics` endpoint.
+- Grafana dashboard template.
+- Observability regression coverage.
+- Full regression verification: 924/924 tests passing.
+- No database migration.
 
-- Persistent organizations, roles, permissions, role-permission assignments, and memberships.
-- Admin, Data Engineer, Reviewer, and Viewer role definitions.
-- Organization-scoped authorization through the existing AuthorizationService.
-- Authorization coverage for existing workspace, dataset, workflow, and approval resources.
-- Organization-aware repository boundaries across workspace, project, dataset, workflow, workflow version, and approval access.
-- Workspace organization ownership lineage for tenant isolation.
-- Authenticated and organization-scoped pending approval access.
-- Backward-compatible legacy role authorization fallback.
-- Alembic migration `20260916_04_add_enterprise_rbac.py`.
+Verification:
 
-Organization quota implementation and verification are complete for the currently defined quota contract.
+- `python -m pytest`: 924 passed, 2 warnings, 57.01s.
+- `compileall`: PASS.
+- Grafana JSON validation: PASS.
+- `git diff --check`: PASS.
 
-Compliance policy enforcement is complete: organization-scoped deterministic compliance policies are persisted and enforced at dataset, ChangeSet, and workflow execution boundaries.
+### S26 — DevOps & Platform Reliability
 
-S24 is COMPLETE.
+Status: Next
+
+Focus:
+
+- CI/CD and deployment reliability.
+- Production observability integration.
+- Runtime health and resilience.
+- Operational alerting.
+- Platform reliability and deployment verification.

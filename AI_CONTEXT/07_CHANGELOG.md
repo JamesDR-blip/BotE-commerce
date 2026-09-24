@@ -1,3 +1,46 @@
+# S25 - Observability, Metrics & Telemetry - COMPLETE
+### 2026-09-24
+
+Completed and verified the S25 observability scope.
+
+### Added
+
+- Added process-wide OpenTelemetry tracing and metrics configuration under `infrastructure/observability/`.
+- Added Prometheus-compatible workflow execution counters and latency histogram.
+- Added capability execution counters and latency histogram.
+- Added governance outcome metrics for compliance and quota decisions.
+- Added OpenTelemetry spans around workflow execution, capability execution, agent reasoning, and workflow state transitions.
+- Added Prometheus `/metrics` endpoint.
+- Added a pre-built Grafana dashboard template covering workflow throughput, workflow outcomes, workflow p95 latency, and governance outcomes.
+- Added observability regression tests covering metrics exposure, workflow spans, agent reasoning spans, and workflow state-transition spans.
+
+### Security / Safety
+
+- Telemetry records operational identifiers and bounded state metadata only.
+- No payload contents, confidential prompt contents, or generated response contents are recorded in the new agent reasoning span attributes.
+- No arbitrary Python, shell, `eval`, `exec`, unsafe YAML, or arbitrary SQL execution path was introduced.
+- Existing ChangeSet, authorization, quota, compliance, lineage, audit, and execution boundaries remain intact.
+- No database migration was required.
+
+### Verification
+
+- Full regression: **924 passed, 2 warnings**.
+- Observability-focused tests: **4 passed, 1 warning**.
+- Grafana dashboard JSON validation: PASS.
+- Grafana dashboard structural validation: PASS.
+- `python -m py_compile` for modified Python sources: PASS.
+- Existing warnings remain limited to the Starlette/AnyIO TestClient deprecation and duplicate `rules/fashion.yaml` test fixture warning.
+
+### S25 Status
+
+All currently defined S25 objectives are implemented and verified.
+
+S25 is **COMPLETE**.
+
+Next sprint: **S26 - DevOps & Platform Reliability**.
+
+---
+
 # CHANGELOG
 
 # Changelog

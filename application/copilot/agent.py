@@ -1,9 +1,10 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import Any
 
 from application.copilot.contracts import CopilotAction, CopilotResponse
 from application.copilot.tools import CopilotToolRegistry
+from infrastructure.observability.telemetry import tracer
 
 
 class CopilotAgent:
@@ -44,44 +45,58 @@ class CopilotAgent:
                 )
             )
 
-        response_stream = self._model.generate_content_stream(
-            model=self._model_name,
-            contents=contents,
-            config=config,
-        )
+        with tracer(__name__).start_as_current_span(
+            "agent.reasoning"
+        ) as span:
+            span.set_attribute("agent.type", "copilot")
+            span.set_attribute("agent.operation", "stream")
+            span.set_attribute("model.name", self._model_name)
 
-        for response in response_stream:
-            for candidate in response.candidates or []:
-                content = candidate.content
-                if content is None:
-                    continue
+            response_stream = self._model.generate_content_stream(
+                model=self._model_name,
+                contents=contents,
+                config=config,
+            )
 
-                for part in content.parts or []:
-                    function_call = getattr(part, "functionCall", None)
-
-                    if function_call is not None:
-                        name = function_call.name
-                        self._validate_tool(name)
-
-                        yield CopilotAction(
-                            action=name,
-                            arguments=dict(function_call.args or {}),
-                            call_id=getattr(function_call, "id", None),
-                        )
+            for response in response_stream:
+                for candidate in response.candidates or []:
+                    content = candidate.content
+                    if content is None:
                         continue
 
-                    text = getattr(part, "text", None)
-                    if text:
-                        yield text
+                    for part in content.parts or []:
+                        function_call = getattr(part, "functionCall", None)
+
+                        if function_call is not None:
+                            name = function_call.name
+                            self._validate_tool(name)
+
+                            yield CopilotAction(
+                                action=name,
+                                arguments=dict(function_call.args or {}),
+                                call_id=getattr(function_call, "id", None),
+                            )
+                            continue
+
+                        text = getattr(part, "text", None)
+                        if text:
+                            yield text
 
     def respond(self, user_message: str) -> CopilotResponse:
-        response = self._model.generate_content(
-            model=self._model_name,
-            contents=user_message,
-            config=self._build_config(),
-        )
+        with tracer(__name__).start_as_current_span(
+            "agent.reasoning"
+        ) as span:
+            span.set_attribute("agent.type", "copilot")
+            span.set_attribute("agent.operation", "respond")
+            span.set_attribute("model.name", self._model_name)
 
-        return self._parse_response(response)
+            response = self._model.generate_content(
+                model=self._model_name,
+                contents=user_message,
+                config=self._build_config(),
+            )
+
+            return self._parse_response(response)
 
     def respond_with_tool_result(
         self,
@@ -137,13 +152,20 @@ class CopilotAgent:
             ]
         )
 
-        response = self._model.generate_content(
-            model=self._model_name,
-            contents=contents,
-            config=self._build_config(),
-        )
+        with tracer(__name__).start_as_current_span(
+            "agent.reasoning"
+        ) as span:
+            span.set_attribute("agent.type", "copilot")
+            span.set_attribute("agent.operation", "tool_result")
+            span.set_attribute("model.name", self._model_name)
 
-        return self._parse_response(response)
+            response = self._model.generate_content(
+                model=self._model_name,
+                contents=contents,
+                config=self._build_config(),
+            )
+
+            return self._parse_response(response)
 
     def _history_to_contents(
         self,
@@ -272,7 +294,3 @@ class CopilotAgent:
             message="".join(message_parts),
             actions=tuple(actions),
         )
-
-
-
-

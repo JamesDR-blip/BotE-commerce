@@ -66,9 +66,9 @@ Phase 4: Enterprise Production & Hardening (S24 - S28)
 - [Sprint 20: Autonomous Agent Operations](sprint-20-autonomous-agent-ops.md) *(COMPLETE)*
 - [Sprint 21: Channel Sync & Multi-Platform Connectors](sprint-21-channel-sync.md) *(COMPLETE)*
 - [Sprint 22: AI Copilot for Data Operations](sprint-22-copilot.md) *(COMPLETE)*
-- [Sprint 23: Marketplace & Extensibility Ecosystem](sprint-23-marketplace.md)
-- [Sprint 24: Enterprise Governance & Granular RBAC](sprint-24-governance-rbac.md) *(COMPLETE — RBAC, multi-tenancy, organization quotas, and deterministic compliance policy enforcement verified)*
-- [Sprint 25: Observability, Metrics & Telemetry](sprint-25-observability.md)
+- [Sprint 23: Marketplace & Extensibility Ecosystem](sprint-23-marketplace.md) *(COMPLETE)*
+- [Sprint 24: Enterprise Governance & Granular RBAC](sprint-24-governance-rbac.md) *(COMPLETE)*
+- [Sprint 25: Observability, Metrics & Telemetry](sprint-25-observability.md) *(COMPLETE)*
 - [Sprint 26: Production DevOps & CI/CD Automation](sprint-26-devops.md)
 - [Sprint 27: Developer Documentation & API Specifications](sprint-27-documentation.md)
 - [Sprint 28: System Hardening & Security Compliance](sprint-28-hardening.md)

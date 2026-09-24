@@ -15,7 +15,12 @@ from domain.serialization.execution_plan import (
 from execution.tracing.trace_collector import (
     ExecutionTraceCollector,
 )
-
+from infrastructure.observability.telemetry import (
+    record_workflow_state_transition,
+    tracer,
+    workflow_execution_duration_seconds,
+    workflow_executions_total,
+)
 
 class WorkflowEngine:
 
@@ -106,6 +111,13 @@ class WorkflowEngine:
             self.executions.mark_running(
                 execution_id
             )
+
+        record_workflow_state_transition(
+            workflow_id=workflow_id,
+            execution_id=execution_id,
+            from_state="CREATED",
+            to_state="RUNNING",
+        )
 
         if streaming:
             return self._execute_streaming_runtime(
@@ -318,93 +330,129 @@ class WorkflowEngine:
         processed_rows = 0
 
         try:
-            with self.dataset_storage.open(
-                storage_key=dataset.storage_key
-            ) as source:
-                for chunk in self.streaming_reader.stream(
-                    dataset.filename,
-                    source,
-                ):
-                    chunk_inputs = dict(inputs)
-                    chunk_inputs["frame"] = chunk
-
-                    trace_collector = ExecutionTraceCollector(
-                        execution_id=execution_id
-                    )
-
-                    execute_plan = (
-                        self.capability_execution.execute_plan
-                    )
-                    parameters = inspect.signature(
-                        execute_plan
-                    ).parameters
-
-                    kwargs = {
-                        "plan": plan,
-                        "inputs": chunk_inputs,
-                        "execution_id": execution_id,
-                    }
-
-                    if "trace_collector" in parameters:
-                        kwargs["trace_collector"] = trace_collector
-
-                    if "lineage_context" in parameters:
-                        kwargs["lineage_context"] = lineage_context
-
-                    result = execute_plan(**kwargs)
-
-                    trace = getattr(
-                        result,
-                        "trace",
-                        None,
-                    ) or trace_collector.trace()
-
-                    if (
-                        self.trace_persistence is not None
-                        and trace is not None
-                    ):
-                        self.trace_persistence.save(trace)
-
-                    processed_chunks += 1
-
-                    chunk_outputs = getattr(
-                        result,
-                        "outputs",
-                        {},
-                    ) or {}
-                    chunk_row_count = chunk_outputs.get(
-                        "processed_rows"
-                    )
-
-                    if isinstance(chunk_row_count, int):
-                        processed_rows += chunk_row_count
-                    else:
-                        try:
-                            processed_rows += len(chunk)
-                        except TypeError as exc:
-                            raise TypeError(
-                                "Streaming reader chunks must support len()"
-                            ) from exc
-
-            completed = runtime.complete(
-                outputs={
-                    "processed_chunks": processed_chunks,
-                    "processed_rows": processed_rows,
-                }
-            )
-
-            if self.executions is not None:
-                self.executions.complete(
-                    execution_id=execution_id,
-                    outputs_json=json.dumps(
-                        completed.outputs,
-                        default=str,
-                    ),
+            with tracer(__name__).start_as_current_span(
+                "workflow.execute"
+            ) as span:
+                span.set_attribute(
+                    "execution.id",
+                    execution_id,
+                )
+                span.set_attribute(
+                    "workflow.id",
+                    workflow_id,
+                )
+                span.set_attribute(
+                    "workflow.version",
+                    workflow_version,
+                )
+                span.set_attribute(
+                    "plan.step_count",
+                    len(plan.steps),
                 )
 
-            return completed
+                with workflow_execution_duration_seconds.time():
+                    with self.dataset_storage.open(
+                        storage_key=dataset.storage_key
+                    ) as source:
+                        for chunk in self.streaming_reader.stream(
+                            dataset.filename,
+                            source,
+                        ):
+                            chunk_inputs = dict(inputs)
+                            chunk_inputs["frame"] = chunk
+
+                            trace_collector = ExecutionTraceCollector(
+                                execution_id=execution_id
+                            )
+
+                            execute_plan = (
+                                self.capability_execution.execute_plan
+                            )
+                            parameters = inspect.signature(
+                                execute_plan
+                            ).parameters
+
+                            kwargs = {
+                                "plan": plan,
+                                "inputs": chunk_inputs,
+                                "execution_id": execution_id,
+                            }
+
+                            if "trace_collector" in parameters:
+                                kwargs["trace_collector"] = trace_collector
+
+                            if "lineage_context" in parameters:
+                                kwargs["lineage_context"] = lineage_context
+
+                            result = execute_plan(**kwargs)
+
+                            trace = getattr(
+                                result,
+                                "trace",
+                                None,
+                            ) or trace_collector.trace()
+
+                            if (
+                                self.trace_persistence is not None
+                                and trace is not None
+                            ):
+                                self.trace_persistence.save(trace)
+
+                            processed_chunks += 1
+
+                            chunk_outputs = getattr(
+                                result,
+                                "outputs",
+                                {},
+                            ) or {}
+                            chunk_row_count = chunk_outputs.get(
+                                "processed_rows"
+                            )
+
+                            if isinstance(chunk_row_count, int):
+                                processed_rows += chunk_row_count
+                            else:
+                                try:
+                                    processed_rows += len(chunk)
+                                except TypeError as exc:
+                                    raise TypeError(
+                                        "Streaming reader chunks must support len()"
+                                    ) from exc
+
+                    completed = runtime.complete(
+                        outputs={
+                            "processed_chunks": processed_chunks,
+                            "processed_rows": processed_rows,
+                        }
+                    )
+
+                    record_workflow_state_transition(
+                        workflow_id=workflow_id,
+                        execution_id=execution_id,
+                        from_state="RUNNING",
+                        to_state="COMPLETED",
+                    )
+
+                    workflow_executions_total.labels(
+                        status="success"
+                    ).inc()
+
+                    if self.executions is not None:
+                        self.executions.complete(
+                            execution_id=execution_id,
+                            outputs_json=json.dumps(
+                                completed.outputs,
+                                default=str,
+                            ),
+                        )
+
+                    return completed
 
         except Exception as exc:
+            workflow_executions_total.labels(
+                status="error"
+            ).inc()
+
             trace = getattr(
                 exc,
                 "execution_trace",
@@ -420,6 +468,13 @@ class WorkflowEngine:
 
             failed = runtime.fail(
                 error=str(exc)
+            )
+
+            record_workflow_state_transition(
+                workflow_id=workflow_id,
+                execution_id=execution_id,
+                from_state="RUNNING",
+                to_state="FAILED",
             )
 
             if self.executions is not None:
@@ -491,7 +546,32 @@ class WorkflowEngine:
             ):
                 kwargs["lineage_context"] = lineage_context
 
-            result = execute_plan(**kwargs)
+            with tracer(__name__).start_as_current_span(
+                "workflow.execute"
+            ) as span:
+                span.set_attribute(
+                    "execution.id",
+                    execution_id,
+                )
+                span.set_attribute(
+                    "workflow.id",
+                    workflow_id,
+                )
+                span.set_attribute(
+                    "workflow.version",
+                    workflow_version,
+                )
+                span.set_attribute(
+                    "plan.step_count",
+                    len(plan.steps),
+                )
+
+                with workflow_execution_duration_seconds.time():
+                    result = execute_plan(**kwargs)
+
+            workflow_executions_total.labels(
+                status="success"
+            ).inc()
 
             trace = getattr(
                 result,
@@ -509,6 +589,10 @@ class WorkflowEngine:
                 self.trace_persistence.save(trace)
 
         except Exception as exc:
+            workflow_executions_total.labels(
+                status="error"
+            ).inc()
+
             trace = getattr(
                 exc,
                 "execution_trace",
@@ -528,6 +612,13 @@ class WorkflowEngine:
                 error=str(exc)
             )
 
+            record_workflow_state_transition(
+                workflow_id=workflow_id,
+                execution_id=execution_id,
+                from_state="RUNNING",
+                to_state="FAILED",
+            )
+
             if self.executions is not None:
                 self.executions.fail(
                     execution_id=execution_id,
@@ -538,6 +629,13 @@ class WorkflowEngine:
 
         completed = runtime.complete(
             outputs=dict(result.outputs)
+        )
+
+        record_workflow_state_transition(
+            workflow_id=workflow_id,
+            execution_id=execution_id,
+            from_state="RUNNING",
+            to_state="COMPLETED",
         )
 
         if self.executions is not None:

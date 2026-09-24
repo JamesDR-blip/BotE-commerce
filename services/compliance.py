@@ -4,6 +4,9 @@ from collections.abc import Mapping
 
 from domain.compliance import ComplianceDecision
 from domain.exceptions import ComplianceViolationError
+from infrastructure.observability.telemetry import (
+    record_governance_outcome,
+)
 from repositories.compliance_policies import CompliancePolicyRepository
 
 
@@ -42,6 +45,10 @@ class ComplianceService:
                 action=action,
                 context=context,
             ):
+                record_governance_outcome(
+                    boundary="compliance",
+                    outcome="violation",
+                )
                 raise ComplianceViolationError(
                     organization_id=organization_id,
                     resource=resource,
@@ -49,4 +56,8 @@ class ComplianceService:
                     reason=policy.reason,
                 )
 
+        record_governance_outcome(
+            boundary="compliance",
+            outcome="allow",
+        )
         return ComplianceDecision.allow()

@@ -30,6 +30,8 @@ from infrastructure.observability.logging import (
     configure_logging,
     instrument_fastapi,
 )
+from infrastructure.observability.telemetry import configure_telemetry
+
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +52,7 @@ def _internal_server_error(request: Request, exc: Exception) -> JSONResponse:
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     configure_logging(settings.log_level)
+    configure_telemetry()
     logger.info(
         "application_configured",
         extra={

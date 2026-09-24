@@ -1,7 +1,10 @@
-"""Organization quota enforcement service."""
+﻿"""Organization quota enforcement service."""
 
 from __future__ import annotations
 
+from infrastructure.observability.telemetry import (
+    record_governance_outcome,
+)
 from repositories.quotas import QuotaRepository
 from domain.exceptions import QuotaExceededError
 from domain.quota import QuotaDimension
@@ -25,6 +28,10 @@ class QuotaService:
         requested_usage: int,
     ) -> None:
         if organization_id is None:
+            record_governance_outcome(
+                boundary="quota",
+                outcome="unscoped",
+            )
             return
 
         if requested_usage < 0:
@@ -37,6 +44,10 @@ class QuotaService:
 
         # No configured quota means unlimited for this dimension.
         if quota is None:
+            record_governance_outcome(
+                boundary="quota",
+                outcome="unlimited",
+            )
             return
 
         current_usage = self.quotas.get_usage(
@@ -47,9 +58,18 @@ class QuotaService:
         projected_usage = current_usage + requested_usage
 
         if projected_usage > quota.limit:
+            record_governance_outcome(
+                boundary="quota",
+                outcome="exceeded",
+            )
             raise QuotaExceededError(
                 dimension=dimension.value,
                 current_usage=current_usage,
                 requested_usage=requested_usage,
                 limit=quota.limit,
             )
+
+        record_governance_outcome(
+            boundary="quota",
+            outcome="pass",
+        )

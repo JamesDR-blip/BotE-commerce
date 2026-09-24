@@ -7,7 +7,7 @@
 
 ## Next Sprint
 
-**S26 ? DevOps & Platform Reliability**
+**S26 - DevOps & Platform Reliability**
 
 ## Previous Sprints
 
@@ -47,8 +47,8 @@
 
 ## Test Status
 
-- **Test Suite:** 920 / 920 passing via python -m pytest
-- **Latest Full Suite Runtime:** 56.18 seconds
+- **Test Suite:** 924 / 924 passing via python -m pytest
+- **Latest Full Suite Runtime:** 61.25 seconds
 - **Warnings:** 2 existing warnings: Starlette/AnyIO TestClient deprecation and duplicate `rules/fashion.yaml` test fixture warning.
 - S19 lineage, audit, API, ChangeSet, approval, rollback, repository, and workflow integration tests all pass.
 - git diff --check: no whitespace errors; remaining messages are Git LF/CRLF normalization warnings.
@@ -143,6 +143,21 @@ Current Alembic revision/head:
 `20260923_01`
 
 A single Alembic head is confirmed.
+
+### S25 Verification
+
+- Full regression: **924 passed, 2 warnings**.
+- Latest full-suite runtime: **61.25 seconds**.
+- Observability-focused tests: **4 passed, 1 warning**.
+- Grafana dashboard structural validation: PASS.
+- Grafana dashboard JSON validation: PASS.
+- OpenTelemetry workflow, capability, agent reasoning, and workflow state-transition coverage: PASS.
+- Prometheus `/metrics` execution metrics coverage: PASS.
+- No database migration required.
+
+S25 is **COMPLETE**.
+
+Next sprint: **S26 - DevOps & Platform Reliability**.
 
 ### Verification
 

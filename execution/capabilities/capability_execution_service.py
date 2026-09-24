@@ -7,6 +7,11 @@ from typing import Any, Mapping
 from execution.capabilities.capability_executor import CapabilityExecutor
 from execution.tracing.trace_collector import ExecutionTraceCollector
 from execution.planning.plan_validator import PlanValidator
+from infrastructure.observability.telemetry import (
+    capability_execution_duration_seconds,
+    capability_executions_total,
+    tracer,
+)
 
 from domain.capability_execution import CapabilityExecutionResult
 from domain.plans import ExecutionPlan
@@ -90,15 +95,36 @@ class CapabilityExecutionService:
             lineage_callback = record_lineage
 
         try:
-            outputs = self._executor.execute(
-                plan=plan,
-                inputs=inputs,
-                execution_id=execution_id,
-                trace_collector=collector,
-                lineage_callback=lineage_callback,
-            )
+            with tracer(__name__).start_as_current_span(
+                "capability.execute"
+            ) as span:
+                span.set_attribute(
+                    "execution.id",
+                    execution_id,
+                )
+                span.set_attribute(
+                    "plan.step_count",
+                    len(plan.steps),
+                )
+
+                with capability_execution_duration_seconds.time():
+                    outputs = self._executor.execute(
+                        plan=plan,
+                        inputs=inputs,
+                        execution_id=execution_id,
+                        trace_collector=collector,
+                        lineage_callback=lineage_callback,
+                    )
+
+            capability_executions_total.labels(
+                status="success"
+            ).inc()
 
         except Exception as exc:
+            capability_executions_total.labels(
+                status="error"
+            ).inc()
+
             trace = collector.trace()
 
             if trace.records:
