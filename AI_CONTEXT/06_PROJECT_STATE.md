@@ -2,12 +2,7 @@
 
 ## Current Sprint
 
-**S25 — Observability, Metrics & Telemetry**
-
-
-## Next Sprint
-
-**S26 - DevOps & Platform Reliability**
+**S26 - DevOps & Platform Reliability — COMPLETE**
 
 ## Previous Sprints
 
@@ -43,12 +38,15 @@
 - S21 Channel Sync & Multi-Platform Connectors
 - S22 AI Copilot for Data Operations
 - S23 Marketplace & Extensibility Ecosystem
+- S24 Enterprise Governance & Granular RBAC
+- S25 Observability, Metrics & Telemetry
+- S26 Production DevOps & CI/CD Automation
 - Structural Refactor: Clean Architecture + DDD layers (`domain/`, `application/`, `execution/`, `infrastructure/`)
 
 ## Test Status
 
-- **Test Suite:** 924 / 924 passing via python -m pytest
-- **Latest Full Suite Runtime:** 61.25 seconds
+- **Test Suite:** 937 / 937 passing via python -m pytest
+- **Latest Full Suite Runtime:** 57.61 seconds
 - **Warnings:** 2 existing warnings: Starlette/AnyIO TestClient deprecation and duplicate `rules/fashion.yaml` test fixture warning.
 - S19 lineage, audit, API, ChangeSet, approval, rollback, repository, and workflow integration tests all pass.
 - git diff --check: no whitespace errors; remaining messages are Git LF/CRLF normalization warnings.
@@ -79,146 +77,29 @@
 - **Composition Root:** `services/container.py`
 
 ## Current Sprint
+- S26 Production DevOps & CI/CD Automation **COMPLETE**
 
-S24 — Enterprise Governance & Granular RBAC: COMPLETE.
+### S26 Verification
 
-The verified S24 implementation covers persistent RBAC, organization membership, tenant-scoped repository access, organization quotas, deterministic compliance policies, and authorization/compliance enforcement across the governed workspace, dataset, workflow, approval, and ChangeSet boundaries.
-
-Organization quota implementation and deterministic compliance policy enforcement are complete for the currently defined S24 governance contract.
-
-## S24 Governance & RBAC
-
-### Delivered
-
-- Persistent organization model.
-- Persistent role model.
-- Persistent permission model.
-- Role-permission assignments.
-- User organization memberships.
-- Admin, Data Engineer, Reviewer, and Viewer role definitions.
-- `AuthorizationService` with persisted RBAC as the authoritative authorization source when configured.
-- Backward-compatible legacy role authorization fallback.
-- Organization-aware workspace access.
-- Organization-aware project access through workspace tenancy.
-- Organization-aware dataset access through project/workspace tenancy.
-- Organization-aware workflow and workflow-version access.
-- Organization-aware approval access.
-- Organization-scoped pending approval queries.
-- Authenticated `/approvals/pending` access.
-- Workspace organization ownership relationship.
-- Tenant filtering through repository boundaries.
-- Authorization injection through the composition root.
-
-### Architecture / Security
-
-- Clean Architecture + DDD boundaries remain intact.
-- Domain authorization contracts remain framework-independent.
-- Application services orchestrate authorization; repositories enforce tenant-scoped persistence queries.
-- Existing ownership boundaries remain authoritative.
-- Organization scope does not replace resource ownership.
-- ChangeSet remains the only internal production dataset mutation boundary.
-- No arbitrary SQL, Python, shell, `eval`, or `exec` capability was introduced.
-- No unvalidated LLM output is used as an authorization decision.
-- Approval tokens remain protected and are not exposed by pending-approval API responses.
-
-### Database
-
-S24 adds:
-
-- `organizations`
-- `roles`
-- `permissions`
-- `role_permissions`
-- `memberships`
-- nullable `workspaces.organization_id` with foreign-key and index support.
-
-Migration:
-
-`database/migrations/versions/20260916_04_add_enterprise_rbac.py`
-`database/migrations/versions/20260922_01_add_organization_quotas.py`
-`database/migrations/versions/20260923_01_add_compliance_policies.py`
-
-Current Alembic revision/head:
-
-`20260923_01`
-
-A single Alembic head is confirmed.
-
-### S25 Verification
-
-- Full regression: **924 passed, 2 warnings**.
-- Latest full-suite runtime: **61.25 seconds**.
-- Observability-focused tests: **4 passed, 1 warning**.
-- Grafana dashboard structural validation: PASS.
-- Grafana dashboard JSON validation: PASS.
-- OpenTelemetry workflow, capability, agent reasoning, and workflow state-transition coverage: PASS.
-- Prometheus `/metrics` execution metrics coverage: PASS.
-- No database migration required.
-
-S25 is **COMPLETE**.
-
-Next sprint: **S26 - DevOps & Platform Reliability**.
-
-### Verification
-
-- Full regression: **920 passed, 2 warnings**.
-- Latest full-suite runtime: **56.18 seconds**.
-- `python -m py_compile` governance files: PASS.
-- `git diff --check`: no content whitespace errors; Git reports only LF/CRLF normalization warnings.
-- Alembic current/head: `20260923_01`.
+- Full regression: **937 passed, 2 warnings**.
+- Ruff scoped S26 checks: PASS.
+- Black scoped S26 checks: PASS.
+- MyPy scoped S26 checks: PASS.
+- git diff --check: PASS; remaining messages are Git LF/CRLF normalization warnings.
+- Alembic current/head: 20260923_01.
 - Single Alembic head confirmed.
+- No new database migration was required for S26.
+- Production deployment static validation: PASS.
+- Local Docker image/Compose runtime execution was not performed because Docker CLI is unavailable in the local environment.
 
+### S26 Delivery
 
-### S24 Quotas & Compliance
-
-#### Organization Quotas
-
-Verified quota dimensions:
-
-- STORAGE_BYTES
-- DATASET_COUNT
-- WORKFLOW_EXECUTION_COUNT
-
-Quota limits are organization-scoped, non-negative integers, and unlimited when no limit is configured. Dataset creation/ingestion and synchronous/asynchronous workflow execution enforce the applicable quota before mutation or queue/engine mutation.
-
-#### Compliance Policies
-
-Added framework-independent CompliancePolicy and ComplianceDecision domain contracts plus persistent organization-scoped compliance policies.
-
-Supported policy shape:
-
-- organization scope
-- resource
-- action
-- string context conditions
-- deterministic deny reason
-- enabled/disabled state
-
-Verified enforcement points:
-
-- dataset create
-- dataset ingest
-- streaming dataset ingest
-- ChangeSet Apply
-- synchronous workflow execution
-- asynchronous workflow execution
-
-A matching enabled policy raises ComplianceViolationError before the governed mutation/execution proceeds.
-
-Legacy resources without organization scope bypass organization governance checks to preserve backward compatibility.
-
-### S24 Verification
-
-- Full regression: **920 passed, 2 warnings**.
-- Governance-focused verification: **24 passed**.
-- Governance files py_compile: PASS.
-- git diff --check: PASS; only LF/CRLF normalization warnings remain.
-- Alembic current/head: **20260923_01**.
-- Single Alembic head confirmed.
-### Known Boundaries
-
-- Organization quota implementation and verification are complete for the currently defined quota contract.
-- Audit retention and post-persistence audit-chain verification remain undefined/deferred because no verified contract establishes those requirements.
-- Existing Starlette/AnyIO TestClient deprecation warning remains.
-- Existing marketplace installer duplicate `rules/fashion.yaml` warning remains.
-- Existing pre-S24 schema/model drift and bootstrap limitations remain outside S24 scope where applicable.
+- Added multi-stage production Docker image with a non-root runtime user.
+- Added production Docker ignore rules.
+- Added production Compose topology for Nginx, API, worker, dashboard, PostgreSQL, and Redis.
+- Configured Redis-backed production workflow execution with two worker replicas.
+- Added Nginx reverse proxy and production health routing.
+- Added PR CI checks for Ruff, Black, MyPy, pytest, and 90% coverage threshold.
+- Added semantic-version release workflow with GHCR image publication and Trivy vulnerability scanning.
+- Added production environment template and deployment documentation.
+- Preserved existing health, metrics, workflow, approval, and mutation boundaries.

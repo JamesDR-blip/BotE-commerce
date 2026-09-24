@@ -26,3 +26,4 @@ sentence-transformers>=5,<6
 cryptography>=43,<47
 prometheus-client>=0.20,<1
 opentelemetry-exporter-otlp>=1.27,<2
+redis>=5,<7

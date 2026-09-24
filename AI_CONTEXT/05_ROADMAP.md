@@ -14,7 +14,7 @@
 - **S09 FastAPI Presentation Layer**: REST endpoints (/upload, /validate, /clean, /extract, /mapping, /history, /report).
 - **S10 Persistence & Alembic Migrations**: PostgreSQL & SQLite support.
 - **S11 Streamlit Dashboard & Client**: Decoupled HTTP client, interactive validation & report download.
-- **Clean Architecture & DDD Refactoring**: Reorganized into domain/, application/, execution/, infrastructure/ packages; introduced Cache protocol and domain serialization.
+- **Clean Architecture & DDD Refactoring**: Reorganized into domain/, application/, execution/, infrastructure/ packages; introduced Cache protocol and domain serialization.
 - **S12 RAG / Rule Intelligence**: RuleRetriever abstraction, semantic rule search, dynamic category rule packs.
 - **S13 Agent Memory & Execution Context**: Tenant-scoped persistent agent memory, correction events, execution learning, PII redaction, expiration, and memory-aware requirement parameter resolution.
 - **S14 Performance**: Streaming tabular ingestion, chunked processing, async execution workers.
@@ -29,44 +29,19 @@
 - **S23 Marketplace & Extensibility Ecosystem**: Signed declarative RulePack packaging, secure archive inspection, Ed25519 verification, filesystem-backed package/version lifecycle, authenticated marketplace APIs, and safe RuleEngine integration.
 - **S24 Enterprise Governance**: Role-based access control (RBAC), multi-tenancy quotas, deterministic compliance policy enforcement, tenant isolation, and governance verification.
 - **S25 Observability**: OpenTelemetry tracing, Prometheus metrics, and execution dashboard.
+- **S26 DevOps**: Production multi-stage Docker image, Docker Compose deployment topology, Nginx reverse proxy, Redis-backed worker deployment, CI/CD automation, semantic-version release workflow, image vulnerability scanning, production environment template, and deployment documentation.
+
 ## Current Sprint
 
-- **S25 Observability — COMPLETE**.
-
-## Next Sprint
-
-- **S26 DevOps**.
+- **S26 DevOps — COMPLETE**.
 
 ## Future Roadmap
-
-- **S26 DevOps**: Production Docker Compose, Helm charts, CI/CD pipeline automation.
 - **S27 Documentation**: Interactive API specs, architecture diagrams, and developer guides.
 - **S28 Hardening**: Security audit, penetration testing, fuzzing, and compliance certification.
 
-### S25 — Observability, Metrics & Telemetry — COMPLETE
-
-Delivered:
-
-- OpenTelemetry tracing.
-- Prometheus-compatible workflow, capability, and governance metrics.
-- Workflow state-transition spans.
-- Agent reasoning spans with payload-safe telemetry.
-- Prometheus `/metrics` endpoint.
-- Grafana dashboard template.
-- Observability regression coverage.
-- Full regression verification: 924/924 tests passing.
-- No database migration.
-
-Verification:
-
-- `python -m pytest`: 924 passed, 2 warnings, 57.01s.
-- `compileall`: PASS.
-- Grafana JSON validation: PASS.
-- `git diff --check`: PASS.
-
 ### S26 — DevOps & Platform Reliability
 
-Status: Next
+Status: COMPLETE
 
 Focus:
 
@@ -75,3 +50,16 @@ Focus:
 - Runtime health and resilience.
 - Operational alerting.
 - Platform reliability and deployment verification.
+
+Delivered in S26:
+- Production multi-stage Dockerfile with non-root runtime.
+- Production Docker Compose topology with Nginx, PostgreSQL, Redis, API, dashboard, and two worker replicas.
+- Redis-backed production workflow execution.
+- PR CI with Ruff, Black, MyPy, pytest, and 90% coverage enforcement.
+- Semantic-version release automation with GHCR publication and Trivy scanning.
+- Production environment template and deployment documentation.
+
+Remaining platform concerns:
+- Production telemetry collector/Prometheus/Grafana deployment wiring.
+- Operational alerting.
+- Docker runtime deployment verification in a Docker-enabled environment.

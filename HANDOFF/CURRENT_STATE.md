@@ -16,7 +16,7 @@ Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presen
 920 / 920 passing via `python -m pytest`.
 
 **Latest Full Suite:**
-56.18 seconds, with 2 warnings.
+57.61 seconds, with 2 warnings.
 
 **Database:**
 - Current local database revision: `20260923_01`.
@@ -32,52 +32,33 @@ Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presen
 
 ## Current Sprint
 
-**S25 - Observability, Metrics & Telemetry - COMPLETE**
+## S26 Completion
 
-S25 has delivered the repository observability baseline, including:
+S26 — DevOps & Platform Reliability is **COMPLETE** for the implemented deployment and CI/CD scope.
 
-- OpenTelemetry tracing at established execution boundaries.
-- Workflow state-transition spans.
-- Capability execution spans.
-- Copilot reasoning spans with bounded metadata.
-- Prometheus-compatible workflow, capability, and governance metrics.
-- Prometheus `/metrics` endpoint.
-- Grafana dashboard template.
-- Observability regression tests.
+Delivered:
+- Multi-stage production Docker image with non-root runtime.
+- Production Docker Compose stack with Nginx, API, dashboard, PostgreSQL, Redis, and two worker replicas.
+- Redis-backed production workflow execution.
+- PR CI for Ruff, Black, MyPy, pytest, and 90% coverage enforcement.
+- Semantic-version release workflow with GHCR publication and Trivy scanning.
+- Production environment template and deployment documentation.
 
-## Verification
-
-- Full regression: 924 passed, 2 warnings, 57.01s.
-- Observability tests: 4 passed.
-- `compileall`: PASS.
-- Grafana JSON validation: PASS.
-- `git diff --check`: PASS.
-
-## Database / Migrations
-
-- No S25 database schema changes.
-- No Alembic migration.
-- Existing database head remains unchanged.
-
-## Architecture Decisions
-
-- Observability remains in Infrastructure.
-- Execution owns workflow/capability tracing boundaries.
-- Application-level Copilot reasoning is instrumented without payload capture.
-- Governance metrics reuse existing Compliance and Quota decision points.
-- No duplicate ChangeSet governance instrumentation.
-- No new deployment infrastructure was introduced for Prometheus/Grafana.
-
-## Security
-
-Telemetry is restricted to bounded operational metadata. Prompt, response, confidential payload, and raw dataset content are not captured.
+Verification:
+- 937 tests passed.
+- Ruff, Black, and scoped MyPy checks passed.
+- Alembic current/head: 20260923_01.
+- No S26 migration was required.
+- Static Docker/Compose/Nginx validation passed.
+- Local Docker runtime verification remains pending because Docker CLI is unavailable in the local environment.
 
 ## Known Issues
-
 - Starlette/AnyIO `BlockingPortal` deprecation warning.
 - Duplicate `rules/fashion.yaml` fixture warning.
 - Production collector/Prometheus/Grafana deployment wiring remains a platform concern.
+- Operational alerting remains to be defined and implemented.
+- Docker runtime build/Compose verification requires a Docker-enabled environment.
 
 ## Next Sprint
 
-**S26 - DevOps & Platform Reliability**
+**S27 - Developer Documentation & API Specifications**

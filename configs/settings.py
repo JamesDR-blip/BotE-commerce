@@ -1,4 +1,5 @@
 """Typed configuration loaded from environment variables."""
+
 from pathlib import Path
 from typing import Literal
 
@@ -8,6 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """Application settings; no configuration is kept in module globals."""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -33,15 +35,29 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = Field(default=8000, ge=1, le=65535)
     api_base_url: str = "http://127.0.0.1:8000"
+    workflow_queue_backend: Literal["inprocess", "redis"] = "inprocess"
+    redis_url: str | None = None
+    redis_stream_name: str = "ai-studio:workflow-executions"
+    redis_consumer_group: str = "workflow-workers"
 
     @model_validator(mode="after")
     def validate_production_configuration(self) -> "Settings":
-        if (
-            self.environment == "production"
-            and self.database_url.startswith("sqlite:")
-        ):
+        if self.environment == "production" and self.database_url.startswith("sqlite:"):
+            raise ValueError("SQLite database is not allowed in production")
+
+        if self.environment == "production":
+            if self.workflow_queue_backend != "redis":
+                raise ValueError(
+                    "Redis workflow queue backend is required in production"
+                )
+            if not self.redis_url:
+                raise ValueError(
+                    "redis_url is required when the workflow queue backend is Redis"
+                )
+
+        if self.workflow_queue_backend == "redis" and not self.redis_url:
             raise ValueError(
-                "SQLite database is not allowed in production"
+                "redis_url is required when the workflow queue backend is Redis"
             )
 
         return self

@@ -14,10 +14,21 @@ def test_settings_reads_environment_values(monkeypatch) -> None:
 
 
 def test_json_formatter_includes_structured_extra_fields() -> None:
-    record = logging.makeLogRecord({"name": "test", "levelno": logging.INFO, "levelname": "INFO", "msg": "completed", "args": (), "event": "validation_completed", "execution_id": "abc"})
+    record = logging.makeLogRecord(
+        {
+            "name": "test",
+            "levelno": logging.INFO,
+            "levelname": "INFO",
+            "msg": "completed",
+            "args": (),
+            "event": "validation_completed",
+            "execution_id": "abc",
+        }
+    )
     payload = json.loads(JsonFormatter().format(record))
     assert payload["event"] == "validation_completed"
     assert payload["execution_id"] == "abc"
+
 
 def test_production_rejects_sqlite_database() -> None:
     try:
@@ -37,5 +48,7 @@ def test_production_accepts_non_sqlite_database() -> None:
         _env_file=None,
         environment="production",
         database_url="postgresql://user:pass@localhost/app",
+        workflow_queue_backend="redis",
+        redis_url="redis://localhost:6379/0",
     )
     assert settings.environment == "production"

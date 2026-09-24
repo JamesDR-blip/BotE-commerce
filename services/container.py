@@ -1,9 +1,9 @@
 """Composition root: dependency injection without mutable module globals."""
+
 from __future__ import annotations
 
 from agents.extraction import ExtractionAgent
 from agents.intent_classifier import IntentClassifier
-from agents.llm import LLMAssistantAgent
 from agents.parameter_resolver import ParameterResolver
 from agents.planner import PlannerAgent
 from agents.reporter import ReporterAgent
@@ -17,21 +17,25 @@ from agents.workflow import (
     ValidatorAgent,
 )
 from application.approval.approval_changeset_service import ApprovalChangeSetService
-from application.audit.audit_service import AuditService
-from application.channels.canonical_product_service import CanonicalProductService
-from application.channels.channel_sync_service import ChannelSyncService
 from application.approval.approval_service import ApprovalService
+from application.audit.audit_service import AuditService
+from application.autonomous.autonomous_operations_orchestrator import (
+    AutonomousOperationsOrchestrator,
+)
+from application.autonomous.autonomous_ops_service import AutonomousOpsService
 from application.changesets.changeset_service import ChangeSetService
 from application.changesets.mutation_service import ChangeSetMutationService
-from application.changesets.rollback_service import ChangeSetRollbackService
 from application.changesets.query_service import ChangeSetQueryService
-from application.datasets.artifact_materializer import DatasetArtifactMaterializer
+from application.changesets.rollback_service import ChangeSetRollbackService
+from application.channels.canonical_product_service import CanonicalProductService
+from application.channels.channel_sync_service import ChannelSyncService
 from application.copilot.agent import CopilotAgent
 from application.copilot.application_tools import (
     CopilotToolServices,
     build_copilot_tools,
 )
 from application.copilot.service import CopilotService
+from application.datasets.artifact_materializer import DatasetArtifactMaterializer
 from application.datasets.dataset_ingestion import DatasetIngestionService
 from application.datasets.dataset_service import DatasetService
 from application.lineage.lineage_tracking_service import LineageTrackingService
@@ -44,6 +48,7 @@ from application.rules.rule_intelligence_service import RuleIntelligenceService
 from application.workflows.authoring_service import WorkflowAuthoringService
 from application.workflows.history_service import WorkflowHistoryService
 from application.workflows.runtime_service import WorkflowRuntimeService
+from application.workflows.simulation_service import SimulationService
 from application.workspace.project_service import WorkspaceProjectService
 from capabilities.cleaning import CleaningCapability
 from capabilities.extraction import ExtractionCapability
@@ -52,10 +57,11 @@ from capabilities.qa import QACapability
 from capabilities.validation import ValidationCapability
 from configs.settings import Settings
 from database.models import make_session_factory
-from domain.catalog.mapping import MappingService
-from domain.catalog.normalization import NormalizationService
+from domain.autonomous_operations import AutonomousPolicy
 from domain.capability_registry import CapabilityRegistry
 from domain.capability_selector import CapabilitySelector
+from domain.catalog.mapping import MappingService
+from domain.catalog.normalization import NormalizationService
 from domain.dependency_resolver import DependencyResolver
 from domain.intent_resolver import IntentResolver
 from domain.quality.anomalies import detect_anomalies
@@ -65,27 +71,32 @@ from execution.capabilities.capability_execution_service import (
     CapabilityExecutionService,
 )
 from execution.capabilities.capability_executor import CapabilityExecutor
-from execution.workflow.engine import WorkflowEngine, WorkflowExecutionWorker
 from execution.shadow_execution_runner import ShadowExecutionRunner
+from execution.workflow.engine import WorkflowEngine, WorkflowExecutionWorker
 from extractors.deterministic import DeterministicProductExtractor
 from infrastructure.cache.ttl import TTLCache
 from infrastructure.channels.connector_factory import ChannelConnectorFactory
-from infrastructure.security.credential_cipher import FernetCredentialCipher
-from infrastructure.security.unavailable_credential_cipher import (
-    UnavailableCredentialCipher,
-)
 from infrastructure.channels.http_client import HttpClient
 from infrastructure.marketplace.catalog import MarketplacePackageCatalog
 from infrastructure.marketplace.installer import PackageInstaller
 from infrastructure.marketplace.rule_pack import MarketplaceRulePackLoader
 from infrastructure.persistence.approval_repository import ApprovalRepository
 from infrastructure.persistence.execution_trace import ExecutionTracePersistence
+from infrastructure.persistence.risk_assessment_repository import (
+    RiskAssessmentRepository,
+)
 from infrastructure.persistence.risk_repository import RiskRepository
-from infrastructure.persistence.risk_assessment_repository import RiskAssessmentRepository
+from infrastructure.queue.redis_workflow_execution_queue import (
+    RedisWorkflowExecutionQueue,
+)
 from infrastructure.queue.workflow_execution_queue import (
     InProcessWorkflowExecutionQueue,
 )
 from infrastructure.rules.chroma_rule_retriever import ChromaRuleRetriever
+from infrastructure.security.credential_cipher import FernetCredentialCipher
+from infrastructure.security.unavailable_credential_cipher import (
+    UnavailableCredentialCipher,
+)
 from infrastructure.storage.dataset_storage import DatasetStorage
 from infrastructure.upload.streaming_reader import StreamingTabularReader
 from infrastructure.upload.tabular_reader import TabularUploadReader
@@ -93,36 +104,32 @@ from plugins.registry import ValidatorRegistry
 from reports.generator import ReportAgent
 from repositories.agent_memory import AgentMemoryRepository
 from repositories.audit_events import AuditEventRepository
-from repositories.channel_mappings import ChannelMappingRepository
-from repositories.channels import ChannelRepository
 from repositories.capability_execution_traces import (
     CapabilityExecutionTraceRepository,
 )
+from repositories.changesets import ChangeSetRepository
+from repositories.channel_mappings import ChannelMappingRepository
+from repositories.channels import ChannelRepository
+from repositories.compliance_policies import CompliancePolicyRepository
 from repositories.data_lineage_events import DataLineageEventRepository
 from repositories.datasets import DatasetRepository
-from repositories.changesets import ChangeSetRepository
 from repositories.execution_traces import ExecutionTraceRepository
 from repositories.executions import ExecutionRepository
-from repositories.projects import ProjectRepository
 from repositories.organizations import OrganizationRepository
+from repositories.projects import ProjectRepository
+from repositories.quotas import QuotaRepository
 from repositories.rbac import RBACRepository
 from repositories.rules import RuleRepository
-from repositories.users import UserRepository
-from repositories.quotas import QuotaRepository
-from repositories.compliance_policies import CompliancePolicyRepository
 from repositories.sync_jobs import SyncAttemptRepository, SyncJobRepository
+from repositories.users import UserRepository
 from repositories.workflow_executions import WorkflowExecutionRepository
 from repositories.workflows import WorkflowRepository
 from repositories.workspaces import WorkspaceRepository
 from services.authentication import AuthenticationService
-from application.workflows.simulation_service import SimulationService
-from application.autonomous.autonomous_ops_service import AutonomousOpsService
-from application.autonomous.autonomous_operations_orchestrator import AutonomousOperationsOrchestrator
-from domain.autonomous_operations import AutonomousPolicy
 from services.authorization import AuthorizationService
+from services.compliance import ComplianceService
 from services.data_operations import DataOperationsService
 from services.quota import QuotaService
-from services.compliance import ComplianceService
 from services.validation_service import ValidationService
 
 
@@ -154,9 +161,7 @@ class Container:
         self.risk_assessment_repository = RiskAssessmentRepository(sessions)
         self.approval_repository = ApprovalRepository(sessions)
 
-        self.risk_service = RiskService(
-            policy=self.risk_repository.get_policy()
-        )
+        self.risk_service = RiskService(policy=self.risk_repository.get_policy())
 
         self.rule_retriever = ChromaRuleRetriever(
             path=settings.rule_index_path,
@@ -170,9 +175,7 @@ class Container:
             RequirementAgent(),
             ClassifierAgent(),
             RuleRetrieverAgent(self.rules, self.rule_retriever),
-            ExtractionAgent(
-                DeterministicProductExtractor()
-            ),
+            ExtractionAgent(DeterministicProductExtractor()),
             AutoFixAgent(),
             ValidatorAgent(self.validation),
             QAAgent(
@@ -188,19 +191,13 @@ class Container:
         )
         self.normalization = NormalizationService()
 
-        normalization_capability = NormalizationCapability(
-            self.normalization
-        )
+        normalization_capability = NormalizationCapability(self.normalization)
         self.capabilities.register(normalization_capability)
 
-        cleaning_capability = CleaningCapability(
-            self.data_operations
-        )
+        cleaning_capability = CleaningCapability(self.data_operations)
         self.capabilities.register(cleaning_capability)
 
-        extraction_capability = ExtractionCapability(
-            self.agents.extraction
-        )
+        extraction_capability = ExtractionCapability(self.agents.extraction)
         self.capabilities.register(extraction_capability)
 
         validation_capability = ValidationCapability(
@@ -210,17 +207,11 @@ class Container:
         )
         self.capabilities.register(validation_capability)
 
-        qa_capability = QACapability(
-            self.agents.qa
-        )
+        qa_capability = QACapability(self.agents.qa)
         self.capabilities.register(qa_capability)
 
-        intent_classifier = IntentClassifier.from_registry(
-            self.capabilities
-        )
-        intent_resolver = IntentResolver.from_registry(
-            self.capabilities
-        )
+        intent_classifier = IntentClassifier.from_registry(self.capabilities)
+        intent_resolver = IntentResolver.from_registry(self.capabilities)
 
         self.memories = AgentMemoryRepository(sessions)
         self.agent_memory = AgentMemoryService(memories=self.memories)
@@ -240,9 +231,7 @@ class Container:
             available_capabilities=lambda: self.capabilities.catalog().keys(),
         )
 
-        intent_resolver = IntentResolver.from_registry(
-            self.capabilities
-        )
+        intent_resolver = IntentResolver.from_registry(self.capabilities)
 
         self.planner = PlannerAgent(
             registry=self.capabilities,
@@ -251,13 +240,9 @@ class Container:
             selector=selector,
         )
 
-        self.capability_executor = CapabilityExecutor(
-            self.capabilities
-        )
+        self.capability_executor = CapabilityExecutor(self.capabilities)
 
-        self.workflow_capability_traces = CapabilityExecutionTraceRepository(
-            sessions
-        )
+        self.workflow_capability_traces = CapabilityExecutionTraceRepository(sessions)
         self.workflow_trace_persistence = ExecutionTracePersistence(
             self.workflow_capability_traces
         )
@@ -265,9 +250,7 @@ class Container:
         self.reports = ReportAgent(settings.reports_path)
         self.reporter = ReporterAgent(self.reports)
         self.executions = ExecutionRepository(sessions)
-        self.execution_traces = ExecutionTraceRepository(
-            sessions
-        )
+        self.execution_traces = ExecutionTraceRepository(sessions)
 
         self.execution_trace_persistence = ExecutionTracePersistence(
             self.execution_traces
@@ -279,16 +262,18 @@ class Container:
         self.workspaces = WorkspaceRepository(sessions)
         self.projects = ProjectRepository(sessions)
         self.datasets = DatasetRepository(sessions)
-        self.channels = ChannelRepository(
-            sessions,
-            credential_cipher=(
-                FernetCredentialCipher(
-                    settings.channel_credentials_encryption_key.get_secret_value()
-                )
-                if settings.channel_credentials_encryption_key is not None
-                else UnavailableCredentialCipher()
+        self.channels = (
+            ChannelRepository(
+                sessions,
+                credential_cipher=(
+                    FernetCredentialCipher(
+                        settings.channel_credentials_encryption_key.get_secret_value()
+                    )
+                    if settings.channel_credentials_encryption_key is not None
+                    else UnavailableCredentialCipher()
+                ),
             ),
-        ),
+        )
         self.channel_mappings = ChannelMappingRepository(sessions)
         self.sync_jobs = SyncJobRepository(sessions)
         self.sync_attempts = SyncAttemptRepository(sessions)
@@ -451,9 +436,19 @@ class Container:
             executions=self.workflow_executions,
             workflow_engine=self.workflow_engine,
         )
-        self.workflow_queue = InProcessWorkflowExecutionQueue(
-            worker=self.workflow_worker.run,
-        )
+        if self.settings.workflow_queue_backend == "redis":
+            if not self.settings.redis_url:
+                raise ValueError(
+                    "redis_url is required when the workflow queue backend is Redis"
+                )
+            self.workflow_queue = RedisWorkflowExecutionQueue(
+                redis_url=self.settings.redis_url,
+                stream_name=self.settings.redis_stream_name,
+            )
+        else:
+            self.workflow_queue = InProcessWorkflowExecutionQueue(
+                worker=self.workflow_worker.run,
+            )
         self.approval_changeset_service = ApprovalChangeSetService(
             sessions=self.sessions,
             approvals=self.approval_repository,
@@ -494,7 +489,6 @@ class Container:
             workflows=self.workflows,
             datasets=self.datasets,
         )
-
 
         copilot_service_ref: dict[str, CopilotService] = {}
 
@@ -545,25 +539,23 @@ class Container:
         copilot_service_ref["service"] = self.copilot
 
         self.autonomous_ops = AutonomousOpsService(policy=AutonomousPolicy())
-        self.autonomous_operations_orchestrator = (
-            AutonomousOperationsOrchestrator(
-                data_health=self.data_health,
-                requirements=self.agents.requirements,
-                planner=self.planner,
-                risk_service=self.risk_service,
-                autonomous_ops=self.autonomous_ops,
-                changeset_service=self.changeset_service,
-                changeset_mutation=self.changeset_mutation_service,
-                changeset_rollback=self.changeset_rollback_service,
-                changesets=self.changesets,
-                datasets=self.datasets,
-                workflow_authoring=self.workflow_authoring,
-                workflow_executions=self.workflow_executions,
-                simulation_service=self.simulation_service,
-                memory_service=self.agent_memory,
-                audit_service=self.audit_service,
-                approval_service=self.approval_service,
-            )
+        self.autonomous_operations_orchestrator = AutonomousOperationsOrchestrator(
+            data_health=self.data_health,
+            requirements=self.agents.requirements,
+            planner=self.planner,
+            risk_service=self.risk_service,
+            autonomous_ops=self.autonomous_ops,
+            changeset_service=self.changeset_service,
+            changeset_mutation=self.changeset_mutation_service,
+            changeset_rollback=self.changeset_rollback_service,
+            changesets=self.changesets,
+            datasets=self.datasets,
+            workflow_authoring=self.workflow_authoring,
+            workflow_executions=self.workflow_executions,
+            simulation_service=self.simulation_service,
+            memory_service=self.agent_memory,
+            audit_service=self.audit_service,
+            approval_service=self.approval_service,
         )
 
 
@@ -575,5 +567,3 @@ def build_container(
         app_settings = Settings()
 
     return Container(app_settings)
-
-

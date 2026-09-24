@@ -1,3 +1,78 @@
+# S26 — Production DevOps & CI/CD Automation — COMPLETE
+### 2026-09-24
+
+Completed the S26 production deployment and CI/CD scope while preserving the existing Clean Architecture, DDD boundaries, workflow execution model, production mutation boundary, and observability contracts.
+
+### Added
+
+- Added a multi-stage python:3.13-slim production Dockerfile.
+- Added a non-root appuser runtime container.
+- Added .dockerignore production build exclusions.
+- Added docker-compose.prod.yml with Nginx, API, worker, dashboard, PostgreSQL, and Redis services.
+- Configured production workflow execution to use Redis.
+- Configured two production worker replicas.
+- Added Nginx reverse proxy routing for API, dashboard, and /healthz.
+- Added .env.production.example with secret-injection guidance.
+- Added docs/production-deployment.md.
+- Added PR CI validation for Ruff, Black, MyPy, pytest, and a 90% coverage threshold.
+- Added semantic-version release automation with GHCR publication and Trivy scanning.
+
+### Changed
+
+- Production settings now require PostgreSQL rather than SQLite.
+- Production workflow execution now requires the Redis queue backend and Redis URL.
+- Added the dedicated production Redis worker entrypoint.
+- Preserved existing operational health and metrics endpoints.
+- Preserved existing ChangeSet, approval, audit, lineage, and execution boundaries.
+
+### Security
+
+- No real credentials or passwords were committed.
+- Production application containers run as a non-root user.
+- PostgreSQL credentials are injected through environment variables.
+- Release authentication uses the GitHub Actions token secret.
+- No eval, exec, unsafe YAML execution, arbitrary SQL execution, or unvalidated LLM authorization path was introduced.
+
+### Verification
+
+- Full regression: **937 passed, 2 warnings** in 57.61 seconds.
+- Ruff scoped S26 checks: PASS.
+- Black scoped S26 checks: PASS.
+- MyPy scoped S26 checks: PASS.
+- git diff --check: PASS.
+- Alembic current/head: 20260923_01.
+- Single Alembic head confirmed.
+- No S26 database migration was required.
+- Production Compose/Docker/Nginx static validation: PASS.
+- Local Docker runtime build/Compose execution was not performed because Docker CLI is unavailable locally.
+
+### Architecture Decisions
+
+1. Keep production deployment concerns outside the Domain layer.
+2. Keep Redis queue implementation in Infrastructure and workflow orchestration in the existing execution/application boundaries.
+3. Use the existing composition root to select the production Redis queue backend.
+4. Keep ChangeSet as the only internal production dataset mutation boundary.
+5. Keep operational health and metrics endpoints backward compatible.
+6. Use environment/secret injection rather than committed production credentials.
+7. Keep CI tooling scoped to the S26-owned files rather than introducing a repository-wide formatting/type-cleanup refactor.
+
+### Known Issues / Remaining Work
+
+- Starlette/AnyIO BlockingPortal deprecation warning remains.
+- Duplicate `rules/fashion.yaml` test fixture warning remains.
+- Local Docker image build and Compose runtime verification requires a Docker-enabled environment.
+- Production collector/Prometheus/Grafana deployment wiring remains a platform deployment concern.
+- Operational alerting and broader production telemetry/collector integration remain outside the completed S26 implementation scope.
+
+### Next Steps
+
+- Validate the production Docker image and Compose stack in a Docker-enabled CI or deployment environment.
+- Complete production telemetry collector/Prometheus/Grafana deployment integration as platform infrastructure permits.
+- Define and implement operational alerting requirements.
+- Proceed to S27 — Developer Documentation & API Specifications.
+
+Next sprint: **S27 - Developer Documentation & API Specifications**.
+---
 # S25 - Observability, Metrics & Telemetry - COMPLETE
 ### 2026-09-24
 
@@ -37,13 +112,7 @@ All currently defined S25 objectives are implemented and verified.
 
 S25 is **COMPLETE**.
 
-Next sprint: **S26 - DevOps & Platform Reliability**.
-
 ---
-
-# CHANGELOG
-
-# Changelog
 
 # S24 — Enterprise Governance & Granular RBAC — COMPLETE
 ### 2026-09-23

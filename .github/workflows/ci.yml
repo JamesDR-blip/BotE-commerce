@@ -1,11 +1,66 @@
-name: CI
-on: [push, pull_request]
+﻿name: CI
+
+on:
+  push:
+  pull_request:
+
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
-        with: {python-version: '3.12'}
-      - run: pip install -r requirements.txt
-      - run: pytest -q
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install "ruff>=0.16,<0.17" "black>=26.5,<27" "mypy>=1.20,<2" "pytest-cov>=7,<8"
+
+      - name: Ruff
+        run: |
+          ruff check \
+            configs/settings.py \
+            services/container.py \
+            worker.py \
+            infrastructure/queue/redis_workflow_execution_queue.py \
+            tests/test_settings_logging.py \
+            tests/test_settings_workflow_queue.py \
+            tests/test_redis_workflow_execution_queue.py \
+            tests/test_worker_entrypoint.py
+
+      - name: Black
+        run: |
+          black --check \
+            configs/settings.py \
+            services/container.py \
+            worker.py \
+            infrastructure/queue/redis_workflow_execution_queue.py \
+            tests/test_settings_logging.py \
+            tests/test_settings_workflow_queue.py \
+            tests/test_redis_workflow_execution_queue.py \
+            tests/test_worker_entrypoint.py
+
+      - name: MyPy
+        run: |
+          mypy \
+            --explicit-package-bases \
+            --follow-imports=skip \
+            --ignore-missing-imports \
+            configs/settings.py \
+            worker.py \
+            infrastructure/queue/redis_workflow_execution_queue.py \
+            tests/test_redis_workflow_execution_queue.py \
+            tests/test_worker_entrypoint.py
+
+      - name: Test with coverage
+        run: |
+          pytest -q \
+            --cov=. \
+            --cov-report=term-missing \
+            --cov-fail-under=90
