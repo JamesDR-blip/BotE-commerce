@@ -1,3 +1,57 @@
+# S27 — Developer Documentation & API Specifications — COMPLETE
+### 2026-09-26
+
+Completed and verified the S27 documentation and API specification scope while preserving the existing Clean Architecture, DDD boundaries, workflow execution model, ChangeSet production mutation boundary, approval controls, lineage/audit contracts, and channel synchronization boundaries.
+
+### Added
+
+- Added documentation portal under docs/.
+- Added docs/api.md.
+- Added architecture documentation for Ingestion, Validation, Autonomous Loop, and Channel Sync.
+- Added developer guide for Adding a Capability.
+- Added developer guide for Writing a Plugin.
+- Added operator guides for Disaster Recovery, Rollback, and Database Migration.
+- Retained and incorporated the existing production deployment guide.
+
+### Changed
+
+- Added explicit OpenAPI router tags across the API routers.
+- Added operation-level OpenAPI summaries and descriptions for all 61 API operations.
+- Kept the generated FastAPI OpenAPI 3.1 document as the authoritative API specification surface.
+- Updated stale repository documentation references to the current Alembic head 20260923_01.
+
+### Verification
+
+- OpenAPI version: **3.1.0**.
+- OpenAPI paths: **60**.
+- OpenAPI operations: **61**.
+- OpenAPI schemas: **71**.
+- Operations with summary/description/tag: **61/61**.
+- Schema-reference audit: PASS.
+- All operations declare responses.
+- Markdown links: PASS.
+- Markdown code fences: PASS.
+- python -m compileall -q api: PASS.
+- S27 API regression: **14 passed, 1 warning**.
+- Full regression: **938 passed, 2 warnings** in **63.36 seconds**.
+- git diff --check: PASS; remaining messages are Git LF/CRLF normalization warnings.
+- No new database migration was required.
+- Alembic current/head: 20260923_01.
+
+### Known Issues / Remaining Work
+
+- Starlette/AnyIO BlockingPortal deprecation warning remains.
+- Duplicate
+ules/fashion.yaml test fixture warning remains.
+- Local Docker image build and Compose runtime verification remains pending because Docker CLI is unavailable locally.
+- Production collector/Prometheus/Grafana deployment wiring remains a platform deployment concern.
+- Operational alerting remains to be defined and implemented.
+
+### Next Steps
+
+- Proceed to S28 — System Hardening & Security Compliance.
+
+---
 # S26 — Production DevOps & CI/CD Automation — COMPLETE
 ### 2026-09-24
 

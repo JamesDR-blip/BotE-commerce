@@ -19,12 +19,14 @@ from schemas.responses import (
 )
 from application.workspace.project_service import WorkspaceProjectService
 
-router = APIRouter()
+router = APIRouter(tags=["Studio"])
 
 @router.post(
     "/workspaces",
     response_model=WorkspaceResponse,
-)
+     summary='Create workspace',
+     description='Create a workspace for the current user.'
+ )
 def create_workspace(
     payload: WorkspaceCreateRequest,
     current_user: CurrentUser = Depends(get_current_user),
@@ -48,7 +50,9 @@ def create_workspace(
 @router.get(
     "/workspaces/{workspace_id}",
     response_model=WorkspaceResponse,
-)
+     summary='Get workspace',
+     description='Return a workspace visible to the current user.'
+ )
 def get_workspace(
     workspace_id: str,
     current_user: CurrentUser = Depends(get_current_user),
@@ -74,7 +78,9 @@ def get_workspace(
 @router.post(
     "/projects",
     response_model=ProjectResponse,
-)
+     summary='Create project',
+     description='Create a project in a workspace for the current user.'
+ )
 def create_project(
     payload: ProjectCreateRequest,
     current_user: CurrentUser = Depends(get_current_user),
@@ -100,7 +106,9 @@ def create_project(
 @router.get(
     "/projects/{project_id}",
     response_model=ProjectResponse,
-)
+     summary='Get project',
+     description='Return a project visible to the current user.'
+ )
 def get_project(
     project_id: str,
     current_user: CurrentUser = Depends(get_current_user),
@@ -129,7 +137,9 @@ def get_project(
 @router.get(
     "/workspaces/{workspace_id}/projects",
     response_model=list[ProjectResponse],
-)
+     summary='List workspace projects',
+     description='Return projects belonging to the requested workspace.'
+ )
 def list_projects(
     workspace_id: str,
     current_user: CurrentUser = Depends(get_current_user),

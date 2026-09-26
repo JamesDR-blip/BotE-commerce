@@ -402,3 +402,23 @@ def test_marketplace_packages_route_is_registered(tmp_path):
     assert "/marketplace/packages" in openapi["paths"]
     assert "get" in openapi["paths"]["/marketplace/packages"]
 
+
+def test_openapi_operations_include_documentation_metadata(tmp_path):
+    app, _ = _client(tmp_path)
+
+    openapi = app.openapi()
+
+    assert openapi["openapi"] == "3.1.0"
+
+    operations = [
+        operation
+        for path_item in openapi["paths"].values()
+        for method, operation in path_item.items()
+        if method.lower()
+        in {"get", "post", "put", "patch", "delete", "options", "head", "trace"}
+    ]
+
+    assert operations
+    assert all(operation.get("summary") for operation in operations)
+    assert all(operation.get("description") for operation in operations)
+    assert all(operation.get("tags") for operation in operations)

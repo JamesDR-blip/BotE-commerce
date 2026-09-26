@@ -1,4 +1,4 @@
-﻿"""Dataset API routes."""
+"""Dataset API routes."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from schemas.responses import DatasetResponse
 from domain.identity import CurrentUser
 
 
-router = APIRouter()
+router = APIRouter(tags=["Datasets"])
 
 
 def _dataset_response(dataset) -> DatasetResponse:
@@ -45,7 +45,9 @@ def _dataset_response(dataset) -> DatasetResponse:
 @router.post(
     "/datasets",
     response_model=DatasetResponse,
-)
+     summary='Create dataset',
+     description='Create a dataset using the supplied dataset definition.'
+ )
 def create_dataset(
     payload: DatasetCreateRequest,
     dataset_service: DatasetService = Depends(get_dataset_service),
@@ -66,7 +68,9 @@ def create_dataset(
 @router.post(
     "/projects/{project_id}/datasets/upload",
     response_model=DatasetResponse,
-)
+     summary='Upload project dataset',
+     description='Upload a dataset file for a project and ingest it into the platform.'
+ )
 async def upload_dataset(
     project_id: str,
     name: str = Form(...),
@@ -96,7 +100,9 @@ async def upload_dataset(
 @router.get(
     "/datasets/{dataset_id}",
     response_model=DatasetResponse,
-)
+     summary='Get dataset',
+     description='Return a dataset visible to the current user.'
+ )
 def get_dataset(
     dataset_id: str,
     dataset_service: DatasetService = Depends(get_dataset_service),
@@ -120,7 +126,9 @@ def get_dataset(
 @router.get(
     "/projects/{project_id}/datasets",
     response_model=list[DatasetResponse],
-)
+     summary='List project datasets',
+     description='Return datasets belonging to the requested project.'
+ )
 def list_datasets(
     project_id: str,
     dataset_service: DatasetService = Depends(get_dataset_service),

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import datetime, timezone
 
@@ -10,7 +10,7 @@ from application.approval.approval_service import ApprovalService
 from domain.approval import ApprovalDecision, ApprovalRequest
 from domain.identity import CurrentUser
 
-router = APIRouter()
+router = APIRouter(tags=["Approval"])
 
 
 class ApprovalTokenModel(BaseModel):
@@ -45,7 +45,7 @@ def _approval_response(record) -> dict:
     }
 
 
-@router.post("/approval/request", status_code=201)
+@router.post("/approval/request", status_code=201, summary='Request approval', description='Create an approval request for an execution or change set with its risk and confidence scores.')
 def request_approval(
     request: ApprovalRequestModel,
     current_user: CurrentUser = Depends(get_current_user),
@@ -77,7 +77,7 @@ def request_approval(
         ) from exc
 
 
-@router.post("/approval/decision")
+@router.post("/approval/decision", summary='Record approval decision', description='Record an approval decision using the supplied approval identifier, decision, and authorization token.')
 def decide_approval(
     decision: ApprovalDecisionModel,
     current_user: CurrentUser = Depends(get_current_user),
@@ -103,7 +103,7 @@ def decide_approval(
         ) from exc
 
 
-@router.get("/approvals/pending")
+@router.get("/approvals/pending", summary='List pending approvals', description='Return approval requests that are currently pending decision.')
 def list_pending_approvals(
     approval_service: ApprovalService = Depends(get_approval_service),
     current_user=Depends(get_current_user),
@@ -114,7 +114,7 @@ def list_pending_approvals(
     ]
 
 
-@router.post("/approvals/{approval_id}/approve")
+@router.post("/approvals/{approval_id}/approve", summary='Approve request', description='Approve a pending approval request using its approval identifier and authorization token.')
 def approve(
     approval_id: str,
     body: ApprovalTokenModel,
@@ -145,7 +145,7 @@ def approve(
         ) from exc
 
 
-@router.post("/approvals/{approval_id}/reject")
+@router.post("/approvals/{approval_id}/reject", summary='Reject request', description='Reject a pending approval request using its approval identifier and authorization token.')
 def reject(
     approval_id: str,
     body: ApprovalTokenModel,

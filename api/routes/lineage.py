@@ -17,13 +17,15 @@ from domain.identity import CurrentUser
 from schemas.responses import AuditEventResponse, LineageEventResponse
 
 
-router = APIRouter()
+router = APIRouter(tags=["Lineage"])
 
 
 @router.get(
     "/datasets/{dataset_id}/lineage",
     response_model=list[LineageEventResponse],
-)
+     summary='Get dataset lineage',
+     description='Return lineage events associated with the specified dataset.'
+ )
 def list_dataset_lineage(
     dataset_id: str,
     current_user: CurrentUser = Depends(get_current_user),
@@ -69,7 +71,9 @@ def list_dataset_lineage(
 @router.get(
     "/audit-logs",
     response_model=list[AuditEventResponse],
-)
+     summary='List audit logs',
+     description='Return audit events for the current user, optionally filtered by workspace, resource, execution, or change set.'
+ )
 def list_audit_logs(
     current_user: CurrentUser = Depends(get_current_user),
     audit_service: AuditService = Depends(get_audit_service),

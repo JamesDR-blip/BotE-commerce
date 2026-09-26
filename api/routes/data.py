@@ -26,18 +26,18 @@ from infrastructure.upload.tabular_reader import TabularUploadReader
 
 from domain.exceptions import ValidationRequestError
 
-router = APIRouter()
+router = APIRouter(tags=["Data"])
 
 logger = logging.getLogger(__name__)
 
-@router.post("/upload", response_model=UploadResponse)
+@router.post("/upload", response_model=UploadResponse, summary='Upload tabular data', description='Read an uploaded tabular file and return its filename, row count, and column information.')
 async def upload(
     file: UploadFile = File(...),
     reader: TabularUploadReader = Depends(get_upload_reader),
 ) -> UploadResponse:
     frame = await _read_frame(file, reader)
     return UploadResponse(filename=file.filename or "", rows=len(frame), columns=[str(column) for column in frame.columns])
-@router.post("/clean", response_model=TabularPreviewResponse)
+@router.post("/clean", response_model=TabularPreviewResponse, summary='Preview cleaned data', description='Apply the requested cleaning operation to uploaded tabular data and return a preview.')
 async def clean(
     file: UploadFile = File(...),
     category: str | None = Form(None),
@@ -47,7 +47,7 @@ async def clean(
     frame = await _read_frame(file, reader)
     detected, cleaned = operations.clean(frame, category)
     return _preview(detected, cleaned)
-@router.post("/extract", response_model=ExtractionResponse)
+@router.post("/extract", response_model=ExtractionResponse, summary='Extract records', description='Extract records from uploaded tabular data and return row-oriented attribute mappings.')
 async def extract(
     file: UploadFile = File(...),
     operations: DataOperationsService = Depends(get_data_operations),
@@ -55,7 +55,7 @@ async def extract(
 ) -> ExtractionResponse:
     frame = await _read_frame(file, reader)
     return ExtractionResponse(records=[{"row": index + 2, "attributes": item.as_dict()} for index, item in enumerate(operations.extract(frame))])
-@router.post("/mapping", response_model=MappingResponse)
+@router.post("/mapping", response_model=MappingResponse, summary='Suggest column mappings', description='Suggest mappings from source columns to the requested target columns.')
 async def mapping(
     file: UploadFile = File(...),
     target_columns: str | None = Form(None),
@@ -66,10 +66,10 @@ async def mapping(
     targets = [value.strip() for value in target_columns.split(",") if value.strip()] if target_columns else None
     suggested, unmapped = mappings.suggest(frame.columns, targets)
     return MappingResponse(mappings=suggested, unmapped_columns=unmapped)
-@router.post("/validate", response_model=ValidationResponse)
+@router.post("/validate", response_model=ValidationResponse, summary='Validate uploaded data', description='Validate uploaded tabular data and return validation findings.')
 async def validate_alias(file: UploadFile = File(...), category: str | None = Form(None), reader: TabularUploadReader = Depends(get_upload_reader), quality: QualityService = Depends(get_quality_service)) -> ValidationResponse:
     return await _validate_upload(file, category, reader, quality)
-@router.post("/validations", response_model=ValidationResponse)
+@router.post("/validations", response_model=ValidationResponse, summary='Validate uploaded data', description='Validate uploaded tabular data and return validation findings.')
 async def validate(file: UploadFile = File(...), category: str | None = Form(None), reader: TabularUploadReader = Depends(get_upload_reader), quality: QualityService = Depends(get_quality_service)) -> ValidationResponse:
     return await _validate_upload(file, category, reader, quality)
 

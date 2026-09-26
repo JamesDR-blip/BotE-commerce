@@ -15,7 +15,7 @@ from schemas.responses import (
 )
 
 
-router = APIRouter()
+router = APIRouter(tags=["Rules"])
 
 
 def _query_from_payload(
@@ -53,7 +53,9 @@ def _response(result) -> RuleSearchResponse:
 @router.post(
     "/rules/search",
     response_model=RuleSearchResponse,
-)
+     summary='Search rules',
+     description='Search the rule knowledge available to the rule intelligence service.'
+ )
 def search_rules(
     payload: RuleSearchRequest,
     rule_intelligence: RuleIntelligenceService = Depends(
@@ -69,7 +71,9 @@ def search_rules(
 @router.post(
     "/rules/recommend",
     response_model=RuleSearchResponse,
-)
+     summary='Recommend rules',
+     description='Recommend rules for the supplied query subject to the requested minimum score.'
+ )
 def recommend_rules(
     payload: RuleRecommendRequest,
     rule_intelligence: RuleIntelligenceService = Depends(

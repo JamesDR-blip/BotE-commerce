@@ -30,13 +30,13 @@
 - **S24 Enterprise Governance**: Role-based access control (RBAC), multi-tenancy quotas, deterministic compliance policy enforcement, tenant isolation, and governance verification.
 - **S25 Observability**: OpenTelemetry tracing, Prometheus metrics, and execution dashboard.
 - **S26 DevOps**: Production multi-stage Docker image, Docker Compose deployment topology, Nginx reverse proxy, Redis-backed worker deployment, CI/CD automation, semantic-version release workflow, image vulnerability scanning, production environment template, and deployment documentation.
+**S27 Documentation**: Interactive API specs, architecture diagrams, and developer/operator guides
 
 ## Current Sprint
 
-- **S26 DevOps — COMPLETE**.
+- **S27 Documentation — COMPLETE**.
 
 ## Future Roadmap
-- **S27 Documentation**: Interactive API specs, architecture diagrams, and developer guides.
 - **S28 Hardening**: Security audit, penetration testing, fuzzing, and compliance certification.
 
 ### S26 — DevOps & Platform Reliability
@@ -63,3 +63,30 @@ Remaining platform concerns:
 - Production telemetry collector/Prometheus/Grafana deployment wiring.
 - Operational alerting.
 - Docker runtime deployment verification in a Docker-enabled environment.
+
+### S27 — Developer Documentation & API Specifications
+
+Status: COMPLETE
+
+Delivered:
+
+- Added the documentation portal under docs/.
+- Added API documentation aligned with the generated FastAPI OpenAPI 3.1 specification.
+- Added architecture sequence diagrams/guides for Ingestion, Validation, Autonomous Loop, and Channel Sync.
+- Added developer guides for Adding a Capability and Writing a Plugin.
+- Added operator guides for Disaster Recovery, Rollback, and Database Migration.
+- Preserved the existing production deployment documentation.
+- Added router tags and operation-level OpenAPI summaries/descriptions for all 61 API operations.
+- Validated OpenAPI schema references and response declarations.
+- Validated Markdown links and code fences.
+
+Verification:
+
+- OpenAPI 3.1.0.
+- 60 paths, 61 operations, 71 schemas.
+- Full regression: 938 passed, 2 warnings.
+- python -m compileall -q api: PASS.
+- git diff --check: PASS.
+- No new database migration; Alembic head remains 20260923_01.
+
+Next sprint: S28 Hardening.

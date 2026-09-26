@@ -1,5 +1,48 @@
 # Sprint Handoff
 
+## S27 — Developer Documentation & API Specifications
+
+**Status: COMPLETE**
+
+### Completed Work
+
+- Documentation portal under docs/.
+- OpenAPI 3.1 API documentation and operation metadata.
+- Architecture documentation for Ingestion, Validation, Autonomous Loop, and Channel Sync.
+- Developer guides for Adding Capability and Writing a Plugin.
+- Operator guides for Disaster Recovery, Rollback, and Database Migration.
+- Existing production deployment documentation retained.
+- Router tags and operation-level summaries/descriptions added to all 61 API operations.
+
+### Verification
+
+- OpenAPI: **3.1.0**.
+- API surface: **60 paths / 61 operations / 71 schemas**.
+- Schema-reference audit: PASS.
+- Markdown links: PASS.
+- Markdown code fences: PASS.
+- python -m compileall -q api: PASS.
+- S27 API regression: **14 passed, 1 warning**.
+- Full regression: **938 passed, 2 warnings** in **63.36 seconds**.
+- git diff --check: PASS.
+- Alembic current/head: 20260923_01.
+- No S27 migration.
+
+### Known Issues
+
+- Starlette/AnyIO BlockingPortal deprecation warning.
+- Duplicate
+ules/fashion.yaml fixture warning.
+- Local Docker build/Compose runtime verification remains pending because Docker CLI is unavailable locally.
+- Production collector/Prometheus/Grafana deployment wiring remains a platform concern.
+- Operational alerting remains outside the implemented scope.
+
+### Next Steps
+
+1. Proceed to S28 — System Hardening & Security Compliance.
+
+---
+
 ## S26 — DevOps & Platform Reliability
 
 **Status: COMPLETE**

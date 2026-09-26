@@ -33,7 +33,9 @@ router = APIRouter(prefix="/marketplace", tags=["marketplace"])
 @router.get(
     "/packages",
     response_model=list[MarketplacePackageResponse],
-)
+     summary='List marketplace packages',
+     description='Return marketplace packages, optionally filtered by a search query.'
+ )
 def list_marketplace_packages(
     query: str | None = Query(default=None),
     current_user: CurrentUser = Depends(get_current_user),
@@ -65,7 +67,9 @@ def list_marketplace_packages(
 @router.post(
     "/install",
     response_model=MarketplaceInstallResponse,
-)
+     summary='Install marketplace package',
+     description='Install a marketplace package from the supplied archive and verify its public key and signature.'
+ )
 async def install_marketplace_package(
     request: Request,
     archive: UploadFile = File(...),

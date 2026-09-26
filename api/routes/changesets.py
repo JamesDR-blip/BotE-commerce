@@ -1,4 +1,4 @@
-﻿"""ChangeSet API routes."""
+"""ChangeSet API routes."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from schemas.responses import (
     ChangeSetRollbackResponse,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["ChangeSets"])
 
 
 def _changeset_response(changeset) -> ChangeSetResponse:
@@ -43,7 +43,9 @@ def _changeset_response(changeset) -> ChangeSetResponse:
 @router.get(
     "/changesets",
     response_model=list[ChangeSetResponse],
-)
+     summary='List change sets',
+     description='Return change sets visible to the current user, optionally filtered by the supported query parameters.'
+ )
 def list_changesets(
     current_user: CurrentUser = Depends(get_current_user),
     query_service: ChangeSetQueryService = Depends(
@@ -61,7 +63,9 @@ def list_changesets(
 @router.get(
     "/changesets/{changeset_id}",
     response_model=ChangeSetDetailResponse,
-)
+     summary='Get change set',
+     description='Return the details of a specific change set.'
+ )
 def get_changeset(
     changeset_id: str,
     current_user: CurrentUser = Depends(get_current_user),
@@ -110,7 +114,9 @@ def get_changeset(
 @router.post(
     "/changesets/{changeset_id}/rollback",
     response_model=ChangeSetRollbackResponse,
-)
+     summary='Rollback change set',
+     description='Request rollback of a change set and return the resulting rollback record.'
+ )
 def rollback_changeset(
     changeset_id: str,
     current_user: CurrentUser = Depends(get_current_user),

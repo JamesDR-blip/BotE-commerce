@@ -19,7 +19,7 @@ from schemas.requests import ChannelSyncRequest
 from schemas.responses import ChannelResponse, SyncJobResponse
 
 
-router = APIRouter()
+router = APIRouter(tags=["Channels"])
 
 
 def _channel_response(channel: Channel) -> ChannelResponse:
@@ -47,7 +47,9 @@ def _sync_job_response(job: SyncJob) -> SyncJobResponse:
 @router.get(
     "/channels",
     response_model=list[ChannelResponse],
-)
+     summary='List channels',
+     description='Return channels available in the requested workspace.'
+ )
 def list_channels(
     workspace_id: str,
     current_user: CurrentUser = Depends(get_current_user),
@@ -78,7 +80,9 @@ def list_channels(
 @router.post(
     "/channels/{channel_id}/sync",
     response_model=SyncJobResponse,
-)
+     summary='Start channel sync',
+     description='Start a synchronization job for a channel and dataset using the supplied idempotency key.'
+ )
 def sync_channel(
     channel_id: str,
     payload: ChannelSyncRequest,
@@ -119,7 +123,9 @@ def sync_channel(
 @router.get(
     "/sync-jobs/{sync_job_id}",
     response_model=SyncJobResponse,
-)
+     summary='Get sync job',
+     description='Return the current state and details of a channel synchronization job.'
+ )
 def get_sync_job(
     sync_job_id: str,
     current_user: CurrentUser = Depends(get_current_user),

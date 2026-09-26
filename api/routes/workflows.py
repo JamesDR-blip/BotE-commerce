@@ -1,4 +1,4 @@
-﻿"""Workflow API routes."""
+"""Workflow API routes."""
 
 from __future__ import annotations
 import json
@@ -44,7 +44,7 @@ except ImportError:  # pragma: no cover
     pd = None
 
 
-router = APIRouter()
+router = APIRouter(tags=["Workflows"])
 
 
 def _simulation_json_value(value):
@@ -113,7 +113,9 @@ def _execution_plan_from_payload(payload: dict):
 @router.post(
     "/workflows",
     response_model=WorkflowResponse,
-)
+     summary='Create workflow',
+     description='Create a workflow and its initial execution plan for the current user.'
+ )
 def create_workflow(
     payload: WorkflowCreateRequest,
     current_user: CurrentUser = Depends(get_current_user),
@@ -151,7 +153,9 @@ def create_workflow(
 @router.get(
     "/workflows/{workflow_id}",
     response_model=WorkflowResponse,
-)
+     summary='Get workflow',
+     description='Return a workflow visible to the current user.'
+ )
 def get_workflow(
     workflow_id: str,
     current_user: CurrentUser = Depends(get_current_user),
@@ -183,7 +187,9 @@ def get_workflow(
 @router.get(
     "/projects/{project_id}/workflows",
     response_model=list[WorkflowResponse],
-)
+     summary='List project workflows',
+     description='Return workflows belonging to the requested project.'
+ )
 def list_workflows(
     project_id: str,
     current_user: CurrentUser = Depends(get_current_user),
@@ -212,7 +218,9 @@ def list_workflows(
 @router.post(
     "/workflows/{workflow_id}/versions",
     response_model=WorkflowVersionResponse,
-)
+     summary='Create workflow version',
+     description='Create a new version of the specified workflow.'
+ )
 def create_workflow_version(
     workflow_id: str,
     payload: WorkflowVersionCreateRequest,
@@ -248,7 +256,9 @@ def create_workflow_version(
 @router.get(
     "/workflows/{workflow_id}/versions",
     response_model=list[WorkflowVersionResponse],
-)
+     summary='List workflow versions',
+     description='Return versions available for the specified workflow.'
+ )
 def list_workflow_versions(
     workflow_id: str,
     current_user: CurrentUser = Depends(get_current_user),
@@ -276,7 +286,9 @@ def list_workflow_versions(
 @router.get(
     "/workflows/{workflow_id}/versions/{version}",
     response_model=WorkflowVersionResponse,
-)
+     summary='Get workflow version',
+     description='Return a specific version of the specified workflow.'
+ )
 def get_workflow_version(
     workflow_id: str,
     version: str,
@@ -309,7 +321,9 @@ def get_workflow_version(
 @router.post(
     "/workflows/{workflow_id}/versions/{version}/activate",
     response_model=WorkflowResponse,
-)
+     summary='Activate workflow version',
+     description='Activate the specified workflow version.'
+ )
 def activate_workflow_version(
     workflow_id: str,
     version: str,
@@ -343,7 +357,9 @@ def activate_workflow_version(
 @router.post(
     "/workflows/{workflow_id}/simulate",
     response_model=WorkflowSimulationResponse,
-)
+     summary='Simulate workflow',
+     description='Simulate a workflow with the supplied inputs and optional dataset without performing production execution.'
+ )
 def simulate_workflow(
     workflow_id: str,
     payload: WorkflowExecutionRequest,
@@ -371,7 +387,9 @@ def simulate_workflow(
 @router.post(
     "/workflows/{workflow_id}/execute",
     response_model=WorkflowExecutionResponse,
-)
+     summary='Execute workflow',
+     description='Execute the specified workflow synchronously with the supplied inputs and optional dataset.'
+ )
 def execute_workflow(
     workflow_id: str,
     payload: WorkflowExecutionRequest,
@@ -410,7 +428,9 @@ def execute_workflow(
 @router.post(
     "/workflows/{workflow_id}/execute-async",
     response_model=WorkflowExecutionResponse,
-)
+     summary='Execute workflow asynchronously',
+     description='Start asynchronous execution of the specified workflow with the supplied inputs and optional dataset.'
+ )
 def execute_workflow_async(
     workflow_id: str,
     payload: WorkflowExecutionRequest,
@@ -449,7 +469,9 @@ def execute_workflow_async(
 @router.get(
     "/workflow-executions/{execution_id}/status",
     response_model=WorkflowExecutionStatusResponse,
-)
+     summary='Get workflow execution status',
+     description='Return the current status information for a workflow execution.'
+ )
 def workflow_execution_status(
     execution_id: str,
     current_user: CurrentUser = Depends(get_current_user),
@@ -483,7 +505,9 @@ def workflow_execution_status(
 @router.get(
     "/workflow-executions/{execution_id}",
     response_model=WorkflowExecutionDetailResponse,
-)
+     summary='Get workflow execution detail',
+     description='Return detailed information for a workflow execution.'
+ )
 def workflow_execution_detail(
     execution_id: str,
     current_user: CurrentUser = Depends(get_current_user),

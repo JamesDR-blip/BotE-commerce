@@ -161,7 +161,7 @@ The recommendations and phased roadmap from this audit have been systematically 
 
 2. **Persistence & Migrations (Phase 1 - P1 resolved):**
    - Introduced Alembic migrations (`database/migrations/`).
-   - Current migration head: `b05fd7d45c87` (`b05fd7d45c87_enforce_workspace_ownership.py`).
+   - Current migration head: `20260923_01` (`20260923_01_add_compliance_policies.py`).
    - Full persistence for Workspaces, Projects, Datasets, Workflows, WorkflowVersions, Executions, and Traces behind repository boundaries.
 
 3. **Clean Architecture & DDD Decomposition (Phase 2 - P1 resolved):**

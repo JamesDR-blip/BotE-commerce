@@ -2,7 +2,7 @@
 
 ## Current Sprint
 
-**S26 - DevOps & Platform Reliability — COMPLETE**
+**S27 - Developer Documentation & API Specifications — COMPLETE**
 
 ## Previous Sprints
 
@@ -41,11 +41,12 @@
 - S24 Enterprise Governance & Granular RBAC
 - S25 Observability, Metrics & Telemetry
 - S26 Production DevOps & CI/CD Automation
+- S27 Developer Documentation & API Specifications
 - Structural Refactor: Clean Architecture + DDD layers (`domain/`, `application/`, `execution/`, `infrastructure/`)
 
 ## Test Status
 
-- **Test Suite:** 937 / 937 passing via python -m pytest
+- **Test Suite:** 938 / 938 passing via python -m pytest
 - **Latest Full Suite Runtime:** 57.61 seconds
 - **Warnings:** 2 existing warnings: Starlette/AnyIO TestClient deprecation and duplicate `rules/fashion.yaml` test fixture warning.
 - S19 lineage, audit, API, ChangeSet, approval, rollback, repository, and workflow integration tests all pass.
@@ -77,29 +78,48 @@
 - **Composition Root:** `services/container.py`
 
 ## Current Sprint
-- S26 Production DevOps & CI/CD Automation **COMPLETE**
+- S27 Developer Documentation & API Specifications **COMPLETE**
 
-### S26 Verification
 
-- Full regression: **937 passed, 2 warnings**.
-- Ruff scoped S26 checks: PASS.
-- Black scoped S26 checks: PASS.
-- MyPy scoped S26 checks: PASS.
-- git diff --check: PASS; remaining messages are Git LF/CRLF normalization warnings.
+
+### S27 Documentation & API Specifications
+
+Status: COMPLETE
+
+Delivered:
+
+- Documentation portal under docs/.
+- OpenAPI 3.1 API documentation with request/response schema coverage.
+- Architecture documentation for Ingestion, Validation, Autonomous Loop, and Channel Sync.
+- Developer guides for Adding Capability and Writing a Plugin.
+- Operator guides for Disaster Recovery, Rollback, and Database Migration.
+- Production deployment documentation retained and incorporated into the documentation set.
+- Router tags and operation-level summaries/descriptions added across the API surface.
+
+Verification:
+
+- OpenAPI: 3.1.0.
+- API surface: 60 paths / 61 operations / 71 schemas.
+- All 61 operations have summaries, descriptions, and tags.
+- Schema-reference audit: PASS.
+- Markdown links: PASS.
+- Markdown code fences: PASS.
+- python -m compileall -q api: PASS.
+- 	ests/test_api_marketplace.py: 14 passed, 1 warning.
+- Full regression: 938 passed, 2 warnings in 63.36 seconds.
+- git diff --check: PASS.
 - Alembic current/head: 20260923_01.
-- Single Alembic head confirmed.
-- No new database migration was required for S26.
-- Production deployment static validation: PASS.
-- Local Docker image/Compose runtime execution was not performed because Docker CLI is unavailable in the local environment.
+- No S27 database migration was required.
 
-### S26 Delivery
+### S27 Known Boundaries
 
-- Added multi-stage production Docker image with a non-root runtime user.
-- Added production Docker ignore rules.
-- Added production Compose topology for Nginx, API, worker, dashboard, PostgreSQL, and Redis.
-- Configured Redis-backed production workflow execution with two worker replicas.
-- Added Nginx reverse proxy and production health routing.
-- Added PR CI checks for Ruff, Black, MyPy, pytest, and 90% coverage threshold.
-- Added semantic-version release workflow with GHCR image publication and Trivy vulnerability scanning.
-- Added production environment template and deployment documentation.
-- Preserved existing health, metrics, workflow, approval, and mutation boundaries.
+- Local Docker image/Compose runtime verification remains pending because Docker CLI is unavailable in the local environment.
+- Production collector/Prometheus/Grafana deployment wiring remains a platform concern from S26.
+- Operational alerting remains to be defined and implemented.
+- Existing Starlette/AnyIO TestClient deprecation warning remains.
+- Existing duplicate
+ules/fashion.yaml test fixture warning remains.
+
+### Next Sprint
+
+- **S28 — System Hardening & Security Compliance**

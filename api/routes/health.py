@@ -19,13 +19,15 @@ from schemas.responses import (
     RemediationProposalResponse,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["Health"])
 
 
 @router.get(
     "/health-metrics",
     response_model=HealthMetricsResponse,
-)
+     summary='Get data health metrics',
+     description='Return health metrics for datasets in the requested project.'
+ )
 def get_health_metrics(
     project_id: str = Query(...),
     service: DataHealthService = Depends(get_data_health_service),
@@ -60,7 +62,9 @@ def get_health_metrics(
 @router.get(
     "/diagnostics/{dataset_id}",
     response_model=DiagnosticsResponse,
-)
+     summary='Get dataset diagnostics',
+     description='Return diagnostics and remediation proposals for the specified dataset.'
+ )
 def get_diagnostics(
     dataset_id: str,
     service: DataHealthService = Depends(get_data_health_service),

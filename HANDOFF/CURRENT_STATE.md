@@ -16,7 +16,7 @@ Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presen
 920 / 920 passing via `python -m pytest`.
 
 **Latest Full Suite:**
-57.61 seconds, with 2 warnings.
+63.36 seconds, with 2 warnings.
 
 **Database:**
 - Current local database revision: `20260923_01`.
@@ -31,6 +31,8 @@ Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presen
 ---
 
 ## Current Sprint
+
+**S27 - Developer Documentation & API Specifications — COMPLETE**
 
 ## S26 Completion
 
@@ -61,4 +63,35 @@ Verification:
 
 ## Next Sprint
 
-**S27 - Developer Documentation & API Specifications**
+**S28 - System Hardening & Security Compliance**
+
+---
+
+## S27 Completion
+
+S27 — Developer Documentation & API Specifications is **COMPLETE**.
+
+Delivered:
+
+- Documentation portal under docs/.
+- OpenAPI 3.1 API documentation.
+- Architecture guides for Ingestion, Validation, Autonomous Loop, and Channel Sync.
+- Developer guides for Adding Capability and Writing a Plugin.
+- Operator guides for Disaster Recovery, Rollback, and Database Migration.
+- Production deployment documentation.
+
+Verification:
+
+- OpenAPI: 3.1.0.
+- 60 paths / 61 operations / 71 schemas.
+- All 61 operations have summary, description, and tags.
+- Schema-reference audit: PASS.
+- Markdown links: PASS.
+- Markdown code fences: PASS.
+- Full regression: 938 passed, 2 warnings in 63.36 seconds.
+- Alembic head: 20260923_01.
+- No S27 migration was required.
+
+## Next Sprint
+
+**S28 - System Hardening & Security Compliance**

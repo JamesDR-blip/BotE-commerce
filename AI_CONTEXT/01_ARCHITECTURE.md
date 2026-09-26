@@ -143,7 +143,7 @@ The platform is structured into five distinct architectural layers following Cle
 
 - **Development:** SQLite (`data_quality.db`)
 - **Production:** PostgreSQL
-- **Alembic Migration Head:** `b05fd7d45c87` (Enforce workspace ownership)
+- **Alembic Migration Head:** `20260923_01` (`20260923_01_add_compliance_policies.py`)
 - **Vector Store:** Chroma (planned for Sprint S12+ RAG / Rule Intelligence)
 
 ## Dependency Rules

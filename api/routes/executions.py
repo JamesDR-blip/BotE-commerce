@@ -20,10 +20,10 @@ from repositories.executions import ExecutionRepository
 from repositories.execution_traces import ExecutionTraceRepository
 
 
-router = APIRouter()
+router = APIRouter(tags=["Executions"])
 
 
-@router.get("/executions")
+@router.get("/executions", summary='List execution history', description='Return execution history entries, limited by the requested result count.')
 def history(
     limit: int = 50,
     executions: ExecutionRepository = Depends(
@@ -33,7 +33,7 @@ def history(
     return _history_items(executions, limit)
 
 
-@router.get("/history", response_model=HistoryResponse)
+@router.get("/history", response_model=HistoryResponse, summary='List execution history', description='Compatibility endpoint that returns execution history in the HistoryResponse format.')
 def history_alias(
     limit: int = 50,
     executions: ExecutionRepository = Depends(
@@ -48,7 +48,9 @@ def history_alias(
 @router.get(
     "/executions/{execution_id}",
     response_model=ExecutionDetailResponse,
-)
+     summary='Get execution detail',
+     description='Return execution details together with the associated execution trace information.'
+ )
 def execution_detail(
     execution_id: str,
     executions: ExecutionRepository = Depends(
@@ -93,8 +95,10 @@ def execution_detail(
 
 
 @router.get(
-    "/executions/{execution_id}/reports/{report_format}"
-)
+    "/executions/{execution_id}/reports/{report_format}",
+     summary='Download execution report',
+     description='Generate and download a report for the specified execution and report format.'
+ )
 def download_report(
     execution_id: str,
     report_format: str,
@@ -109,7 +113,7 @@ def download_report(
     )
 
 
-@router.get("/report/{execution_id}/{report_format}")
+@router.get("/report/{execution_id}/{report_format}", summary='Download execution report', description='Compatibility endpoint for downloading a report for the specified execution and report format.')
 def report_alias(
     execution_id: str,
     report_format: str,

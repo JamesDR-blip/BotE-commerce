@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from services.container import Container, build_container
 from domain.risk_evaluation import RiskEvaluationResult
 
-router = APIRouter()
+router = APIRouter(tags=["Risk"])
 
 class EvaluateRequest(BaseModel):
     blast_radius: float
@@ -18,7 +18,7 @@ class EvaluateResponse(BaseModel):
 def get_container() -> Container:
     return build_container()
 
-@router.post("/risk/evaluate", response_model=EvaluateResponse)
+@router.post("/risk/evaluate", response_model=EvaluateResponse, summary='Evaluate risk', description='Evaluate risk from the supplied blast radius and confidence and indicate whether approval is required.')
 def evaluate_risk(request: EvaluateRequest, container: Container = Depends(get_container)):
     try:
         result: RiskEvaluationResult = container.risk_service.evaluate(request.blast_radius, request.confidence)

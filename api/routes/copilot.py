@@ -23,7 +23,7 @@ from schemas.copilot import (
 )
 
 
-router = APIRouter()
+router = APIRouter(tags=["Copilot"])
 
 
 def _author_workflow_response(result) -> CopilotAuthorWorkflowResponse:
@@ -72,7 +72,9 @@ def _author_workflow_response(result) -> CopilotAuthorWorkflowResponse:
 @router.post(
     "/copilot/sessions",
     response_model=CopilotSessionResponse,
-)
+     summary='Create Copilot session',
+     description='Create a Copilot session for the current user and return its session details.'
+ )
 def create_session(
     current_user: CurrentUser = Depends(get_current_user),
     copilot: CopilotService = Depends(get_copilot_service),
@@ -83,7 +85,9 @@ def create_session(
 
 @router.post(
     "/copilot/chat",
-)
+     summary='Stream Copilot chat',
+     description='Send a message to the Copilot session and stream generated events, actions, and responses.'
+ )
 def chat(
     payload: CopilotChatRequest,
     current_user: CurrentUser = Depends(get_current_user),
@@ -122,7 +126,9 @@ def chat(
 @router.post(
     "/copilot/author-workflow",
     response_model=CopilotAuthorWorkflowResponse,
-)
+     summary='Author workflow with Copilot',
+     description='Use Copilot workflow-authoring input to create or propose a workflow and return the authoring result.'
+ )
 def author_workflow(
     payload: CopilotAuthorWorkflowRequest,
     current_user: CurrentUser = Depends(get_current_user),
