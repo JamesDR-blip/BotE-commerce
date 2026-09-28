@@ -52,7 +52,7 @@ def test_approval_request_rejects_generated_missing_required_fields(
     }
     payload.pop(missing_field)
 
-    response = make_client().post(
+    response = S28_CLIENT.post(
         "/approval/request",
         json=payload,
     )
@@ -78,7 +78,7 @@ def test_approval_request_rejects_generated_invalid_confidence_score(
         "confidence_score": invalid_value,
     }
 
-    response = make_client().post(
+    response = S28_CLIENT.post(
         "/approval/request",
         json=payload,
     )
@@ -98,7 +98,7 @@ def test_approval_token_endpoint_rejects_generated_bodies_without_token(
 ) -> None:
     payload.pop("token", None)
 
-    response = make_client().post(
+    response = S28_CLIENT.post(
         "/approvals/approval-1/approve",
         json=payload,
     )

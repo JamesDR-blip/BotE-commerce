@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import hashlib
 import json
@@ -186,7 +186,9 @@ def test_installer_rejects_duplicate_archive_paths(
             json.dumps(manifest).encode("utf-8"),
         )
         archive.writestr("rules/fashion.yaml", b"safe")
-        archive.writestr("rules/fashion.yaml", b"duplicate")
+
+        with pytest.warns(UserWarning, match=r"Duplicate name: 'rules/fashion\.yaml'"):
+            archive.writestr("rules/fashion.yaml", b"duplicate")
 
     payload = archive_path.read_bytes()
     private_key = Ed25519PrivateKey.generate()
