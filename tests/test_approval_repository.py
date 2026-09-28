@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timezone
+from datetime import datetime, timezone
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -93,6 +93,7 @@ def create_parent_records(sessions) -> None:
                 before_content_hash="b" * 64,
                 after_storage_key="changesets/changeset-1/after.csv",
                 after_content_hash="a" * 64,
+                integrity_hash="3261b41ee867d64579fb2532da067e6d5f674a6be81bf72ee2c2ec8c4b3edaec",
                 status="PREPARED",
                 created_at=now,
             )
@@ -185,4 +186,3 @@ def test_approval_repository_get_by_execution_id_is_execution_scoped() -> None:
     )
 
     assert repository.get_by_execution_id("other-execution") == []
-

@@ -34,10 +34,10 @@
 
 ## Current Sprint
 
-- **S27 Documentation — COMPLETE**.
+- **S28 Hardening — core implementation complete; external validation pending**.
 
 ## Future Roadmap
-- **S28 Hardening**: Security audit, penetration testing, fuzzing, and compliance certification.
+- **S28 Production Sign-off**: Independent penetration testing, stakeholder compliance review, and deployment/operations validation remain pending.
 
 ### S26 — DevOps & Platform Reliability
 
@@ -89,4 +89,21 @@ Verification:
 - git diff --check: PASS.
 - No new database migration; Alembic head remains 20260923_01.
 
-Next sprint: S28 Hardening.
+### S28 — System Hardening & Security Compliance
+
+Core implementation complete; production sign-off remains pending.
+
+Delivered:
+- Nginx API rate limiting and connector URL validation for SSRF defense.
+- ChangeSet and audit-chain integrity verification, including ChangeSet item snapshots.
+- S28 fuzzing and hardening regression coverage.
+- Bandit CI scanning and pip-audit with a documented embedded-only ChromaDB advisory disposition.
+- SOC 2 / GDPR readiness checklist and security sign-off report.
+
+Verification:
+- Full regression: 977 passed, 3 warnings.
+- Bandit: 0 findings.
+- pip-audit blocking scan: no applicable findings; raw scan retains five ChromaDB advisory records.
+- Alembic current/head: 20260928_01.
+
+Remaining before production sign-off: independent penetration testing and remediation, stakeholder review of compliance readiness, Docker runtime validation, and production telemetry/alerting work carried forward from S26.

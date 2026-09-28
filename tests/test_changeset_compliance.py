@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+from hashlib import sha256
+from io import BytesIO
 
 import pytest
 from sqlalchemy import create_engine
@@ -27,6 +29,16 @@ def create_session():
     return sessionmaker(bind=engine, expire_on_commit=False)
 
 
+class FakeDatasetStorage:
+    def __init__(self):
+        self.contents = {
+            "datasets/dataset-1/before.csv": b"before-artifact",
+            "datasets/dataset-1/after.csv": b"after-artifact",
+        }
+
+    def open(self, *, storage_key: str):
+        return BytesIO(self.contents[storage_key])
+
 def make_changeset() -> ChangeSet:
     return ChangeSet(
         id="cs-1",
@@ -35,9 +47,9 @@ def make_changeset() -> ChangeSet:
         workflow_id="workflow-1",
         workflow_version="1.0",
         before_storage_key="datasets/dataset-1/before.csv",
-        before_content_hash="b" * 64,
+        before_content_hash=sha256(b"before-artifact").hexdigest(),
         after_storage_key="datasets/dataset-1/after.csv",
-        after_content_hash="a" * 64,
+        after_content_hash=sha256(b"after-artifact").hexdigest(),
         status=ChangeSetStatus.PREPARED,
         created_at=datetime.now(timezone.utc),
     )
@@ -111,11 +123,12 @@ def test_matching_compliance_policy_blocks_changeset_application():
     service = ChangeSetMutationService(
         sessions=sessions,
         changesets=changesets,
+        dataset_storage=FakeDatasetStorage(),
         compliance_service=compliance,
     )
 
     with pytest.raises(ComplianceViolationError) as exc_info:
-        service.apply(changeset_id="cs-1")
+        service.apply(changeset_id="cs-1", actor_id="user-1")
 
     assert exc_info.value.organization_id == "org-1"
     assert exc_info.value.resource == "changeset"
@@ -158,10 +171,11 @@ def test_non_matching_compliance_policy_allows_changeset_application():
     service = ChangeSetMutationService(
         sessions=sessions,
         changesets=changesets,
+        dataset_storage=FakeDatasetStorage(),
         compliance_service=compliance,
     )
 
-    applied = service.apply(changeset_id="cs-1")
+    applied = service.apply(changeset_id="cs-1", actor_id="user-1")
 
     assert applied.status is ChangeSetStatus.APPLIED
 
@@ -171,4 +185,4 @@ def test_non_matching_compliance_policy_allows_changeset_application():
         assert dataset.storage_key == (
             "datasets/dataset-1/after.csv"
         )
-        assert dataset.content_hash == "a" * 64
+        assert dataset.content_hash == sha256(b"after-artifact").hexdigest()

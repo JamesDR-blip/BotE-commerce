@@ -13,26 +13,27 @@ Clean Architecture + DDD (Domain, Application, Execution, Infrastructure, Presen
 `services/container.py`
 
 **Tests:**
-920 / 920 passing via `python -m pytest`.
+977 / 977 passing via `python -m pytest`.
 
 **Latest Full Suite:**
-63.36 seconds, with 2 warnings.
+104.72 seconds, with 3 warnings.
 
 **Database:**
-- Current local database revision: `20260923_01`.
-- Repository Alembic head: `20260923_01`.
+- Current local database revision: `20260928_01`.
+- Repository Alembic head: `20260928_01`.
 - Single Alembic head confirmed.
 - S24 migrations:
   - `20260916_04_add_enterprise_rbac.py`
   - `20260922_01_add_organization_quotas.py`
   - `20260923_01_add_compliance_policies.py`.
+- S28 integrity migrations: `20260926_01_add_changeset_integrity.py` and `20260928_01_changeset_item_integrity.py`.
 - Existing schema/model drift and bootstrap limitations remain outside the verified S24 scope.
 
 ---
 
 ## Current Sprint
 
-**S27 - Developer Documentation & API Specifications — COMPLETE**
+**S28 - System Hardening & Security Compliance — CORE IMPLEMENTATION COMPLETE; EXTERNAL VALIDATION PENDING**
 
 ## S26 Completion
 
@@ -55,15 +56,18 @@ Verification:
 - Local Docker runtime verification remains pending because Docker CLI is unavailable in the local environment.
 
 ## Known Issues
+- Independent penetration testing and stakeholder SOC 2 / GDPR readiness review remain pending; no certification is claimed.
+- ChromaDB advisory records remain in the raw scan and are excluded from blocking only for the embedded-only configuration.
+- Three non-failing warnings remain: Hypothesis cache configuration, Starlette/AnyIO TestClient deprecation, and duplicate `rules/fashion.yaml` fixture.
 - Starlette/AnyIO `BlockingPortal` deprecation warning.
 - Duplicate `rules/fashion.yaml` fixture warning.
 - Production collector/Prometheus/Grafana deployment wiring remains a platform concern.
 - Operational alerting remains to be defined and implemented.
 - Docker runtime build/Compose verification requires a Docker-enabled environment.
 
-## Next Sprint
+## S28 Production Sign-off Actions
 
-**S28 - System Hardening & Security Compliance**
+Independent penetration testing/remediation, stakeholder SOC 2 / GDPR readiness review, Docker runtime verification, telemetry collector integration, and operational alerting are the remaining production sign-off actions.
 
 ---
 
@@ -92,6 +96,6 @@ Verification:
 - Alembic head: 20260923_01.
 - No S27 migration was required.
 
-## Next Sprint
+## S27 Handoff Context
 
-**S28 - System Hardening & Security Compliance**
+The S27 handoff below is retained as historical sprint context. Current status and remaining S28 actions are listed above.

@@ -59,6 +59,7 @@ class InProcessWorkflowExecutionQueue:
                     # A worker-level exception must not terminate the
                     # background thread. The execution worker is responsible
                     # for persisting execution failure state.
-                    continue
+                    # Keep the queue alive when one worker execution fails.
+                    continue  # nosec B112
             finally:
                 self._items.task_done()

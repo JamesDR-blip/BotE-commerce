@@ -1,3 +1,36 @@
+# S28 — System Hardening & Security Compliance — CORE IMPLEMENTATION COMPLETE
+### 2026-09-28
+
+Implemented and verified the core S28 hardening scope while preserving Clean Architecture, existing API contracts, ChangeSet as the production mutation boundary, and current approval/audit flows.
+
+### Added / Changed
+
+- Added Nginx API rate limiting and connector base URL checks for HTTPS-only origins and private/reserved destinations.
+- Added SHA-256 ChangeSet integrity commitments and artifact checks before Apply/Rollback.
+- Extended ChangeSet integrity commitments to include deterministically ordered item snapshots; added migration `20260928_01_changeset_item_integrity.py` to recompute existing commitments.
+- Added audit-chain verification on audit reads.
+- Added malformed-input fuzz coverage and hardening regression tests.
+- Added Bandit and pip-audit CI steps; CI installs pip 26.2 or newer.
+- Documented the embedded-only ChromaDB advisory disposition; raw scan output remains retained.
+- Added SOC 2 / GDPR readiness checklist and security sign-off report.
+
+### Verification
+
+- Focused hardening regression: 74 passed, 2 warnings.
+- Full regression: 977 passed, 3 warnings in 104.72 seconds.
+- Bandit: 0 findings.
+- pip-audit raw report: five ChromaDB advisory records; blocking scan after documented exclusions: no known applicable vulnerabilities.
+- pip: 26.2.1.
+- Alembic upgrade from `20260926_01` to `20260928_01`: PASS; single head confirmed.
+
+### Remaining Before Production Sign-off
+
+- Independent penetration testing and remediation.
+- Stakeholder review and completion of the SOC 2 / GDPR readiness checklist; no certification is claimed.
+- Docker runtime deployment validation, production telemetry collector integration, and operational alerting.
+
+---
+
 # S27 — Developer Documentation & API Specifications — COMPLETE
 ### 2026-09-26
 

@@ -1,9 +1,9 @@
-﻿"""Repository for immutable ChangeSet persistence."""
+"""Repository for immutable ChangeSet persistence."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Callable
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
@@ -19,6 +19,8 @@ from domain.changeset import (
     ChangeSet,
     ChangeSetItem,
     ChangeSetStatus,
+    compute_changeset_integrity_hash,
+    verify_changeset_integrity,
 )
 
 
@@ -116,16 +118,11 @@ class ChangeSetRepository:
                     .where(
                         WorkspaceRecord.owner_id == owner_id,
                     )
-                    .order_by(
-                        ChangeSetRecord.created_at.desc()
-                    )
+                    .order_by(ChangeSetRecord.created_at.desc())
                 )
             )
 
-            return [
-                self._to_domain(record)
-                for record in records
-            ]
+            return [self._to_domain(record) for record in records]
 
     def list_items_for_owner(
         self,
@@ -160,13 +157,8 @@ class ChangeSetRepository:
             records = list(
                 session.scalars(
                     select(ChangeSetItemRecord)
-                    .where(
-                        ChangeSetItemRecord.changeset_id
-                        == changeset_id
-                    )
-                    .order_by(
-                        ChangeSetItemRecord.record_id
-                    )
+                    .where(ChangeSetItemRecord.changeset_id == changeset_id)
+                    .order_by(ChangeSetItemRecord.record_id)
                 )
             )
 
@@ -190,19 +182,12 @@ class ChangeSetRepository:
             records = list(
                 session.scalars(
                     select(ChangeSetRecord)
-                    .where(
-                        ChangeSetRecord.dataset_id == dataset_id
-                    )
-                    .order_by(
-                        ChangeSetRecord.created_at
-                    )
+                    .where(ChangeSetRecord.dataset_id == dataset_id)
+                    .order_by(ChangeSetRecord.created_at)
                 )
             )
 
-            return [
-                self._to_domain(record)
-                for record in records
-            ]
+            return [self._to_domain(record) for record in records]
 
     def list_by_execution(
         self,
@@ -212,19 +197,12 @@ class ChangeSetRepository:
             records = list(
                 session.scalars(
                     select(ChangeSetRecord)
-                    .where(
-                        ChangeSetRecord.execution_id == execution_id
-                    )
-                    .order_by(
-                        ChangeSetRecord.created_at
-                    )
+                    .where(ChangeSetRecord.execution_id == execution_id)
+                    .order_by(ChangeSetRecord.created_at)
                 )
             )
 
-            return [
-                self._to_domain(record)
-                for record in records
-            ]
+            return [self._to_domain(record) for record in records]
 
     def add_in_transaction(
         self,
@@ -255,6 +233,30 @@ class ChangeSetRepository:
     ) -> str | None:
         return session.scalar(
             select(WorkspaceRecord.organization_id)
+            .join(
+                ProjectRecord,
+                ProjectRecord.workspace_id == WorkspaceRecord.id,
+            )
+            .join(
+                DatasetRecord,
+                DatasetRecord.project_id == ProjectRecord.id,
+            )
+            .join(
+                ChangeSetRecord,
+                ChangeSetRecord.dataset_id == DatasetRecord.id,
+            )
+            .where(
+                ChangeSetRecord.id == changeset_id,
+            )
+        )
+
+    def get_owner_id_in_transaction(
+        self,
+        session: Session,
+        changeset_id: str,
+    ) -> str | None:
+        return session.scalar(
+            select(WorkspaceRecord.owner_id)
             .join(
                 ProjectRecord,
                 ProjectRecord.workspace_id == WorkspaceRecord.id,
@@ -312,9 +314,7 @@ class ChangeSetRepository:
         )
 
         if changeset is None:
-            raise ValueError(
-                f"ChangeSet not found: {changeset_id}"
-            )
+            raise ValueError(f"ChangeSet not found: {changeset_id}")
 
         if changeset.status != ChangeSetStatus.PREPARED.value:
             raise ValueError(
@@ -326,8 +326,7 @@ class ChangeSetRepository:
             update(DatasetRecord)
             .where(
                 DatasetRecord.id == changeset.dataset_id,
-                DatasetRecord.storage_key
-                == expected_before_storage_key,
+                DatasetRecord.storage_key == expected_before_storage_key,
             )
             .values(
                 storage_key=changeset.after_storage_key,
@@ -342,9 +341,7 @@ class ChangeSetRepository:
             )
 
         changeset.status = ChangeSetStatus.APPLIED.value
-        changeset.applied_at = (
-            applied_at or datetime.now(timezone.utc)
-        )
+        changeset.applied_at = applied_at or datetime.now(timezone.utc)
 
         session.flush()
         return changeset
@@ -363,9 +360,7 @@ class ChangeSetRepository:
         )
 
         if changeset is None:
-            raise ValueError(
-                f"ChangeSet not found: {changeset_id}"
-            )
+            raise ValueError(f"ChangeSet not found: {changeset_id}")
 
         if changeset.status != ChangeSetStatus.APPLIED.value:
             raise ValueError(
@@ -377,8 +372,7 @@ class ChangeSetRepository:
             update(DatasetRecord)
             .where(
                 DatasetRecord.id == changeset.dataset_id,
-                DatasetRecord.storage_key
-                == expected_after_storage_key,
+                DatasetRecord.storage_key == expected_after_storage_key,
             )
             .values(
                 storage_key=changeset.before_storage_key,
@@ -393,9 +387,7 @@ class ChangeSetRepository:
             )
 
         changeset.status = ChangeSetStatus.ROLLED_BACK.value
-        changeset.rolled_back_at = (
-            rolled_back_at or datetime.now(timezone.utc)
-        )
+        changeset.rolled_back_at = rolled_back_at or datetime.now(timezone.utc)
 
         session.flush()
         return changeset
@@ -406,6 +398,17 @@ class ChangeSetRepository:
         changeset: ChangeSet,
         items: list[ChangeSetItem],
     ) -> ChangeSetRecord:
+        expected_integrity_hash = compute_changeset_integrity_hash(
+            changeset,
+            items,
+        )
+
+        if (
+            changeset.integrity_hash is not None
+            and changeset.integrity_hash != expected_integrity_hash
+        ):
+            raise ValueError(f"ChangeSet integrity hash mismatch: {changeset.id}")
+
         record = ChangeSetRecord(
             id=changeset.id,
             dataset_id=changeset.dataset_id,
@@ -416,6 +419,7 @@ class ChangeSetRepository:
             before_content_hash=changeset.before_content_hash,
             after_storage_key=changeset.after_storage_key,
             after_content_hash=changeset.after_content_hash,
+            integrity_hash=expected_integrity_hash,
             status=changeset.status.value,
             created_at=changeset.created_at,
             applied_at=changeset.applied_at,
@@ -450,7 +454,7 @@ class ChangeSetRepository:
         self,
         record: ChangeSetRecord,
     ) -> ChangeSet:
-        return ChangeSet(
+        changeset = ChangeSet(
             id=record.id,
             dataset_id=record.dataset_id,
             execution_id=record.execution_id,
@@ -464,4 +468,18 @@ class ChangeSetRepository:
             created_at=record.created_at,
             applied_at=record.applied_at,
             rolled_back_at=record.rolled_back_at,
+            integrity_hash=record.integrity_hash,
         )
+        items = [
+            ChangeSetItem(
+                id=item.id,
+                changeset_id=item.changeset_id,
+                entity=item.entity,
+                record_id=item.record_id,
+                before_snapshot=item.before_snapshot,
+                after_snapshot=item.after_snapshot,
+            )
+            for item in sorted(record.items, key=lambda value: value.id)
+        ]
+        verify_changeset_integrity(changeset, items)
+        return changeset

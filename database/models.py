@@ -1124,6 +1124,12 @@ class ChangeSetRecord(Base):
         nullable=False,
     )
 
+
+    integrity_hash: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+    )
+
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,

@@ -1,4 +1,4 @@
-﻿"""Application service for tamper-evident audit events."""
+"""Application service for tamper-evident audit events."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -7,7 +7,11 @@ from typing import Any, Callable
 
 from sqlalchemy.orm import Session
 
-from domain.audit import AuditEvent, compute_audit_event_hash
+from domain.audit import (
+    AuditEvent,
+    compute_audit_event_hash,
+    verify_audit_chain,
+)
 from repositories.audit_events import AuditEventRepository
 
 
@@ -237,11 +241,47 @@ class AuditService:
         execution_id: str | None = None,
         changeset_id: str | None = None,
     ) -> list[AuditEvent]:
-        return self._repository.list_for_owner(
+        events = self._repository.list_for_owner(
             owner_id=owner_id,
             workspace_id=workspace_id,
-            resource_type=resource_type,
-            resource_id=resource_id,
-            execution_id=execution_id,
-            changeset_id=changeset_id,
         )
+
+        events_by_workspace: dict[str, list[AuditEvent]] = {}
+        for event in events:
+            events_by_workspace.setdefault(
+                event.workspace_id,
+                [],
+            ).append(event)
+
+        for workspace_events in events_by_workspace.values():
+            verify_audit_chain(workspace_events)
+
+        if resource_type is not None:
+            events = [
+                event
+                for event in events
+                if event.resource_type == resource_type
+            ]
+
+        if resource_id is not None:
+            events = [
+                event
+                for event in events
+                if event.resource_id == resource_id
+            ]
+
+        if execution_id is not None:
+            events = [
+                event
+                for event in events
+                if event.execution_id == execution_id
+            ]
+
+        if changeset_id is not None:
+            events = [
+                event
+                for event in events
+                if event.changeset_id == changeset_id
+            ]
+
+        return events

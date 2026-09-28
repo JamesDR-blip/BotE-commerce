@@ -118,3 +118,29 @@ def test_descriptive_rules_are_marked_non_executable(
 
     assert descriptive
     assert descriptive[0].metadata["executable"] is False
+from pathlib import Path
+
+from infrastructure.rules.chroma_rule_retriever import ChromaRuleRetriever
+
+
+def test_chroma_retriever_uses_embedded_persistent_client(
+    tmp_path: Path,
+) -> None:
+    retriever = ChromaRuleRetriever(
+        path=tmp_path / "chroma",
+    )
+
+    assert type(retriever._client).__name__ == "Client"
+    assert retriever._client is not None
+
+
+def test_chroma_retriever_does_not_expose_remote_server_configuration() -> None:
+    source = Path(
+        "infrastructure/rules/chroma_rule_retriever.py"
+    ).read_text(encoding="utf-8")
+
+    assert "chromadb.HttpClient" not in source
+    assert "HttpClient(" not in source
+    assert "trust_remote_code" not in source
+    assert "chroma run" not in source
+    assert "chroma-server" not in source

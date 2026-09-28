@@ -1,5 +1,67 @@
 # Sprint Handoff
 
+## S28 — System Hardening & Security Compliance
+
+**Status: CORE IMPLEMENTATION COMPLETE; EXTERNAL VALIDATION PENDING**
+
+### Completed
+
+- Added Nginx API rate limiting and connector base URL validation for SSRF hardening.
+- Added SHA-256 ChangeSet integrity verification for immutable metadata and item snapshots, plus stored-artifact hash verification before Apply/Rollback.
+- Added audit event/hash-chain verification when audit records are read.
+- Added fuzz tests for malformed approval requests and regression tests for integrity tampering, connector URL validation, and Nginx configuration.
+- Added Bandit and pip-audit to CI. CI installs pip 26.2 or newer.
+- Documented why four unique ChromaDB advisory IDs are excluded from the blocking scan while the system uses the embedded persistent client; raw scan output retains the findings.
+- Added a SOC 2 / GDPR readiness checklist and production sign-off audit report.
+
+### Changed Files
+
+- `.github/workflows/ci.yml`, `configs/settings.py`, `requirements.txt`, `nginx/nginx.conf`
+- `application/audit/audit_service.py`
+- `application/changesets/mutation_service.py`, `application/changesets/rollback_service.py`
+- `database/models.py`, `database/migrations/versions/20260926_01_add_changeset_integrity.py`, `database/migrations/versions/20260928_01_changeset_item_integrity.py`
+- `domain/audit.py`, `domain/changeset.py`
+- `infrastructure/channels/connector_factory.py`, `infrastructure/queue/workflow_execution_queue.py`
+- `repositories/changesets.py`, `services/container.py`
+- S28 approval, audit, ChangeSet, connector, Chroma, Nginx, and fuzz tests under `tests/`
+- `bandit-s28-report.json`, `bandit-s28-pip-audit.json`
+- `docs/security-s28-scan-disposition.md`, `docs/security/soc2-gdpr-readiness.md`, `docs/security/s28-production-signoff.md`
+- `AI_CONTEXT/05_ROADMAP.md`, `AI_CONTEXT/06_PROJECT_STATE.md`, `AI_CONTEXT/07_CHANGELOG.md`, `SPRINTS/README.md`, `SPRINTS/sprint-28-hardening.md`, `HANDOFF/CURRENT_STATE.md`, `HANDOFF/SPRINT_HANDOFF.md`
+- Local development database `data_quality.db` was migrated to head.
+
+### Verification
+
+- Focused hardening regression: **74 passed, 2 warnings**.
+- Full regression: **977 passed, 3 warnings** in **104.72 seconds**.
+- Bandit: **0 findings**.
+- pip-audit raw: five ChromaDB advisory records (four unique IDs, one duplicate); filtered blocking scan: **no known applicable vulnerabilities** under the documented embedded-only disposition.
+- pip: **26.2.1**.
+- Alembic upgrade from `20260926_01` to `20260928_01`: **PASS**; current/head `20260928_01`, single head.
+
+### Architecture and Safety
+
+- Preserved Clean Architecture and DDD layer boundaries.
+- Kept ChangeSet as the sole production dataset mutation boundary.
+- ChangeSet integrity covers metadata and stable item snapshots; lifecycle status/timestamps remain mutable state and are not included in the immutable commitment.
+- No API route contract changes were introduced by the hardening work.
+
+### Known Issues / Remaining
+
+- Independent penetration testing and remediation remain pending; this handoff does not claim a penetration test or regulatory certification.
+- Stakeholder review/completion of the SOC 2 / GDPR readiness checklist remains pending.
+- ChromaDB advisories remain in the raw scan; the exception is valid only while no Chroma server API is enabled or exposed.
+- Docker runtime deployment validation, production telemetry collector integration, and operational alerting remain deployment follow-up.
+- Existing warnings: Hypothesis cache configuration, Starlette/AnyIO TestClient deprecation, and duplicate `rules/fashion.yaml` fixture.
+
+### Next Steps
+
+1. Arrange an independent penetration test and resolve its findings.
+2. Have responsible stakeholders review and complete the compliance readiness checklist.
+3. Reassess ChromaDB advisories before enabling a server or after an upstream fix.
+4. Complete Docker runtime and production telemetry/alerting validation before GA sign-off.
+
+---
+
 ## S27 — Developer Documentation & API Specifications
 
 **Status: COMPLETE**

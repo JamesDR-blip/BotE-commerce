@@ -2,7 +2,7 @@
 
 ## Current Sprint
 
-**S27 - Developer Documentation & API Specifications — COMPLETE**
+**S28 - System Hardening & Security Compliance — CORE IMPLEMENTATION COMPLETE; EXTERNAL VALIDATION PENDING**
 
 ## Previous Sprints
 
@@ -46,23 +46,24 @@
 
 ## Test Status
 
-- **Test Suite:** 938 / 938 passing via python -m pytest
-- **Latest Full Suite Runtime:** 57.61 seconds
-- **Warnings:** 2 existing warnings: Starlette/AnyIO TestClient deprecation and duplicate `rules/fashion.yaml` test fixture warning.
+- **Test Suite:** 977 / 977 passing via python -m pytest
+- **Latest Full Suite Runtime:** 104.72 seconds
+- **Warnings:** 3: Hypothesis cache configuration, Starlette/AnyIO TestClient deprecation, and duplicate `rules/fashion.yaml` test fixture warning.
 - S19 lineage, audit, API, ChangeSet, approval, rollback, repository, and workflow integration tests all pass.
 - git diff --check: no whitespace errors; remaining messages are Git LF/CRLF normalization warnings.
 
 ## Database / Migration Status
 
 - **Engine:** SQLite (local dev/test), PostgreSQL (production)
-- **Current Database Revision:** `20260923_01`
-- **Current local database revision:** `20260923_01`.
-- **Repository Alembic head:** `20260923_01`.
+- **Current Database Revision:** `20260928_01`
+- **Current local database revision:** `20260928_01`.
+- **Repository Alembic head:** `20260928_01`.
 - **Latest migrations:** S24 governance migrations:
   - `database/migrations/versions/20260916_04_add_enterprise_rbac.py`
   - `database/migrations/versions/20260922_01_add_organization_quotas.py`
   - `database/migrations/versions/20260923_01_add_compliance_policies.py`
-- Alembic currently reports a single head: `20260923_01`.
+- S28 migrations: `20260926_01_add_changeset_integrity.py` and `20260928_01_changeset_item_integrity.py`.
+- Alembic currently reports a single head: `20260928_01`.
 - Seven pre-existing model/schema drift operations remain outside S22 scope.
 - Existing clean-from-zero Alembic baseline/bootstrap limitations remain outside S22 scope.
 
@@ -78,7 +79,23 @@
 - **Composition Root:** `services/container.py`
 
 ## Current Sprint
-- S27 Developer Documentation & API Specifications **COMPLETE**
+- S28 System Hardening & Security Compliance: core implementation complete; independent penetration testing and stakeholder compliance sign-off remain pending.
+
+### S28 Verification
+
+- Full regression: 977 passed, 3 warnings in 104.72 seconds.
+- Focused hardening regression: 74 passed, 2 warnings.
+- Bandit: 0 findings.
+- pip-audit: blocking scan reports no applicable findings after the documented ChromaDB embedded-only disposition; raw report retains five ChromaDB advisory records.
+- pip version: 26.2.1.
+- Alembic current/head: 20260928_01; single head.
+- Local migration from 20260926_01 to 20260928_01 succeeded.
+
+### S28 Remaining
+
+- Independent penetration testing and remediation.
+- SOC 2 / GDPR readiness checklist stakeholder review; no certification is claimed.
+- Production Docker runtime validation, telemetry collector integration, and operational alerting remain deployment work.
 
 
 

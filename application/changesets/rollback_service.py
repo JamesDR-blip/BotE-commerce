@@ -1,6 +1,8 @@
-﻿"""Application service for atomic ChangeSet rollback."""
+"""Application service for atomic ChangeSet rollback."""
 
 from __future__ import annotations
+
+import hashlib
 
 from application.audit.audit_service import AuditService
 from domain.changeset import ChangeSet
@@ -14,17 +16,19 @@ class ChangeSetRollbackService:
         *,
         sessions,
         changesets,
+        dataset_storage,
         audit_service: AuditService | None = None,
     ) -> None:
         self._sessions = sessions
         self._changesets = changesets
+        self._dataset_storage = dataset_storage
         self._audit_service = audit_service
 
     def rollback(
         self,
         *,
         changeset_id: str,
-        actor_id: str | None = None,
+        actor_id: str,
     ) -> ChangeSet:
         with self._sessions() as session:
             with session.begin():
@@ -42,6 +46,31 @@ class ChangeSetRollbackService:
                     raise ValueError(
                         "Only APPLIED ChangeSets can be rolled back: "
                         f"{changeset_id} ({record.status})"
+                    )
+
+                owner_id = self._changesets.get_owner_id_in_transaction(
+                    session,
+                    changeset_id,
+                )
+
+                if owner_id is None:
+                    raise ValueError(
+                        "Owner not found for ChangeSet: "
+                        f"{changeset_id}"
+                    )
+
+                if actor_id != owner_id:
+                    raise PermissionError(
+                        f"Actor is not authorized to rollback ChangeSet: "
+                        f"{changeset_id}"
+                    )
+                actual_after_hash = self._hash_storage_artifact(
+                    record.after_storage_key
+                )
+                if actual_after_hash != record.after_content_hash:
+                    raise ValueError(
+                        "ChangeSet after artifact hash mismatch: "
+                        f"{changeset_id}"
                     )
 
                 rolled_back = self._changesets.rollback_in_transaction(
@@ -94,6 +123,13 @@ class ChangeSetRollbackService:
                     )
 
             return self._changesets.to_domain(rolled_back)
+
+    def _hash_storage_artifact(self, storage_key: str) -> str:
+        hasher = hashlib.sha256()
+        with self._dataset_storage.open(storage_key=storage_key) as source:
+            while chunk := source.read(1024 * 1024):
+                hasher.update(chunk)
+        return hasher.hexdigest()
 
 
 __all__ = ["ChangeSetRollbackService"]

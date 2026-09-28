@@ -71,4 +71,4 @@ Phase 4: Enterprise Production & Hardening (S24 - S28)
 - [Sprint 25: Observability, Metrics & Telemetry](sprint-25-observability.md) *(COMPLETE)*
 - [Sprint 26: Production DevOps & CI/CD Automation](sprint-26-devops.md) *(COMPLETE)*
 - [Sprint 27: Developer Documentation & API Specifications](sprint-27-documentation.md) *(COMPLETE)*
-- [Sprint 28: System Hardening & Security Compliance](sprint-28-hardening.md)
+- [Sprint 28: System Hardening & Security Compliance](sprint-28-hardening.md) *(core implementation complete; external validation pending)*

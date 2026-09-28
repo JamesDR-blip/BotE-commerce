@@ -1,4 +1,4 @@
-﻿name: CI
+name: CI
 
 on:
   push:
@@ -18,9 +18,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade 'pip>=26.2'
           pip install -r requirements.txt
-          pip install "ruff>=0.16,<0.17" "black>=26.5,<27" "mypy>=1.20,<2" "pytest-cov>=7,<8"
+          pip install "ruff>=0.16,<0.17" "black>=26.5,<27" "mypy>=1.20,<2" "pytest-cov>=7,<8" "pip-audit>=2.10,<3"
 
       - name: Ruff
         run: |
@@ -64,3 +64,35 @@ jobs:
             --cov=. \
             --cov-report=term-missing \
             --cov-fail-under=90
+      - name: Bandit
+        run: |
+          pip install "bandit>=1.8,<2"
+          bandit -r . -x ./venv,./.git,./.mypy_cache,./__pycache__,./tests -q
+      - name: pip-audit
+        run: |
+          # Preserve the full audit output. Chroma is embedded-only; the
+          # ignored advisories target its separately hosted server API. See
+          # docs/security-s28-scan-disposition.md and its regression test.
+          set +e
+          pip-audit \
+            --format json \
+            --output pip-audit-s28-raw.json
+          audit_status=$?
+          set -e
+
+          if [ "$audit_status" -ne 0 ]; then
+            echo "pip-audit found vulnerabilities; enforcing approved S28 disposition."
+          fi
+
+          pip-audit \
+            --ignore-vuln PYSEC-2026-311 \
+            --ignore-vuln PYSEC-2026-3814 \
+            --ignore-vuln PYSEC-2026-3815 \
+            --ignore-vuln PYSEC-2026-3813
+
+      - name: Upload pip-audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-s28-report
+          path: pip-audit-s28-raw.json

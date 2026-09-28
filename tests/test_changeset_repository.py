@@ -1,14 +1,16 @@
+from dataclasses import replace
 from datetime import datetime, timezone
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from database.models import Base, DatasetRecord
+from database.models import Base, ChangeSetRecord, DatasetRecord
 from domain.changeset import (
     ChangeSet,
     ChangeSetItem,
     ChangeSetStatus,
+    compute_changeset_integrity_hash,
 )
 from repositories.changesets import ChangeSetRepository
 
@@ -86,9 +88,7 @@ def test_changeset_repository_persists_changeset_and_items() -> None:
 
     assert stored.id == "cs-1"
     assert stored.status is ChangeSetStatus.PREPARED
-    assert stored.before_storage_key == (
-        "datasets/dataset-1/before.csv"
-    )
+    assert stored.before_storage_key == ("datasets/dataset-1/before.csv")
 
     loaded = repository.get("cs-1")
 
@@ -110,6 +110,78 @@ def test_changeset_repository_persists_changeset_and_items() -> None:
         assert rows[0].after_snapshot == {"name": "New"}
 
 
+def test_changeset_repository_persists_integrity_hash() -> None:
+    sessions = create_session()
+    repository = ChangeSetRepository(sessions)
+
+    changeset = make_changeset()
+    stored = repository.create(changeset, [])
+
+    expected = compute_changeset_integrity_hash(changeset)
+
+    assert stored.integrity_hash == expected
+
+    with sessions() as session:
+        record = session.get(ChangeSetRecord, "cs-1")
+        assert record is not None
+        assert record.integrity_hash == expected
+
+
+def test_changeset_repository_detects_tampered_record_on_read() -> None:
+    sessions = create_session()
+    repository = ChangeSetRepository(sessions)
+
+    repository.create(make_changeset(), [])
+
+    with sessions() as session:
+        record = session.get(ChangeSetRecord, "cs-1")
+        assert record is not None
+        record.after_storage_key = "datasets/dataset-1/tampered.csv"
+        session.commit()
+
+    with pytest.raises(ValueError, match="integrity hash mismatch"):
+        repository.get("cs-1")
+
+
+def test_changeset_repository_detects_tampered_item_on_read() -> None:
+    sessions = create_session()
+    repository = ChangeSetRepository(sessions)
+    changeset = make_changeset()
+    repository.create(
+        changeset,
+        [
+            ChangeSetItem(
+                id="item-1",
+                changeset_id=changeset.id,
+                entity="dataset_row",
+                record_id="row-0",
+                before_snapshot={"name": "Old"},
+                after_snapshot={"name": "New"},
+            )
+        ],
+    )
+
+    with sessions() as session:
+        record = session.get(ChangeSetRecord, "cs-1")
+        assert record is not None
+        record.items[0].after_snapshot = {"name": "Tampered"}
+        session.commit()
+
+    with pytest.raises(ValueError, match="integrity hash mismatch"):
+        repository.get("cs-1")
+
+
+def test_changeset_repository_rejects_mismatched_supplied_integrity_hash() -> None:
+    sessions = create_session()
+    repository = ChangeSetRepository(sessions)
+
+    changeset = make_changeset()
+    changeset = replace(changeset, integrity_hash="0" * 64)
+
+    with pytest.raises(ValueError, match="integrity hash mismatch"):
+        repository.create(changeset, [])
+
+
 def test_changeset_repository_applies_prepared_changeset_atomically() -> None:
     sessions = create_session()
     repository = ChangeSetRepository(sessions)
@@ -125,9 +197,7 @@ def test_changeset_repository_applies_prepared_changeset_atomically() -> None:
             applied = repository.apply_in_transaction(
                 session,
                 changeset_id="cs-1",
-                expected_before_storage_key=(
-                    "datasets/dataset-1/before.csv"
-                ),
+                expected_before_storage_key=("datasets/dataset-1/before.csv"),
             )
 
         assert applied.status == ChangeSetStatus.APPLIED.value
@@ -139,9 +209,7 @@ def test_changeset_repository_applies_prepared_changeset_atomically() -> None:
         )
 
         assert dataset is not None
-        assert dataset.storage_key == (
-            "datasets/dataset-1/after.csv"
-        )
+        assert dataset.storage_key == ("datasets/dataset-1/after.csv")
         assert dataset.content_hash == "a" * 64
 
     loaded = repository.get("cs-1")
@@ -165,16 +233,16 @@ def test_changeset_repository_rejects_apply_when_dataset_pointer_changed() -> No
         [],
     )
 
-    with sessions() as session:
-        with pytest.raises(ValueError, match="storage pointer changed"):
-            with session.begin():
-                repository.apply_in_transaction(
-                    session,
-                    changeset_id="cs-1",
-                    expected_before_storage_key=(
-                        "datasets/dataset-1/before.csv"
-                    ),
-                )
+    with (
+        sessions() as session,
+        pytest.raises(ValueError, match="storage pointer changed"),
+        session.begin(),
+    ):
+        repository.apply_in_transaction(
+            session,
+            changeset_id="cs-1",
+            expected_before_storage_key=("datasets/dataset-1/before.csv"),
+        )
 
     loaded = repository.get("cs-1")
 
@@ -188,9 +256,7 @@ def test_changeset_repository_rejects_apply_when_dataset_pointer_changed() -> No
         )
 
         assert dataset is not None
-        assert dataset.storage_key == (
-            "datasets/dataset-1/unexpected.csv"
-        )
+        assert dataset.storage_key == ("datasets/dataset-1/unexpected.csv")
         assert dataset.content_hash == "x" * 64
 
 
@@ -204,29 +270,22 @@ def test_changeset_repository_rolls_back_applied_changeset() -> None:
         [],
     )
 
-    with sessions() as session:
-        with session.begin():
-            repository.apply_in_transaction(
-                session,
-                changeset_id="cs-1",
-                expected_before_storage_key=(
-                    "datasets/dataset-1/before.csv"
-                ),
-            )
+    with sessions() as session, session.begin():
+        repository.apply_in_transaction(
+            session,
+            changeset_id="cs-1",
+            expected_before_storage_key=("datasets/dataset-1/before.csv"),
+        )
 
     with sessions() as session:
         with session.begin():
             rolled_back = repository.rollback_in_transaction(
                 session,
                 changeset_id="cs-1",
-                expected_after_storage_key=(
-                    "datasets/dataset-1/after.csv"
-                ),
+                expected_after_storage_key=("datasets/dataset-1/after.csv"),
             )
 
-        assert rolled_back.status == (
-            ChangeSetStatus.ROLLED_BACK.value
-        )
+        assert rolled_back.status == (ChangeSetStatus.ROLLED_BACK.value)
 
     with sessions() as session:
         dataset = session.get(
@@ -235,9 +294,7 @@ def test_changeset_repository_rolls_back_applied_changeset() -> None:
         )
 
         assert dataset is not None
-        assert dataset.storage_key == (
-            "datasets/dataset-1/before.csv"
-        )
+        assert dataset.storage_key == ("datasets/dataset-1/before.csv")
         assert dataset.content_hash == "b" * 64
 
     loaded = repository.get("cs-1")
@@ -257,18 +314,18 @@ def test_changeset_repository_transaction_rolls_back_dataset_and_changeset() -> 
         [],
     )
 
-    with sessions() as session:
-        with pytest.raises(RuntimeError, match="force rollback"):
-            with session.begin():
-                repository.apply_in_transaction(
-                    session,
-                    changeset_id="cs-1",
-                    expected_before_storage_key=(
-                        "datasets/dataset-1/before.csv"
-                    ),
-                )
+    with (
+        sessions() as session,
+        pytest.raises(RuntimeError, match="force rollback"),
+        session.begin(),
+    ):
+        repository.apply_in_transaction(
+            session,
+            changeset_id="cs-1",
+            expected_before_storage_key=("datasets/dataset-1/before.csv"),
+        )
 
-                raise RuntimeError("force rollback")
+        raise RuntimeError("force rollback")
 
     loaded = repository.get("cs-1")
 
@@ -282,7 +339,5 @@ def test_changeset_repository_transaction_rolls_back_dataset_and_changeset() -> 
         )
 
         assert dataset is not None
-        assert dataset.storage_key == (
-            "datasets/dataset-1/before.csv"
-        )
+        assert dataset.storage_key == ("datasets/dataset-1/before.csv")
         assert dataset.content_hash == "b" * 64

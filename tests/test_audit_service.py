@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import datetime, timezone
 
 import pytest
@@ -38,6 +39,23 @@ class FakeAuditRepository:
         self.events.append(event)
         return event
 
+
+    def list_for_owner(
+        self,
+        *,
+        owner_id,
+        workspace_id=None,
+    ):
+        events = [
+            event
+            for event in self.events
+            if workspace_id is None
+            or event.workspace_id == workspace_id
+        ]
+        return sorted(
+            events,
+            key=lambda event: (event.created_at, event.id),
+        )
 
 class FakeSession:
     def begin(self):
@@ -370,3 +388,157 @@ def test_record_in_transaction_rejects_missing_workspace():
 
     assert repository.events == []
 
+
+def test_list_rejects_tampered_event_hash():
+    service, repository = make_service()
+
+    event = service.record(
+        workspace_id="workspace-1",
+        actor_id="user-1",
+        action="DATA_ACCESS",
+        resource_type="dataset",
+        resource_id="dataset-1",
+    )
+
+    repository.events[0] = replace(
+        event,
+        event_hash="0" * 64,
+    )
+
+    with pytest.raises(ValueError, match="hash mismatch"):
+        service.list(owner_id="owner-1", workspace_id="workspace-1")
+
+
+def test_list_rejects_tampered_event_payload():
+    service, repository = make_service()
+
+    event = service.record(
+        workspace_id="workspace-1",
+        actor_id="user-1",
+        action="DATA_ACCESS",
+        resource_type="dataset",
+        resource_id="dataset-1",
+    )
+
+    repository.events[0] = replace(
+        event,
+        action="UNAUTHORIZED_ACTION",
+    )
+
+    with pytest.raises(ValueError, match="hash mismatch"):
+        service.list(owner_id="owner-1", workspace_id="workspace-1")
+
+
+def test_list_rejects_broken_previous_hash_link():
+    service, repository = make_service()
+
+    first = service.record(
+        workspace_id="workspace-1",
+        actor_id="user-1",
+        action="FIRST_EVENT",
+        resource_type="dataset",
+        resource_id="dataset-1",
+    )
+    second = service.record(
+        workspace_id="workspace-1",
+        actor_id="user-1",
+        action="SECOND_EVENT",
+        resource_type="dataset",
+        resource_id="dataset-1",
+    )
+
+    repository.events[1] = replace(
+        second,
+        previous_hash="0" * 64,
+    )
+
+
+    with pytest.raises(ValueError, match="previous_hash mismatch"):
+        service.list(owner_id="owner-1", workspace_id="workspace-1")
+
+
+def test_list_rejects_deleted_middle_event():
+    service, repository = make_service()
+
+    service.record(
+        workspace_id="workspace-1",
+        actor_id="user-1",
+        action="FIRST_EVENT",
+        resource_type="dataset",
+        resource_id="dataset-1",
+    )
+    second = service.record(
+        workspace_id="workspace-1",
+        actor_id="user-1",
+        action="SECOND_EVENT",
+        resource_type="dataset",
+        resource_id="dataset-1",
+    )
+    service.record(
+        workspace_id="workspace-1",
+        actor_id="user-1",
+        action="THIRD_EVENT",
+        resource_type="dataset",
+        resource_id="dataset-1",
+    )
+
+    repository.events.remove(second)
+
+    with pytest.raises(ValueError, match="previous_hash mismatch"):
+        service.list(owner_id="owner-1", workspace_id="workspace-1")
+
+
+def test_list_verifies_each_workspace_chain_independently():
+    service, repository = make_service()
+
+    workspace_one_event = service.record(
+        workspace_id="workspace-1",
+        actor_id="user-1",
+        action="DATA_ACCESS",
+        resource_type="dataset",
+        resource_id="dataset-1",
+    )
+
+    workspace_two_event = service.record(
+        workspace_id="workspace-2",
+        actor_id="user-1",
+        action="DATA_ACCESS",
+        resource_type="dataset",
+        resource_id="dataset-2",
+    )
+
+    events = service.list(owner_id="owner-1")
+
+    assert events == [
+        workspace_one_event,
+        workspace_two_event,
+    ]
+    assert workspace_one_event.previous_hash is None
+    assert workspace_two_event.previous_hash is None
+
+def test_list_verifies_full_chain_before_applying_resource_filter():
+    service, repository = make_service()
+
+    first = service.record(
+        workspace_id="workspace-1",
+        actor_id="user-1",
+        action="FIRST_EVENT",
+        resource_type="dataset",
+        resource_id="dataset-1",
+    )
+    second = service.record(
+        workspace_id="workspace-1",
+        actor_id="user-1",
+        action="SECOND_EVENT",
+        resource_type="execution",
+        resource_id="execution-1",
+    )
+
+    events = service.list(
+        owner_id="owner-1",
+        workspace_id="workspace-1",
+        resource_type="execution",
+    )
+
+    assert events == [second]
+    assert second.previous_hash == first.event_hash

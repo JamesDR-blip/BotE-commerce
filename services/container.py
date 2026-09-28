@@ -411,6 +411,7 @@ class Container:
         self.changeset_mutation_service = ChangeSetMutationService(
             sessions=self.sessions,
             changesets=self.changesets,
+            dataset_storage=self.dataset_storage,
             audit_service=self.audit_service,
             compliance_service=self.compliance_service,
         )
@@ -418,6 +419,7 @@ class Container:
         self.changeset_rollback_service = ChangeSetRollbackService(
             sessions=self.sessions,
             changesets=self.changesets,
+            dataset_storage=self.dataset_storage,
             audit_service=self.audit_service,
         )
         self.changeset_query_service = ChangeSetQueryService(

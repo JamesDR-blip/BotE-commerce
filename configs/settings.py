@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     channel_credentials_encryption_key: SecretStr | None = None
     llm_model: str = "gemini-2.5-flash"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
-    host: str = "0.0.0.0"
+    host: str = "127.0.0.1"
     port: int = Field(default=8000, ge=1, le=65535)
     api_base_url: str = "http://127.0.0.1:8000"
     workflow_queue_backend: Literal["inprocess", "redis"] = "inprocess"

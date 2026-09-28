@@ -1,4 +1,5 @@
-﻿import httpx
+import json
+import httpx
 import pytest
 
 from domain.channel_sync import (
@@ -10,6 +11,7 @@ from domain.channel_sync import (
 from infrastructure.channels.amazon_sp_api_connector import (
     AmazonSPAPIConnector,
 )
+from infrastructure.channels.connector_factory import ChannelConnectorFactory
 from infrastructure.channels.http_client import (
     HttpClient,
     HttpClientError,
@@ -38,6 +40,70 @@ def _request(
         operation=operation,
         idempotency_key="sync-key-1",
     )
+
+
+def _factory() -> ChannelConnectorFactory:
+    return ChannelConnectorFactory(
+        http_client=HttpClient(max_retries=0),
+    )
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "http://example.test",
+        "ftp://example.test",
+        "example.test",
+        "https://user:pass@example.test",
+        "https://localhost",
+        "https://service.local",
+        "https://127.0.0.1",
+        "https://10.0.0.10",
+        "https://172.16.0.10",
+        "https://192.168.1.10",
+        "https://169.254.1.10",
+        "https://[::1]",
+        "https://[fd00::1]",
+        "https://example.test/products",
+        "https://example.test?redirect=internal",
+    ],
+)
+def test_channel_connector_factory_rejects_unsafe_base_url(
+    base_url: str,
+) -> None:
+    credentials = {
+        "base_url": base_url,
+        "access_token": "secret-token",
+    }
+
+    with pytest.raises(ValueError, match="channel base_url"):
+        _factory().create(
+            channel=ChannelType.SHOPIFY,
+            credentials=json.dumps(credentials),
+        )
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "https://shopify.test",
+        "https://amazon.test/",
+    ],
+)
+def test_channel_connector_factory_accepts_https_origin(
+    base_url: str,
+) -> None:
+    credentials = {
+        "base_url": base_url,
+        "access_token": "secret-token",
+    }
+
+    connector = _factory().create(
+        channel=ChannelType.SHOPIFY,
+        credentials=json.dumps(credentials),
+    )
+
+    assert isinstance(connector, ShopifyConnector)
 
 
 def test_http_client_retries_transient_status(monkeypatch) -> None:

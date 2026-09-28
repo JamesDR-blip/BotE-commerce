@@ -1,4 +1,5 @@
-﻿from datetime import datetime, timezone
+from datetime import datetime, timezone
+from io import BytesIO
 
 import pytest
 from sqlalchemy import create_engine
@@ -9,6 +10,7 @@ from application.changesets.mutation_service import (
 )
 from database.models import (
     Base,
+    ChangeSetRecord,
     DatasetRecord,
     ProjectRecord,
     UserRecord,
@@ -47,9 +49,9 @@ def make_changeset(
         workflow_id="workflow-1",
         workflow_version="1.0",
         before_storage_key="datasets/dataset-1/before.csv",
-        before_content_hash="b" * 64,
+        before_content_hash="6ec3db418ab364e7ece99f3b79ccfa239edb33917eed2e46e1c56b97915fdc2c",
         after_storage_key="datasets/dataset-1/after.csv",
-        after_content_hash="a" * 64,
+        after_content_hash="8f01b524dd9a2744f3525a91da871dad2412b0a58fd2aee88fae786f1af358ad",
         status=status,
         created_at=datetime.now(timezone.utc),
     )
@@ -60,7 +62,7 @@ def create_dataset(
     *,
     dataset_id: str = "dataset-1",
     storage_key: str = "datasets/dataset-1/before.csv",
-    content_hash: str = "b" * 64,
+    content_hash: str = "6ec3db418ab364e7ece99f3b79ccfa239edb33917eed2e46e1c56b97915fdc2c",
 ) -> None:
     with sessions() as session:
         session.add(
@@ -98,6 +100,17 @@ def create_dataset(
         session.commit()
 
 
+class FakeDatasetStorage:
+    def __init__(self):
+        self.contents = {
+            "datasets/dataset-1/before.csv": b"before-artifact",
+            "datasets/dataset-1/after.csv": b"after-artifact",
+        }
+
+    def open(self, *, storage_key: str):
+        return BytesIO(self.contents[storage_key])
+
+
 def create_service(sessions, *, with_audit=False):
     repository = ChangeSetRepository(sessions)
 
@@ -113,6 +126,7 @@ def create_service(sessions, *, with_audit=False):
         ChangeSetMutationService(
             sessions=sessions,
             changesets=repository,
+            dataset_storage=FakeDatasetStorage(),
             audit_service=audit_service,
         ),
         repository,
@@ -126,7 +140,7 @@ def test_mutation_service_applies_prepared_changeset() -> None:
     create_dataset(sessions)
     repository.create(make_changeset(), [])
 
-    applied = service.apply(changeset_id="cs-1")
+    applied = service.apply(changeset_id="cs-1", actor_id="user-1")
 
     assert applied.id == "cs-1"
     assert applied.status is ChangeSetStatus.APPLIED
@@ -142,7 +156,7 @@ def test_mutation_service_applies_prepared_changeset() -> None:
         assert dataset.storage_key == (
             "datasets/dataset-1/after.csv"
         )
-        assert dataset.content_hash == "a" * 64
+        assert dataset.content_hash == "8f01b524dd9a2744f3525a91da871dad2412b0a58fd2aee88fae786f1af358ad"
 
 
 def test_mutation_service_rejects_missing_changeset() -> None:
@@ -153,7 +167,7 @@ def test_mutation_service_rejects_missing_changeset() -> None:
         ValueError,
         match="ChangeSet not found",
     ):
-        service.apply(changeset_id="missing")
+        service.apply(changeset_id="missing", actor_id="user-1")
 
 
 def test_mutation_service_rejects_non_prepared_changeset() -> None:
@@ -173,7 +187,7 @@ def test_mutation_service_rejects_non_prepared_changeset() -> None:
         ValueError,
         match="Only PREPARED ChangeSets can be applied",
     ):
-        service.apply(changeset_id="cs-1")
+        service.apply(changeset_id="cs-1", actor_id="user-1")
 
     loaded = repository.get("cs-1")
 
@@ -190,7 +204,7 @@ def test_mutation_service_rejects_non_prepared_changeset() -> None:
         assert dataset.storage_key == (
             "datasets/dataset-1/before.csv"
         )
-        assert dataset.content_hash == "b" * 64
+        assert dataset.content_hash == "6ec3db418ab364e7ece99f3b79ccfa239edb33917eed2e46e1c56b97915fdc2c"
 
 
 def test_mutation_transaction_rolls_back_dataset_and_changeset(
@@ -218,7 +232,7 @@ def test_mutation_transaction_rolls_back_dataset_and_changeset(
         RuntimeError,
         match="force rollback",
     ):
-        service.apply(changeset_id="cs-1")
+        service.apply(changeset_id="cs-1", actor_id="user-1")
 
     loaded = repository.get("cs-1")
 
@@ -236,7 +250,7 @@ def test_mutation_transaction_rolls_back_dataset_and_changeset(
         assert dataset.storage_key == (
             "datasets/dataset-1/before.csv"
         )
-        assert dataset.content_hash == "b" * 64
+        assert dataset.content_hash == "6ec3db418ab364e7ece99f3b79ccfa239edb33917eed2e46e1c56b97915fdc2c"
 
 
 def test_mutation_service_records_audit_event_with_actor_and_metadata() -> None:
@@ -280,11 +294,11 @@ def test_mutation_service_records_audit_event_with_actor_and_metadata() -> None:
         "before_storage_key": (
             "datasets/dataset-1/before.csv"
         ),
-        "before_content_hash": "b" * 64,
+        "before_content_hash": "6ec3db418ab364e7ece99f3b79ccfa239edb33917eed2e46e1c56b97915fdc2c",
         "after_storage_key": (
             "datasets/dataset-1/after.csv"
         ),
-        "after_content_hash": "a" * 64,
+        "after_content_hash": "8f01b524dd9a2744f3525a91da871dad2412b0a58fd2aee88fae786f1af358ad",
     }
     assert event.previous_hash is None
     assert len(event.event_hash) == 64
@@ -351,12 +365,14 @@ def test_mutation_and_rollback_audit_events_form_workspace_hash_chain() -> None:
         sessions=sessions,
         changesets=mutation_repository,
         audit_service=audit_service,
+        dataset_storage=FakeDatasetStorage(),
     )
 
     rollback_service = ChangeSetRollbackService(
         sessions=sessions,
         changesets=mutation_repository,
         audit_service=audit_service,
+        dataset_storage=FakeDatasetStorage(),
     )
 
     create_dataset(sessions)
@@ -386,3 +402,50 @@ def test_mutation_and_rollback_audit_events_form_workspace_hash_chain() -> None:
     assert second.action == "CHANGESET_ROLLED_BACK"
     assert second.previous_hash == first.event_hash
     assert second.event_hash != first.event_hash
+
+
+def test_mutation_service_rejects_cross_owner_actor() -> None:
+    sessions = create_session()
+    service, repository = create_service(sessions)
+
+    create_dataset(sessions)
+    repository.create(make_changeset(), [])
+
+    with pytest.raises(PermissionError, match="not authorized"):
+        service.apply(
+            changeset_id="cs-1",
+            actor_id="owner-2",
+        )
+
+
+
+
+
+
+
+
+def test_mutation_service_rejects_tampered_before_artifact() -> None:
+    sessions = create_session()
+    storage = FakeDatasetStorage()
+    repository = ChangeSetRepository(sessions)
+    service = ChangeSetMutationService(
+        sessions=sessions,
+        changesets=repository,
+        dataset_storage=storage,
+    )
+
+    create_dataset(sessions)
+    repository.create(make_changeset(status=ChangeSetStatus.PREPARED), [])
+    storage.contents["datasets/dataset-1/before.csv"] = b"tampered-before-artifact"
+
+    with pytest.raises(ValueError, match="before artifact hash mismatch"):
+        service.apply(changeset_id="cs-1", actor_id="user-1")
+
+    with sessions() as session:
+        dataset = session.get(DatasetRecord, "dataset-1")
+        changeset = session.get(ChangeSetRecord, "cs-1")
+        assert dataset is not None
+        assert changeset is not None
+        assert dataset.storage_key == "datasets/dataset-1/before.csv"
+        assert dataset.content_hash == "6ec3db418ab364e7ece99f3b79ccfa239edb33917eed2e46e1c56b97915fdc2c"
+        assert changeset.status == ChangeSetStatus.PREPARED

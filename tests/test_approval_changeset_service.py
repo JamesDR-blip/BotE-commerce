@@ -106,6 +106,7 @@ def create_parent_records(
                 before_content_hash="b" * 64,
                 after_storage_key="changesets/changeset-1/after.csv",
                 after_content_hash="a" * 64,
+                integrity_hash="3261b41ee867d64579fb2532da067e6d5f674a6be81bf72ee2c2ec8c4b3edaec",
                 status="PREPARED",
                 created_at=now,
             )

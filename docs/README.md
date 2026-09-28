@@ -25,6 +25,12 @@ Documentation for the Autonomous E-commerce Data Operations Platform.
 - [Rollback](operator/rollback.md)
 - [Database Migration](operator/database-migration.md)
 
+## Security and Compliance
+
+- [S28 Scan Disposition](security-s28-scan-disposition.md)
+- [SOC 2 / GDPR Readiness Checklist](security/soc2-gdpr-readiness.md)
+- [S28 Production Sign-off Report](security/s28-production-signoff.md)
+
 ## Source of Truth
 
 The documentation describes the implementation currently present in the repository. Where an operational procedure is not automated or otherwise demonstrated by repository source, the guide identifies that limitation rather than assuming an implementation exists.
