@@ -19,6 +19,8 @@ def make_client() -> TestClient:
     return TestClient(app)
 
 
+S28_CLIENT = make_client()
+
 JSON_SCALARS = st.one_of(
     st.none(),
     st.booleans(),
