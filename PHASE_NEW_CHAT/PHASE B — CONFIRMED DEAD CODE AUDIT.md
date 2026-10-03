@@ -1,15 +1,45 @@
-[PASTE MASTER CONTEXT HERE]
+PROJECT:
+Autonomous E-commerce Data Operations Platform
 
-PHASE:
-PHASE B — CONFIRMED DEAD CODE AUDIT
-
-OBJECTIVE:
-Determine whether suspected legacy/scaffold/compatibility source code is actually dead, externally consumed, dynamically loaded, or still required.
+ROLE:
+Senior Software Architect + Dead-Code / Dependency Auditor.
 
 READ-ONLY ONLY.
 DO NOT DELETE OR MODIFY CODE.
 
-PRIMARY TARGETS:
+==================================================
+MASTER CONTEXT
+==================================================
+
+[PASTE MASTER CONTEXT HERE]
+
+==================================================
+LATEST CONSOLIDATED STATE
+==================================================
+
+[PASTE UPDATED CONSOLIDATED PROJECT STATE FROM PHASE A]
+
+==================================================
+PHASE A HANDOFF
+==================================================
+
+[PASTE PHASE A HANDOFF]
+
+==================================================
+PHASE
+==================================================
+
+PHASE B — CONFIRMED DEAD CODE AUDIT
+
+OBJECTIVE:
+Determine whether suspected legacy/scaffold/compatibility source code is actually dead, externally consumed, dynamically loaded, runtime-required, duplicated, or still active.
+
+==================================================
+PRIMARY TARGETS
+==================================================
+
+At minimum inspect:
+
 - controllers/
 - ai/
 - views/
@@ -21,11 +51,15 @@ PRIMARY TARGETS:
 - apparently unused rule-engine modules
 - apparently unused repositories
 - apparently unused agents
+- other candidates discovered from evidence
 
-CRITICAL RULE:
+==================================================
+CRITICAL RULE
+==================================================
+
 Do NOT classify code as DEAD solely because direct static imports are zero.
 
-For each candidate inspect:
+Check:
 
 1. Static imports
 2. Reverse imports
@@ -33,43 +67,48 @@ For each candidate inspect:
 4. importlib
 5. __import__
 6. getattr/reflection
-7. registry systems
-8. plugin registration
-9. dependency injection
-10. FastAPI route registration
-11. Streamlit references
-12. worker references
-13. configuration references
-14. environment-variable references
-15. Docker/Compose references
-16. CI/CD references
-17. filesystem/path references
-18. templates
-19. tests
-20. documentation that describes current runtime behavior
-21. entrypoint behavior
-22. possible external consumer risk
+7. registries
+8. dependency injection
+9. FastAPI route registration
+10. Streamlit references
+11. worker references
+12. configuration
+13. environment variables
+14. Docker/Compose
+15. CI/CD
+16. filesystem/path references
+17. templates
+18. tests
+19. documentation
+20. entrypoints
+21. plugin systems
+22. external-consumer possibility
 
-CLASSIFICATION:
-For every module/file use exactly one primary classification:
-- DEAD
-- LEGACY_ACTIVE
-- COMPATIBILITY
-- HISTORICAL
-- DUPLICATED
-- CURRENT
-- UNKNOWN
+==================================================
+CLASSIFICATION
+==================================================
 
-Also provide:
+Each candidate:
+
+DEAD
+LEGACY_ACTIVE
+COMPATIBILITY
+HISTORICAL
+DUPLICATED
+CURRENT
+UNKNOWN
+
+Also:
+
 INTERNAL_USAGE =
 DYNAMIC_USAGE =
 RUNTIME_USAGE =
 EXTERNAL_USAGE =
 CONFIDENCE = HIGH / MEDIUM / LOW
 
-DO NOT infer external usage from absence of evidence.
-
-OUTPUT:
+==================================================
+OUTPUT
+==================================================
 
 1. EXECUTIVE SUMMARY
 
@@ -86,28 +125,136 @@ OUTPUT:
 7. EXTERNAL-CONSUMER UNKNOWNs
 
 8. SAFE_TO_DELETE
-Only list items where deletion is strongly proven safe.
 
 9. NOT_SAFE_TO_DELETE
 
-10. REQUIRED FOLLOW-UP VERIFICATION
+10. REQUIRES_MORE_EVIDENCE
 
-11. PROPOSED PHASE B CLEANUP PLAN
-No implementation.
+11. REQUIRES_RUNTIME_VERIFICATION
 
-Each proposed removal must include:
-- exact path
-- evidence
-- dependencies
-- risk
-- expected behavior impact
-- tests required
-- rollback
-- stop condition
+12. REQUIRES_EXPLICIT_AUTHORIZATION
 
-12. FINAL STATUS
+13. FINDINGS THAT AFFECT PHASE C
+
+==================================================
+STATE CONSISTENCY
+==================================================
+
+Compare against:
+
+- MASTER CONTEXT
+- LATEST CONSOLIDATED STATE
+- PHASE A HANDOFF
+
+If contradictory evidence exists:
+
+STATE_CHANGE =
+OLD =
+NEW =
+REASON =
+EVIDENCE =
+IMPACT_ON_PREVIOUS_PHASES =
+
+Never silently overwrite previous classifications.
+
+==================================================
+MANDATORY FINAL OUTPUT
+==================================================
+
+A. FINAL STATUS
+
+PHASE_ID = B
+PHASE_NAME = CONFIRMED_DEAD_CODE
+PHASE_STATUS =
+
 CODE_CLEANUP_STATUS =
+
 SAFE_TO_DELETE_NOW =
 REQUIRES_MORE_EVIDENCE =
 REQUIRES_RUNTIME_VERIFICATION =
 REQUIRES_EXPLICIT_AUTHORIZATION =
+
+PROVEN =
+PARTIALLY_EVIDENCED =
+UNKNOWN =
+BLOCKED =
+
+B. PHASE HANDOFF
+
+PHASE_ID =
+PHASE_NAME =
+PHASE_STATUS =
+
+OBJECTIVE =
+SCOPE_AUDITED =
+
+PROVEN =
+PARTIALLY_EVIDENCED =
+UNKNOWN =
+BLOCKED =
+
+DECISIONS =
+DO_NOT_TOUCH =
+
+CONFIRMED_CURRENT =
+CONFIRMED_COMPATIBILITY =
+CONFIRMED_LEGACY_ACTIVE =
+CONFIRMED_HISTORICAL =
+CONFIRMED_DUPLICATED =
+CONFIRMED_DEAD =
+UNKNOWN_CANDIDATES =
+
+SAFE_TO_DELETE_NOW =
+REQUIRES_MORE_EVIDENCE =
+REQUIRES_RUNTIME_VERIFICATION =
+REQUIRES_EXPLICIT_AUTHORIZATION =
+
+KEY_FINDINGS =
+AFFECTED_FILES =
+AFFECTED_MODULES =
+DEPENDENCIES_DISCOVERED =
+RISKS_DISCOVERED =
+OPEN_QUESTIONS =
+
+NEW_EVIDENCE_REQUIRED_FOR_NEXT_PHASE =
+INPUT_REQUIRED_BY_NEXT_PHASE =
+RECOMMENDED_NEXT_ACTION =
+
+STATE_CHANGE =
+
+C. UPDATED CONSOLIDATED PROJECT STATE
+
+Create a self-contained state for Phase C.
+
+Preserve all still-valid findings from previous phases.
+
+Include:
+
+PROJECT_AUDIT_STATUS =
+ARCHITECTURE_STATUS =
+CODE_CLEANUP_STATUS =
+FILE_CLEANUP_STATUS =
+UI_STATUS =
+USER_FLOW_STATUS =
+CAPABILITY_STATUS =
+COMMERCIAL_READINESS =
+PRODUCTION_READINESS =
+
+CURRENT =
+COMPATIBILITY =
+LEGACY_OR_INVESTIGATION =
+HISTORICAL =
+DUPLICATED =
+DEAD_CONFIRMED =
+PROTECTED_DATA =
+
+SAFE_TO_DELETE_NOW =
+REQUIRES_MORE_EVIDENCE =
+REQUIRES_RUNTIME_VERIFICATION =
+REQUIRES_EXPLICIT_AUTHORIZATION =
+
+KNOWN_ARCHITECTURAL_DEBT =
+KNOWN_RUNTIME_RISKS =
+KNOWN_PRODUCT_GAPS =
+UNKNOWN =
+BLOCKED =
