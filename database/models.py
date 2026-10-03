@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from pathlib import Path
 
 from datetime import datetime, timezone
 from sqlalchemy import (
@@ -1354,7 +1355,12 @@ class ReportRecord(Base):
     execution: Mapped[ExecutionRecord] = relationship(back_populates="reports")
 
 
-def make_session_factory(url: str):
+def make_session_factory(
+    url: str,
+    *,
+    create_schema: bool = True,
+    require_current_revision: bool = False,
+):
     if url == "sqlite://":
         engine = create_engine(
             url,
@@ -1371,7 +1377,27 @@ def make_session_factory(url: str):
             else {},
         )
 
-    Base.metadata.create_all(engine)
+    if create_schema:
+        Base.metadata.create_all(engine)
+
+    if require_current_revision:
+        from alembic.runtime.migration import MigrationContext
+        from alembic.script import ScriptDirectory
+
+        migration_dir = Path(__file__).resolve().parent / "migrations"
+        expected_revision = ScriptDirectory(str(migration_dir)).get_current_head()
+        with engine.connect() as connection:
+            current_revision = MigrationContext.configure(
+                connection
+            ).get_current_revision()
+
+        if current_revision != expected_revision:
+            raise RuntimeError(
+                "Production database must be upgraded with Alembic before "
+                "application startup: expected revision "
+                f"{expected_revision}, found {current_revision}"
+            )
+
     return sessionmaker(bind=engine, expire_on_commit=False)
 
 class ChannelMappingRecord(Base):

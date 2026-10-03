@@ -102,6 +102,30 @@ def make_created_job() -> SyncJob:
     )
 
 
+def test_get_sync_job_uses_current_owner_and_returns_repository_result():
+    service_parts = make_service()
+    service, _, _, sync_jobs, *_ = service_parts
+    current_user = CurrentUser(user_id="owner-1")
+    job = make_created_job()
+    sync_jobs.get_for_owner.side_effect = [job, None]
+
+    result = service.get_sync_job(
+        sync_job_id="job-1",
+        current_user=current_user,
+    )
+    missing = service.get_sync_job(
+        sync_job_id="missing-job",
+        current_user=current_user,
+    )
+
+    assert result is job
+    assert missing is None
+    assert sync_jobs.get_for_owner.call_args_list == [
+        call(job_id="job-1", owner_id="owner-1"),
+        call(job_id="missing-job", owner_id="owner-1"),
+    ]
+
+
 def configure_common(service_parts):
     (
         _service,

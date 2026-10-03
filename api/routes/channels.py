@@ -6,7 +6,6 @@ from api.dependencies import (
     get_channel_repository,
     get_channel_sync_service,
     get_current_user,
-    get_sync_job_repository,
     get_workspace_project_service,
 )
 from application.channels.channel_sync_service import ChannelSyncService
@@ -14,7 +13,6 @@ from application.workspace.project_service import WorkspaceProjectService
 from domain.channel_sync import Channel, SyncJob
 from domain.identity import CurrentUser
 from repositories.channels import ChannelRepository
-from repositories.sync_jobs import SyncJobRepository
 from schemas.requests import ChannelSyncRequest
 from schemas.responses import ChannelResponse, SyncJobResponse
 
@@ -129,13 +127,13 @@ def sync_channel(
 def get_sync_job(
     sync_job_id: str,
     current_user: CurrentUser = Depends(get_current_user),
-    sync_job_repository: SyncJobRepository = Depends(
-        get_sync_job_repository
+    channel_sync_service: ChannelSyncService = Depends(
+        get_channel_sync_service
     ),
 ) -> SyncJobResponse:
-    job = sync_job_repository.get_for_owner(
-        job_id=sync_job_id,
-        owner_id=current_user.user_id,
+    job = channel_sync_service.get_sync_job(
+        sync_job_id=sync_job_id,
+        current_user=current_user,
     )
 
     if job is None:

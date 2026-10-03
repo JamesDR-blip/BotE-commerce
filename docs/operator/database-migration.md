@@ -4,7 +4,11 @@
 
 The repository uses Alembic with migrations under `database/migrations`.
 
-The current repository head is `20260923_01`.
+The active repository head is `20261002_01` (canonical PostgreSQL baseline). The former 23-revision history is preserved in `database/migrations/archive/legacy_versions/` and is not an active lineage.
+
+The baseline passed fresh-install validation on disposable PostgreSQL 16.15. The observed schema had 31 application tables, 43 foreign keys, 67 explicit/application indexes, and 109 total indexes; representative persistence Groups 1–7 passed. This local verification is not production-equivalent and does not establish production migration safety. The project has never been deployed to production or staging and has no production data to preserve. Production migration authorization remains unestablished while production schema/revision evidence, backup/restore evidence, production-equivalent upgrade rehearsal, and deployment/provisioning order remain unresolved.
+
+Schema changes follow the dedicated migration-job model: PostgreSQL → Alembic migration job → schema validation → application/API → workers. Application/API and worker startup must not execute automatic Alembic migrations.
 
 ## Pre-migration checks
 
@@ -16,21 +20,17 @@ The current repository head is `20260923_01`.
 
 ## Inspect migration state
 
-Standard Alembic inspection commands are `alembic current` and `alembic heads`.
+`alembic heads` inspects the repository graph without a database. `alembic current` connects to the configured database: use it only after confirming the database identity and authorization. Archived revision states are not recognized by the new active lineage; do not probe or migrate an existing local database before its state is classified and backed up.
 
 ## Apply migrations
 
-Use the repository's Alembic configuration and apply migrations through the deployment environment with `alembic upgrade head`.
+For a newly provisioned, verified-empty PostgreSQL 16 database, the dedicated migration-job command is `alembic upgrade head`; this path was validated locally against the disposable PostgreSQL 16.15 database. That validation does not authorize production execution. Do not run this against SQLite, `create_all()`-initialized databases, or databases carrying one of the archived revision IDs unless a state-specific adoption procedure has been separately reviewed and authorized.
 
 Do not manually edit the database to emulate an Alembic revision.
 
 ## Rollback
 
-Downgrade is an explicit migration operation and should only be performed after verifying that the target application version is compatible with the downgraded schema.
-
-Use the target Alembic revision identifier with `alembic downgrade REVISION`.
-
-The repository documentation does not define a production-specific automated downgrade policy beyond the Alembic migration mechanism.
+The canonical baseline is intentionally not downgradeable; its `downgrade()` raises an explicit error. Recovery requires restoring a matching verified database backup or using a separately reviewed forward fix. Do not run `alembic downgrade` as a rollback assumption.
 
 ## Post-migration verification
 
@@ -44,4 +44,4 @@ After migration:
 
 ## Current head reference
 
-The current head is `20260923_01`. S27 documentation does not add a database migration.
+The active head is `20261002_01`. Update this reference when the active Alembic head advances; archived historical revision IDs are not current heads.

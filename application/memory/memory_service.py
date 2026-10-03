@@ -5,9 +5,8 @@ from datetime import datetime
 from uuid import uuid4
 
 from domain.agent_memory import AgentMemory, CorrectionEvent, ExecutionLearning
-from repositories.agent_memory import AgentMemoryRepository
-
 from application.memory.redaction import redact_memory_value
+from application.memory.ports import AgentMemoryPersistencePort
 
 
 class AgentMemoryService:
@@ -16,7 +15,7 @@ class AgentMemoryService:
     def __init__(
         self,
         *,
-        memories: AgentMemoryRepository,
+        memories: AgentMemoryPersistencePort,
     ) -> None:
         self._memories = memories
 

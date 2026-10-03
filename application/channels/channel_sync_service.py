@@ -54,6 +54,17 @@ class ChannelSyncService:
         self._connector_factory = connector_factory
         self._audit = audit_service
 
+    def get_sync_job(
+        self,
+        *,
+        sync_job_id: str,
+        current_user: CurrentUser,
+    ) -> SyncJob | None:
+        return self._sync_jobs.get_for_owner(
+            job_id=sync_job_id,
+            owner_id=current_user.user_id,
+        )
+
     def sync(
         self,
         *,

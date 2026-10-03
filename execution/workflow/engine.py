@@ -679,3 +679,25 @@ class WorkflowExecutionWorker:
                 execution_id=execution_id,
                 error=str(exc),
             )
+
+    def recover(self, execution_id: str) -> None:
+        """Fail a reclaimed delivery whose prior worker died while RUNNING.
+
+        Redis pending-message recovery invokes this only after the delivery
+        lease expired. Work is not replayed because capability side effects
+        may not be idempotent.
+        """
+        failed = self._executions.fail_if_running(
+            execution_id=execution_id,
+            error=(
+                "Worker delivery was reclaimed after its lease expired; "
+                "execution was marked FAILED and was not retried"
+            ),
+        )
+        if failed is not None:
+            record_workflow_state_transition(
+                workflow_id=failed.workflow_id,
+                execution_id=execution_id,
+                from_state="RUNNING",
+                to_state="FAILED",
+            )

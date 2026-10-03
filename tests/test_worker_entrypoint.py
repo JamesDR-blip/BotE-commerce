@@ -47,6 +47,9 @@ def test_create_workflow_consumer_wires_existing_worker(
         def run(self, execution_id: str) -> None:
             del execution_id
 
+        def recover(self, execution_id: str) -> None:
+            del execution_id
+
     class FakeContainer:
         workflow_worker = FakeWorker()
 
@@ -64,11 +67,13 @@ def test_create_workflow_consumer_wires_existing_worker(
             stream_name: str,
             consumer_group: str,
             worker,
+            recovery_worker,
         ) -> None:
             captured["redis_url"] = redis_url
             captured["stream_name"] = stream_name
             captured["consumer_group"] = consumer_group
             captured["worker"] = worker
+            captured["recovery_worker"] = recovery_worker
 
     monkeypatch.setattr("worker.build_container", fake_build_container)
     monkeypatch.setattr(
@@ -84,4 +89,5 @@ def test_create_workflow_consumer_wires_existing_worker(
         "stream_name": "test-workflow-stream",
         "consumer_group": "test-workers",
         "worker": FakeContainer.workflow_worker.run,
+        "recovery_worker": FakeContainer.workflow_worker.recover,
     }

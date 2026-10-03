@@ -30,6 +30,7 @@ def create_workflow_consumer(
         stream_name=settings.redis_stream_name,
         consumer_group=settings.redis_consumer_group,
         worker=container.workflow_worker.run,
+        recovery_worker=container.workflow_worker.recover,
     )
 
 

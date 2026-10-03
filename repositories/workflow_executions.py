@@ -208,17 +208,35 @@ class WorkflowExecutionRepository:
 
         with self._sessions() as session:
 
-            record = self._get_mutable(
-                session,
-                execution_id,
+            result = session.execute(
+                update(WorkflowExecutionRecord)
+                .where(
+                    WorkflowExecutionRecord.id == execution_id,
+                    WorkflowExecutionRecord.status.not_in(
+                        {"COMPLETED", "FAILED", "CANCELLED"}
+                    ),
+                )
+                .values(
+                    status="COMPLETED",
+                    outputs_json=outputs_json,
+                    finished_at=datetime.now(timezone.utc),
+                )
             )
 
-            record.status = "COMPLETED"
-            record.outputs_json = outputs_json
-            record.finished_at = datetime.now(timezone.utc)
+            if result.rowcount != 1:
+                session.rollback()
+                record = session.get(WorkflowExecutionRecord, execution_id)
+                if record is None:
+                    raise ValueError(
+                        f"Workflow execution not found: {execution_id}"
+                    )
+                raise ValueError(
+                    "Workflow execution is already terminal: "
+                    f"{execution_id} ({record.status})"
+                )
 
             session.commit()
-            session.refresh(record)
+            record = session.get(WorkflowExecutionRecord, execution_id)
 
             return record
 
@@ -272,19 +290,65 @@ class WorkflowExecutionRepository:
 
         with self._sessions() as session:
 
-            record = self._get_mutable(
-                session,
-                execution_id,
+            result = session.execute(
+                update(WorkflowExecutionRecord)
+                .where(
+                    WorkflowExecutionRecord.id == execution_id,
+                    WorkflowExecutionRecord.status.not_in(
+                        {"COMPLETED", "FAILED", "CANCELLED"}
+                    ),
+                )
+                .values(
+                    status="FAILED",
+                    error=error,
+                    finished_at=datetime.now(timezone.utc),
+                )
             )
 
-            record.status = "FAILED"
-            record.error = error
-            record.finished_at = datetime.now(timezone.utc)
+            if result.rowcount != 1:
+                session.rollback()
+                record = session.get(WorkflowExecutionRecord, execution_id)
+                if record is None:
+                    raise ValueError(
+                        f"Workflow execution not found: {execution_id}"
+                    )
+                raise ValueError(
+                    "Workflow execution is already terminal: "
+                    f"{execution_id} ({record.status})"
+                )
 
             session.commit()
-            session.refresh(record)
+            record = session.get(WorkflowExecutionRecord, execution_id)
 
             return record
+
+    def fail_if_running(
+        self,
+        *,
+        execution_id: str,
+        error: str,
+    ) -> WorkflowExecutionRecord | None:
+        """Persist crash recovery only while an execution is still RUNNING."""
+        with self._sessions() as session:
+            result = session.execute(
+                update(WorkflowExecutionRecord)
+                .where(
+                    WorkflowExecutionRecord.id == execution_id,
+                    WorkflowExecutionRecord.status == "RUNNING",
+                )
+                .values(
+                    status="FAILED",
+                    error=error,
+                    finished_at=datetime.now(timezone.utc),
+                )
+            )
+
+            if result.rowcount != 1:
+                session.rollback()
+                return None
+
+            session.commit()
+            return session.get(WorkflowExecutionRecord, execution_id)
 
     def get(
         self,

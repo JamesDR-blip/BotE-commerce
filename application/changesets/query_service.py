@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+from application.changesets.ports import ChangeSetQueryPersistencePort
 from domain.identity import CurrentUser
-from repositories.changesets import ChangeSetRepository
 
 
 class ChangeSetQueryService:
     def __init__(
         self,
         *,
-        changesets: ChangeSetRepository,
+        changesets: ChangeSetQueryPersistencePort,
     ) -> None:
         self.changesets = changesets
 

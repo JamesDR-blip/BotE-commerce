@@ -54,24 +54,20 @@ class ChannelRepositoryStub:
         ]
 
 
-class SyncJobRepositoryStub:
-    def __init__(self, jobs: dict[str, SyncJob]):
-        self.jobs = jobs
-
-    def get_for_owner(self, *, job_id, owner_id):
-        job = self.jobs.get(job_id)
-        if job is None:
-            return None
-        if job.workspace_id != "ws-1" or owner_id != USER.user_id:
-            return None
-        return job
-
-
 class ChannelSyncServiceStub:
-    def __init__(self, job: SyncJob | None = None, error: ValueError | None = None):
+    def __init__(
+        self,
+        job: SyncJob | None = None,
+        error: ValueError | None = None,
+        lookup_job: SyncJob | None = None,
+        lookup_owner_id: str = USER.user_id,
+    ):
         self.job = job
         self.error = error
+        self.lookup_job = lookup_job
+        self.lookup_owner_id = lookup_owner_id
         self.calls: list[dict[str, str]] = []
+        self.lookup_calls: list[tuple[str, str]] = []
 
     def sync(self, *, current_user, channel_id, dataset_id, idempotency_key):
         self.calls.append(
@@ -85,6 +81,16 @@ class ChannelSyncServiceStub:
             raise self.error
         assert self.job is not None
         return self.job
+
+    def get_sync_job(self, *, sync_job_id, current_user):
+        self.lookup_calls.append(
+            (sync_job_id, current_user.user_id)
+        )
+        if current_user.user_id != self.lookup_owner_id:
+            return None
+        if self.lookup_job is None or self.lookup_job.id != sync_job_id:
+            return None
+        return self.lookup_job
 
 
 def _channel(
@@ -293,28 +299,50 @@ def test_sync_channel_rejects_empty_request_fields():
 
 def test_get_sync_job_returns_owner_scoped_job():
     client = build_client()
-
-    client.app.dependency_overrides[get_sync_job_repository] = lambda: (
-        SyncJobRepositoryStub({"job-1": _job()})
+    job = _job()
+    stub = ChannelSyncServiceStub(
+        lookup_job=job,
+        lookup_owner_id=USER.user_id,
     )
+
+    client.app.dependency_overrides[get_channel_sync_service] = lambda: stub
 
     response = client.get("/sync-jobs/job-1")
 
     assert response.status_code == 200
-    assert response.json()["id"] == "job-1"
-    assert response.json()["status"] == "succeeded"
+    assert response.json() == {
+        "id": "job-1",
+        "workspace_id": "ws-1",
+        "dataset_id": "ds-1",
+        "channel_id": "ch-1",
+        "idempotency_key": "idem-1",
+        "status": "succeeded",
+        "error": None,
+    }
+    assert stub.lookup_calls == [("job-1", USER.user_id)]
 
 
 def test_get_sync_job_returns_404_for_missing_or_other_owner():
     client = build_client()
+    stub = ChannelSyncServiceStub()
 
-    client.app.dependency_overrides[get_sync_job_repository] = lambda: (
-        SyncJobRepositoryStub({})
-    )
+    client.app.dependency_overrides[get_channel_sync_service] = lambda: stub
 
     response = client.get("/sync-jobs/job-missing")
 
     assert response.status_code == 404
+    assert response.json() == {"detail": "Sync job not found: job-missing"}
+
+    stub.lookup_job = _job()
+    stub.lookup_owner_id = OTHER_USER.user_id
+    response = client.get("/sync-jobs/job-1")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Sync job not found: job-1"}
+    assert stub.lookup_calls == [
+        ("job-missing", USER.user_id),
+        ("job-1", USER.user_id),
+    ]
 
 
 def test_sync_job_response_exposes_error_without_credentials():
@@ -325,8 +353,11 @@ def test_sync_job_response_exposes_error_without_credentials():
         error="remote channel rejected product",
     )
 
-    client.app.dependency_overrides[get_sync_job_repository] = lambda: (
-        SyncJobRepositoryStub({"job-1": job})
+    client.app.dependency_overrides[get_channel_sync_service] = lambda: (
+        ChannelSyncServiceStub(
+            lookup_job=job,
+            lookup_owner_id=USER.user_id,
+        )
     )
 
     response = client.get("/sync-jobs/job-1")
@@ -334,3 +365,18 @@ def test_sync_job_response_exposes_error_without_credentials():
     assert response.status_code == 200
     assert response.json()["error"] == "remote channel rejected product"
     assert "credentials" not in response.text
+
+
+def test_legacy_sync_job_repository_provider_remains_callable():
+    from types import SimpleNamespace
+
+    repository = object()
+    request = SimpleNamespace(
+        app=SimpleNamespace(
+            state=SimpleNamespace(
+                container=SimpleNamespace(sync_jobs=repository),
+            ),
+        ),
+    )
+
+    assert get_sync_job_repository(request) is repository

@@ -5,7 +5,13 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from database.models import Base, ChangeSetRecord, DatasetRecord
+from database.models import (
+    Base,
+    ChangeSetRecord,
+    DatasetRecord,
+    ProjectRecord,
+    WorkspaceRecord,
+)
 from domain.changeset import (
     ChangeSet,
     ChangeSetItem,
@@ -64,6 +70,39 @@ def create_dataset(
                 storage_key=storage_key,
                 content_hash=content_hash,
             )
+        )
+        session.commit()
+
+
+def create_owner_path(
+    sessions,
+    *,
+    workspace_id: str,
+    owner_id: str,
+    project_id: str,
+    dataset_id: str,
+) -> None:
+    with sessions() as session:
+        session.add_all(
+            [
+                WorkspaceRecord(
+                    id=workspace_id,
+                    owner_id=owner_id,
+                    name=f"Workspace {workspace_id}",
+                ),
+                ProjectRecord(
+                    id=project_id,
+                    workspace_id=workspace_id,
+                    name=f"Project {project_id}",
+                ),
+                DatasetRecord(
+                    id=dataset_id,
+                    project_id=project_id,
+                    name=f"Dataset {dataset_id}",
+                    source_type="upload",
+                    status="READY",
+                ),
+            ]
         )
         session.commit()
 
@@ -341,3 +380,126 @@ def test_changeset_repository_transaction_rolls_back_dataset_and_changeset() -> 
         assert dataset is not None
         assert dataset.storage_key == ("datasets/dataset-1/before.csv")
         assert dataset.content_hash == "b" * 64
+
+
+def test_changeset_repository_lists_only_owner_changesets_in_descending_order():
+    sessions = create_session()
+    repository = ChangeSetRepository(sessions)
+    create_owner_path(
+        sessions,
+        workspace_id="ws-1",
+        owner_id="owner-1",
+        project_id="project-1",
+        dataset_id="dataset-1",
+    )
+    create_owner_path(
+        sessions,
+        workspace_id="ws-2",
+        owner_id="owner-2",
+        project_id="project-2",
+        dataset_id="dataset-2",
+    )
+
+    older = replace(
+        make_changeset(changeset_id="cs-old"),
+        created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+    newer = replace(
+        make_changeset(changeset_id="cs-new"),
+        created_at=datetime(2026, 2, 1, tzinfo=timezone.utc),
+    )
+    other_owner = make_changeset(
+        changeset_id="cs-other",
+        dataset_id="dataset-2",
+    )
+    repository.create(older, [])
+    repository.create(newer, [])
+    repository.create(other_owner, [])
+
+    assert [
+        changeset.id
+        for changeset in repository.list_for_owner(owner_id="owner-1")
+    ] == ["cs-new", "cs-old"]
+    assert [
+        changeset.id
+        for changeset in repository.list_for_owner(owner_id="owner-2")
+    ] == ["cs-other"]
+    assert repository.list_for_owner(owner_id="owner-without-changesets") == []
+
+
+def test_changeset_repository_get_for_owner_hides_foreign_and_missing_changesets():
+    sessions = create_session()
+    repository = ChangeSetRepository(sessions)
+    create_owner_path(
+        sessions,
+        workspace_id="ws-1",
+        owner_id="owner-1",
+        project_id="project-1",
+        dataset_id="dataset-1",
+    )
+    repository.create(make_changeset(), [])
+
+    assert repository.get_for_owner(
+        changeset_id="cs-1",
+        owner_id="owner-1",
+    ) is not None
+    assert repository.get_for_owner(
+        changeset_id="cs-1",
+        owner_id="owner-2",
+    ) is None
+    assert repository.get_for_owner(
+        changeset_id="missing",
+        owner_id="owner-1",
+    ) is None
+
+
+def test_changeset_repository_lists_owner_items_in_record_id_order():
+    sessions = create_session()
+    repository = ChangeSetRepository(sessions)
+    create_owner_path(
+        sessions,
+        workspace_id="ws-1",
+        owner_id="owner-1",
+        project_id="project-1",
+        dataset_id="dataset-1",
+    )
+    items = [
+        ChangeSetItem(
+            id="item-b",
+            changeset_id="cs-1",
+            entity="dataset_row",
+            record_id="b",
+            before_snapshot={},
+            after_snapshot={},
+        ),
+        ChangeSetItem(
+            id="item-a",
+            changeset_id="cs-1",
+            entity="dataset_row",
+            record_id="a",
+            before_snapshot={},
+            after_snapshot={},
+        ),
+    ]
+    repository.create(make_changeset(), items)
+    repository.create(make_changeset(changeset_id="cs-empty"), [])
+
+    found_items = repository.list_items_for_owner(
+        changeset_id="cs-1",
+        owner_id="owner-1",
+    )
+
+    assert found_items is not None
+    assert [item.record_id for item in found_items] == ["a", "b"]
+    assert repository.list_items_for_owner(
+        changeset_id="cs-1",
+        owner_id="owner-2",
+    ) is None
+    assert repository.list_items_for_owner(
+        changeset_id="missing",
+        owner_id="owner-1",
+    ) is None
+    assert repository.list_items_for_owner(
+        changeset_id="cs-empty",
+        owner_id="owner-1",
+    ) == []

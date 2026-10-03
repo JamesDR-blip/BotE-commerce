@@ -27,9 +27,9 @@ Production mutation remains subject to the platform's ChangeSet, risk and approv
 
 ## Database rollback
 
-Database downgrade is a separate migration operation and must not be assumed to be required for every application rollback.
+The canonical baseline is intentionally not downgradeable; its `downgrade()` raises an explicit error. Database rollback therefore requires restoring a matching verified backup or using a separately reviewed forward fix. Do not assume a revision downgrade can reverse the baseline.
 
-The repository currently tracks Alembic migration head `20260923_01`.
+The active repository head is `20261002_01`. The former 23-revision history is preserved as an inactive archive under `database/migrations/archive/legacy_versions/`; those IDs are not active heads.
 
 Do not downgrade a production database merely because an application image was rolled back. First establish schema compatibility and the migration dependency of the target application version.
 

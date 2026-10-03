@@ -81,6 +81,9 @@ from infrastructure.marketplace.catalog import MarketplacePackageCatalog
 from infrastructure.marketplace.installer import PackageInstaller
 from infrastructure.marketplace.rule_pack import MarketplaceRulePackLoader
 from infrastructure.persistence.approval_repository import ApprovalRepository
+from infrastructure.persistence.agent_memory_repository import (
+    AgentMemoryRepository,
+)
 from infrastructure.persistence.execution_trace import ExecutionTracePersistence
 from infrastructure.persistence.risk_assessment_repository import (
     RiskAssessmentRepository,
@@ -102,7 +105,6 @@ from infrastructure.upload.streaming_reader import StreamingTabularReader
 from infrastructure.upload.tabular_reader import TabularUploadReader
 from plugins.registry import ValidatorRegistry
 from reports.generator import ReportAgent
-from repositories.agent_memory import AgentMemoryRepository
 from repositories.audit_events import AuditEventRepository
 from repositories.capability_execution_traces import (
     CapabilityExecutionTraceRepository,
@@ -138,7 +140,11 @@ class Container:
         self.settings = settings
         self.authentication = AuthenticationService()
 
-        sessions = make_session_factory(settings.database_url)
+        sessions = make_session_factory(
+            settings.database_url,
+            create_schema=settings.environment != "production",
+            require_current_revision=settings.environment == "production",
+        )
         self.sessions = sessions
 
         self.rbac = RBACRepository(sessions)

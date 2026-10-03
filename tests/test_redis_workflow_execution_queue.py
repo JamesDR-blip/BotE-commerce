@@ -1,11 +1,16 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import pytest
+from threading import Event, Thread
+from time import sleep
 
 from infrastructure.queue.redis_workflow_execution_queue import (
     RedisWorkflowExecutionConsumer,
     RedisWorkflowExecutionQueue,
 )
+from database.models import make_session_factory
+from execution.workflow.engine import WorkflowExecutionWorker
+from repositories.workflow_executions import WorkflowExecutionRepository
 
 
 class FakeRedis:
@@ -13,6 +18,7 @@ class FakeRedis:
         self.entries: list[tuple[str, dict[str, str]]] = []
         self.acks: list[str] = []
         self.created_groups: list[str] = []
+        self.lease_claims: list[dict[str, object]] = []
 
     def xadd(
         self,
@@ -40,6 +46,22 @@ class FakeRedis:
     ) -> int:
         self.acks.append(message_id)
         return 1
+
+    def xpending_range(
+        self,
+        stream_name,
+        groupname,
+        *,
+        min,
+        max,
+        count,
+        consumername,
+    ):
+        return [{"consumer": consumername}]
+
+    def xclaim(self, **kwargs):
+        self.lease_claims.append(kwargs)
+        return []
 
 
 def make_queue(redis: FakeRedis) -> RedisWorkflowExecutionQueue:
@@ -96,6 +118,25 @@ def test_consumer_acks_after_worker_returns() -> None:
         received.append,
     )
 
+    # Keep a long-running pending execution visible to Redis's idle-message
+    # recovery without allowing this consumer to steal another owner's entry.
+    stop = Event()
+    heartbeat = Thread(
+        target=consumer._keep_delivery_alive,
+        args=("1-0", stop),
+    )
+    heartbeat.start()
+    try:
+        sleep(0.15)
+        assert redis.lease_claims
+        claim = redis.lease_claims[0]
+        assert claim["consumername"] == "test-worker"
+        assert claim["min_idle_time"] == 1
+        assert claim["idle"] == 0
+    finally:
+        stop.set()
+        heartbeat.join(timeout=1)
+
     consumer._process_message(
         message_id="1-0",
         payload={"execution_id": "execution-123"},
@@ -104,6 +145,34 @@ def test_consumer_acks_after_worker_returns() -> None:
     assert received == ["execution-123"]
     assert redis.acks == ["1-0"]
 
+    # Reproduce process death after the durable claim, then deliver the
+    # pending message through the recovery callback on the next consumer.
+    sessions = make_session_factory("sqlite://")
+    executions = WorkflowExecutionRepository(sessions)
+    executions.create(
+        execution_id="exec-crash-window",
+        workflow_id="workflow-1",
+        workflow_version="1.0",
+        status="QUEUED",
+        inputs_json="{}",
+    )
+    assert executions.claim_running("exec-crash-window") is not None
+    worker = WorkflowExecutionWorker(
+        executions=executions,
+        workflow_engine=object(),
+    )
+    consumer._worker = worker.run
+    consumer._recovery_worker = worker.recover
+    consumer._process_message(
+        message_id="2-0",
+        payload={"execution_id": "exec-crash-window"},
+        recovered=True,
+    )
+    crashed_execution = executions.get("exec-crash-window")
+    assert crashed_execution is not None
+    assert crashed_execution.status == "FAILED"
+    assert "lease expired" in crashed_execution.error
+    assert redis.acks == ["1-0", "2-0"]
 
 def test_consumer_does_not_ack_when_worker_raises() -> None:
     redis = FakeRedis()

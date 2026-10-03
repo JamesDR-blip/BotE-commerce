@@ -2,11 +2,18 @@
 
 from datetime import datetime, timedelta, timezone
 
+from infrastructure.persistence.agent_memory_repository import (
+    AgentMemoryRepository as CanonicalAgentMemoryRepository,
+)
 from database.models import Base, UserRecord, WorkspaceRecord
 from domain.agent_memory import AgentMemory
 from repositories.agent_memory import AgentMemoryRepository
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+
+def test_repository_compatibility_import_resolves_to_canonical_adapter():
+    assert AgentMemoryRepository is CanonicalAgentMemoryRepository
 
 
 def _repository():

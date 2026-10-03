@@ -55,6 +55,23 @@ def test_queued_execution_can_only_be_claimed_once():
     assert first_claim is not None
     assert first_claim.status == "RUNNING"
     assert second_claim is None
+    failed = repo.fail_if_running(
+        execution_id="exec-queued",
+        error="worker lease expired",
+    )
+    assert failed is not None
+    assert failed.status == "FAILED"
+    assert failed.error == "worker lease expired"
+    assert failed.finished_at is not None
+    assert repo.fail_if_running(
+        execution_id="exec-queued",
+        error="duplicate recovery",
+    ) is None
+    with pytest.raises(ValueError, match="already terminal"):
+        repo.complete(
+            execution_id="exec-queued",
+            outputs_json="{}",
+        )
 
 
 def test_non_queued_execution_cannot_be_claimed():
@@ -100,6 +117,7 @@ def test_terminal_execution_cannot_be_claimed():
             execution_id="exec-completed",
             outputs_json="{}",
         )
+
 
 def test_execution_persists_dataset_reference():
     sessions = make_session_factory("sqlite://")
