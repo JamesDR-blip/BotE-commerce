@@ -77,19 +77,12 @@ class SuccessfulCapabilityExecution:
         )()
 
 
-def _client() -> TestClient:
-    app = create_app(
-        Settings(database_url="sqlite://")
-    )
-
+def _client(database_url: str = "sqlite://") -> TestClient:
+    app = create_app(Settings(database_url=database_url))
     app.dependency_overrides[get_current_user] = (
         lambda: CurrentUser(user_id="test-user")
     )
-
-    return TestClient(
-        app,
-        raise_server_exceptions=False,
-    )
+    return TestClient(app, raise_server_exceptions=False)
 
 
 def test_workflow_execution_endpoint_runs_workflow() -> None:
@@ -532,8 +525,11 @@ def test_workflow_execution_detail_returns_404_for_missing_execution():
         "Workflow execution not found: "
         "missing-workflow-execution"
     )
-def test_workflow_async_execution_endpoint_returns_execution_id() -> None:
-    client = _client()
+def test_workflow_async_execution_endpoint_returns_execution_id(
+    tmp_path,
+) -> None:
+    database_path = (tmp_path / "workflow-async.db").as_posix()
+    client = _client(f"sqlite:///{database_path}")
 
     workspace_response = client.post(
         "/workspaces",
@@ -706,8 +702,11 @@ def test_workflow_async_status_returns_404_for_missing_execution() -> None:
         "missing-async-execution"
     )
 
-def test_workflow_async_execution_persists_dataset_reference():
-    client = _client()
+def test_workflow_async_execution_persists_dataset_reference(
+    tmp_path,
+) -> None:
+    database_path = (tmp_path / "workflow-dataset-async.db").as_posix()
+    client = _client(f"sqlite:///{database_path}")
 
     workspace_response = client.post(
         "/workspaces",
