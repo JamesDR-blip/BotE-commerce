@@ -93,7 +93,7 @@ Run FastAPI first, then run `streamlit run dashboard.py`. The dashboard uses `AP
 
 ## Persistence and migrations
 
-SQLAlchemy persists users, workspaces, projects, datasets, workflows, workflow versions, workflow executions, execution traces, report paths, and validation logs. Executions may have a nullable user owner so existing integrations remain compatible. Repositories provide the application boundary for each persisted aggregate. For deployment, install dependencies and run `alembic upgrade head` (current migration head: `20260928_01`); the legacy schema auto-create path remains for local/test compatibility.
+SQLAlchemy persists users, workspaces, projects, datasets, workflows, workflow versions, workflow executions, execution traces, report paths, and validation logs. Executions may have a nullable user owner so existing integrations remain compatible. Repositories provide the application boundary for each persisted aggregate. For deployment, install dependencies and run `alembic upgrade head` (current migration head: `20261002_01`); the legacy schema auto-create path remains for local/test compatibility.
 
 ## Run
 

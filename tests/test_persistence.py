@@ -381,3 +381,68 @@ def test_execution_repository_persists_and_reads_execution_context() -> None:
         '{"version":"1.0","steps":[],"metadata":{}}'
     )
     assert context["planner_version"] == "planner-1"
+
+
+def test_stale_revision_is_rejected_without_schema_creation(tmp_path):
+    stale_path = tmp_path / "stale.sqlite"
+    url = f"sqlite:///{stale_path}"
+    engine = create_engine(url)
+
+    try:
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "CREATE TABLE alembic_version "
+                "(version_num VARCHAR(32) NOT NULL)"
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO alembic_version (version_num) "
+                "VALUES ('20260928_01')"
+            )
+
+        try:
+            make_session_factory(
+                url,
+                create_schema=False,
+                require_current_revision=True,
+            )
+        except RuntimeError as exc:
+            assert "must be upgraded with Alembic" in str(exc)
+            assert "20261002_01" in str(exc)
+            assert "20260928_01" in str(exc)
+        else:
+            raise AssertionError("Stale migration revision was accepted")
+
+        table_names = set(inspect(engine).get_table_names())
+        assert table_names == {"alembic_version"}
+    finally:
+        engine.dispose()
+
+
+def test_current_revision_guard_does_not_repair_schema_drift(tmp_path):
+    drift_path = tmp_path / "schema-drift.sqlite"
+    url = f"sqlite:///{drift_path}"
+    engine = create_engine(url)
+
+    try:
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "CREATE TABLE alembic_version "
+                "(version_num VARCHAR(32) NOT NULL)"
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO alembic_version (version_num) "
+                "VALUES ('20261002_01')"
+            )
+
+        sessions = make_session_factory(
+            url,
+            create_schema=False,
+            require_current_revision=True,
+        )
+        try:
+            tables = set(inspect(sessions.kw["bind"]).get_table_names())
+            assert tables == {"alembic_version"}
+        finally:
+            sessions.kw["bind"].dispose()
+    finally:
+        engine.dispose()
